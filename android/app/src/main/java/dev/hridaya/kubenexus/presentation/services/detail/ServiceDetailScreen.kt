@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.K8sEventSummary
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
+import dev.hridaya.kubenexus.presentation.common.rememberNotificationPermissionRequest
 import dev.hridaya.kubenexus.presentation.portforward.ActivePortForwardChipsRow
 import dev.hridaya.kubenexus.presentation.portforward.PortForwardUiState
 import dev.hridaya.kubenexus.presentation.services.detail.components.ServiceEventsCard
@@ -73,6 +74,7 @@ fun ServiceDetailRoute(
         },
     )
     val portForwardUiState by servicePortForwardViewModel.uiState.collectAsStateWithLifecycle()
+    val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     ServiceDetailScreen(
         uiState = uiState,
@@ -81,6 +83,7 @@ fun ServiceDetailRoute(
         portForwardUiState = portForwardUiState,
         onPortForwardStart = { localPort, servicePort ->
             uiState.service?.let { service ->
+                requestNotificationPermission()
                 servicePortForwardViewModel.start(service, localPort, servicePort)
             }
         },

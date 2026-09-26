@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -36,8 +35,6 @@ import dev.hridaya.kubenexus.presentation.services.ServicesRoute
 import dev.hridaya.kubenexus.presentation.services.ServicesViewModel
 import dev.hridaya.kubenexus.presentation.services.detail.ServiceDetailRoute
 import dev.hridaya.kubenexus.presentation.services.detail.ServiceDetailViewModel
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 
 @Composable
 fun MainScreen(
@@ -69,9 +66,7 @@ fun MainScreen(
     // hands its state, or its actions, to another.
     val screenStores: ScreenViewModelStores = viewModel()
     // Only the cluster id, so MainScreen does not recompose on every Home state change.
-    val activeClusterId by remember(homeViewModel) {
-        homeViewModel.uiState.map { it.activeCluster?.id }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = homeViewModel.uiState.value.activeCluster?.id)
+    val activeClusterId by homeViewModel.activeClusterId.collectAsStateWithLifecycle()
     val clusterKey = activeClusterId.orEmpty()
     val podKey = selectedPodName?.let { "pod/$clusterKey/$selectedPodNamespace/$it" }
     val deploymentKey = selectedDeploymentName?.let { "deployment/$clusterKey/$selectedDeploymentNamespace/$it" }

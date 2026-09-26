@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark window background before Compose draws, so the system splash and first frame do
+         not flash white in dark mode. -->
+    <style name="Theme.KubeNexus" parent="android:Theme.Material.NoActionBar" />
+</resources>
