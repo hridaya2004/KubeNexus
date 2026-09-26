@@ -59,8 +59,7 @@ fun GhosttyTerminalView(
     var localInput by remember { mutableStateOf("") }
     var commandHistory by remember { mutableStateOf(listOf<String>()) }
     var historyIndex by remember { mutableIntStateOf(-1) }
-    var ctrlActive by remember { mutableStateOf(false) }
-    var altActive by remember { mutableStateOf(false) }
+    var modifiers by remember { mutableStateOf(TerminalModifiers()) }
 
     // When soft keyboard is visible and user presses back, forcefully clear focus and hide keyboard so layout expands to full screen
     BackHandler(enabled = isImeVisible) {
@@ -96,10 +95,12 @@ fun GhosttyTerminalView(
                 commandHistory = commandHistory + command
             }
             historyIndex = -1
-            engine.sendText(command + "\n")
+            // Enter is CR, as on a real terminal. The TTY turns it into a newline for line
+            // input (ICRNL); raw-mode programs expect CR, and treat LF as Ctrl+J.
+            engine.sendText(command + "\r")
             localInput = ""
         } else {
-            engine.sendText("\n")
+            engine.sendText("\r")
         }
     }
 
@@ -241,7 +242,17 @@ fun GhosttyTerminalView(
             Spacer(modifier = Modifier.height(6.dp))
             TerminalCommandInput(
                 value = localInput,
-                onValueChange = { localInput = it },
+                onValueChange = { newValue ->
+                    val typed = appendedChar(localInput, newValue)
+                    if (modifiers.any && typed != null) {
+                        // A character typed with CTRL or ALT armed goes straight to the
+                        // remote program, like a keystroke, and releases the modifiers.
+                        engine.sendText(modifiers.apply(typed))
+                        modifiers = TerminalModifiers()
+                    } else {
+                        localInput = newValue
+                    }
+                },
                 onExecute = { executeLocalCommand() },
                 focusRequester = focusRequester,
             )
@@ -253,10 +264,8 @@ fun GhosttyTerminalView(
             engine = engine,
             focusRequester = focusRequester,
             isTerminalActive = uiState.isTerminalActive,
-            ctrlActive = ctrlActive,
-            altActive = altActive,
-            onCtrlToggle = { ctrlActive = !ctrlActive },
-            onAltToggle = { altActive = !altActive },
+            modifiers = modifiers,
+            onModifiersChange = { modifiers = it },
             onAppendLocalInput = { localInput += it },
             onClearLocalInput = { localInput = "" },
             onHistoryUp = {

@@ -16,16 +16,20 @@ internal fun TerminalKeysBar(
     engine: GhosttyTerminalEngine,
     focusRequester: FocusRequester,
     isTerminalActive: Boolean,
-    ctrlActive: Boolean,
-    altActive: Boolean,
-    onCtrlToggle: () -> Unit,
-    onAltToggle: () -> Unit,
+    modifiers: TerminalModifiers,
+    onModifiersChange: (TerminalModifiers) -> Unit,
     onAppendLocalInput: (String) -> Unit,
     onClearLocalInput: () -> Unit,
     onHistoryUp: () -> Unit,
     onHistoryDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Sends a key with the armed CTRL/ALT modifiers, then releases them.
+    fun sendModifiedKey(keyCode: Int) {
+        engine.sendKey(keyCode, metaState = modifiers.metaState)
+        if (modifiers.any) onModifiersChange(TerminalModifiers())
+    }
+
     // Accessory keys bar (Virtual keys for ESC, TAB, CTRL, ALT, UP, DOWN, etc.)
     Row(
         modifier = modifier
@@ -36,7 +40,7 @@ internal fun TerminalKeysBar(
         TerminalKeyButton(
             label = "ESC",
             onClick = {
-                engine.sendKey(KeyEvent.KEYCODE_ESCAPE)
+                sendModifiedKey(KeyEvent.KEYCODE_ESCAPE)
                 focusRequester.requestFocus()
             },
         )
@@ -46,24 +50,24 @@ internal fun TerminalKeysBar(
                 if (isTerminalActive) {
                     onAppendLocalInput("\t")
                 } else {
-                    engine.sendKey(KeyEvent.KEYCODE_TAB)
+                    sendModifiedKey(KeyEvent.KEYCODE_TAB)
                 }
                 focusRequester.requestFocus()
             },
         )
         TerminalKeyButton(
             label = "CTRL",
-            isActive = ctrlActive,
+            isActive = modifiers.ctrl,
             onClick = {
-                onCtrlToggle()
+                onModifiersChange(modifiers.copy(ctrl = !modifiers.ctrl))
                 focusRequester.requestFocus()
             },
         )
         TerminalKeyButton(
             label = "ALT",
-            isActive = altActive,
+            isActive = modifiers.alt,
             onClick = {
-                onAltToggle()
+                onModifiersChange(modifiers.copy(alt = !modifiers.alt))
                 focusRequester.requestFocus()
             },
         )
@@ -106,14 +110,14 @@ internal fun TerminalKeysBar(
         TerminalKeyButton(
             label = "←",
             onClick = {
-                engine.sendKey(KeyEvent.KEYCODE_DPAD_LEFT)
+                sendModifiedKey(KeyEvent.KEYCODE_DPAD_LEFT)
                 focusRequester.requestFocus()
             },
         )
         TerminalKeyButton(
             label = "→",
             onClick = {
-                engine.sendKey(KeyEvent.KEYCODE_DPAD_RIGHT)
+                sendModifiedKey(KeyEvent.KEYCODE_DPAD_RIGHT)
                 focusRequester.requestFocus()
             },
         )
