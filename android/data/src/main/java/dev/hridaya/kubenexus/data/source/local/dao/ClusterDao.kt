@@ -131,6 +131,19 @@ abstract class ClusterDao {
         activateCluster(id)
     }
 
+    /**
+     * Inserts [cluster], first deactivating every other cluster if it is the active one. Both
+     * happen in one transaction, so observers of the active cluster never see a moment where
+     * there is none.
+     */
+    @Transaction
+    open suspend fun addCluster(cluster: ClusterEntity) {
+        if (cluster.isActive) {
+            deactivateAllClusters()
+        }
+        insertCluster(cluster)
+    }
+
     @Query("UPDATE clusters SET name = :name WHERE id = :id")
     abstract suspend fun updateClusterName(id: String, name: String)
 

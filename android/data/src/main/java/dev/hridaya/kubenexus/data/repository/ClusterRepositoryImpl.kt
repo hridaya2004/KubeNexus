@@ -72,10 +72,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 status = ClusterStatus.CONNECTED,
             )
 
-            if (setAsActive) {
-                clusterDao.deactivateAllClusters()
-            }
-            clusterDao.insertCluster(newCluster.toEntity(encryptor))
+            clusterDao.addCluster(newCluster.toEntity(encryptor))
 
             Result.Success(newCluster)
         } catch (t: Throwable) {

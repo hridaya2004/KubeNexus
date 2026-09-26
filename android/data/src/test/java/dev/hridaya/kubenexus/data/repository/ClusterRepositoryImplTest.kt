@@ -106,6 +106,18 @@ class ClusterRepositoryImplTest {
     }
 
     @Test
+    fun `adding an active cluster leaves it the only active one, and an inactive one changes nothing`() =
+        runTest(testDispatcher) {
+            val first = (repository.addCluster(sampleKubeconfig, "First", setAsActive = true) as Result.Success).data
+            val second = (repository.addCluster(sampleKubeconfig, "Second", setAsActive = true) as Result.Success).data
+            val third = (repository.addCluster(sampleKubeconfig, "Third", setAsActive = false) as Result.Success).data
+
+            assertEquals(listOf(second.id), fakeDao.getAllClusters().filter { it.isActive }.map { it.id })
+            assertFalse(fakeDao.getClusterById(first.id)!!.isActive)
+            assertFalse(fakeDao.getClusterById(third.id)!!.isActive)
+        }
+
+    @Test
     fun `getClustersStream and getClusterById decrypt stored encrypted kubeconfig`() =
         runTest(testDispatcher) {
             val encryptedKubeconfig = encryptor.encrypt(sampleKubeconfig)
