@@ -10,7 +10,7 @@ import dev.hridaya.kubenexus.domain.model.DeploymentDraft
  * The generated text is exactly what gets applied: the user reviews this
  * string, and the same string is sent through the bridge, so what is shown is
  * never out of sync with what is created. The manifest is assembled as an
- * ordered structure and serialized by yamlkt's dynamic block-style encoder,
+ * ordered structure and serialized by [renderK8sManifest],
  * which preserves key order instead of relying on hand-appended lines. Labels
  * and selector intentionally match (`app: <name>`) so a Service added together
  * or later targets the workload.

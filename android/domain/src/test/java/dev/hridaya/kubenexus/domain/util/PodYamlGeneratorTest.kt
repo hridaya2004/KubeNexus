@@ -8,12 +8,10 @@ import org.junit.Test
 
 class PodYamlGeneratorTest {
 
-    // yamlkt owns two cosmetics this suite deliberately does not pin: the
-    // trailing space it emits after a key introducing a nested block, and the
-    // single quotes it wraps around values containing YAML-special characters.
-    // Normalizing them keeps expectations focused on manifest structure.
+    // The renderer's output is pinned exactly, apart from the single trailing newline
+    // asserted separately.
     private fun normalizeRenderedManifest(renderedManifest: String): String =
-        renderedManifest.trimEnd('\n').lines().joinToString("\n") { it.trimEnd().replace("'", "") }
+        renderedManifest.trimEnd('\n')
 
     @Test
     fun `renders the full manifest deterministically`() {

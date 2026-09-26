@@ -7,12 +7,10 @@ import org.junit.Test
 
 class DeploymentYamlGeneratorTest {
 
-    // yamlkt owns two cosmetics this suite deliberately does not pin: the
-    // trailing space it emits after a key introducing a nested block, and the
-    // single quotes it wraps around values containing YAML-special characters.
-    // Normalizing them keeps expectations focused on manifest structure.
+    // The renderer's output is pinned exactly, apart from the single trailing newline
+    // asserted separately.
     private fun normalizeRenderedManifest(renderedManifest: String): String =
-        renderedManifest.trimEnd('\n').lines().joinToString("\n") { it.trimEnd().replace("'", "") }
+        renderedManifest.trimEnd('\n')
 
     @Test
     fun `renders the full manifest deterministically`() {
@@ -124,5 +122,25 @@ class DeploymentYamlGeneratorTest {
 
         // Verify selector match
         assertTrue(normalizedManifest.contains("selector:\n    app: web"))
+    }
+
+    // YAML 1.1 reads plain `yes` as a boolean and `123` as a number, which the API server
+    // then rejects ("missing metadata.name") or misroutes. They must be emitted as strings.
+    @Test
+    fun `names YAML would coerce are emitted as strings`() {
+        val renderedManifest = DeploymentYamlGenerator.generate(
+            DeploymentDraft(
+                name = "yes",
+                namespace = "123",
+                image = "nginx:1.27",
+                replicas = 1,
+                containerPort = 80,
+                serviceType = "None",
+            ),
+        )
+
+        assertTrue(renderedManifest.contains("  name: \"yes\"\n"))
+        assertTrue(renderedManifest.contains("  namespace: \"123\"\n"))
+        assertTrue(renderedManifest.contains("app: \"yes\"\n"))
     }
 }

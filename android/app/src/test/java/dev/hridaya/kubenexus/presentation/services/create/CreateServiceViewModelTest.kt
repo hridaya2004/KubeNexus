@@ -117,9 +117,7 @@ class CreateServiceViewModelTest {
         assertEquals(CreateServiceStep.REVIEW, state.step)
         assertNull(state.errorMessage)
         assertNotNull(state.generatedYaml)
-        // yamlkt single-quotes values containing '-', ':' or '/'; stripping the
-        // quotes keeps these assertions about manifest content, not cosmetics.
-        val yaml = state.generatedYaml!!.replace("'", "")
+        val yaml = state.generatedYaml!!
         assertTrue(yaml.contains("kind: Service"))
         assertTrue(yaml.contains("name: web-app"))
         assertTrue(yaml.contains("namespace: team-a"))

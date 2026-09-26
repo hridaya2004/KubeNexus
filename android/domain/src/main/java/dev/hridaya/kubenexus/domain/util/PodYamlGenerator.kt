@@ -10,7 +10,7 @@ import dev.hridaya.kubenexus.domain.model.PodDraft
  * The generated text is exactly what gets applied: the user reviews this
  * string, and the same string is sent through the bridge, so what is shown is
  * never out of sync with what is created. The manifest is assembled as an
- * ordered structure and serialized by yamlkt's dynamic block-style encoder,
+ * ordered structure and serialized by [renderK8sManifest],
  * which preserves key order instead of relying on hand-appended lines. The
  * [PodDraft.containerPort] is omittable because a bare container needs no port
  * mapping at all; a zero means "no ports block" rather than port zero, so the
