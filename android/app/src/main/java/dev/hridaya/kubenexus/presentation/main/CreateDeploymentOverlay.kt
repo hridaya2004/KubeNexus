@@ -24,7 +24,6 @@ internal fun CreateDeploymentOverlay(
     val context = LocalContext.current
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val createDeploymentViewModel: CreateDeploymentViewModel = hiltViewModel(
-        key = "create_deployment",
         creationCallback = { factory: CreateDeploymentViewModel.Factory ->
             factory.create(
                 clusterId = homeUiState.activeCluster?.id,
@@ -59,5 +58,6 @@ internal fun CreateDeploymentOverlay(
         viewModel = createDeploymentViewModel,
         onNavigateBack = onDismiss,
         modifier = modifier,
+        targetClusterName = homeUiState.activeCluster?.name,
     )
 }

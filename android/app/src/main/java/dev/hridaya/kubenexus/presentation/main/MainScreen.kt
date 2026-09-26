@@ -5,11 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.hridaya.kubenexus.presentation.deployments.DeploymentsRoute
 import dev.hridaya.kubenexus.presentation.deployments.DeploymentsViewModel
 import dev.hridaya.kubenexus.presentation.deployments.detail.DeploymentDetailRoute
@@ -21,6 +23,8 @@ import dev.hridaya.kubenexus.presentation.licenses.OpenSourceLicensesScreen
 import dev.hridaya.kubenexus.presentation.logcat.LogcatRoute
 import dev.hridaya.kubenexus.presentation.logcat.LogcatViewModel
 import dev.hridaya.kubenexus.presentation.navigation.Destination
+import dev.hridaya.kubenexus.presentation.navigation.ScreenViewModelScope
+import dev.hridaya.kubenexus.presentation.navigation.ScreenViewModelStores
 import dev.hridaya.kubenexus.presentation.pods.PodsScreen
 import dev.hridaya.kubenexus.presentation.pods.detail.PodDetailRoute
 import dev.hridaya.kubenexus.presentation.pods.detail.PodDetailViewModel
@@ -30,6 +34,8 @@ import dev.hridaya.kubenexus.presentation.services.ServicesRoute
 import dev.hridaya.kubenexus.presentation.services.ServicesViewModel
 import dev.hridaya.kubenexus.presentation.services.detail.ServiceDetailRoute
 import dev.hridaya.kubenexus.presentation.services.detail.ServiceDetailViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun MainScreen(
@@ -55,6 +61,34 @@ fun MainScreen(
     val portForwardSessionsViewModel: PortForwardSessionsViewModel = hiltViewModel()
     val portForwardSessionsState by rememberPortForwardSessionsState(portForwardSessionsViewModel)
     var showPortForwardSessions by rememberSaveable { mutableStateOf(false) }
+
+    // Screens get their own ViewModel store, keyed by everything their ViewModels are bound
+    // to. The active cluster is part of every key, so a screen opened on one cluster never
+    // hands its state, or its actions, to another.
+    val screenStores: ScreenViewModelStores = viewModel()
+    // Only the cluster id, so MainScreen does not recompose on every Home state change.
+    val activeClusterId by remember(homeViewModel) {
+        homeViewModel.uiState.map { it.activeCluster?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = homeViewModel.uiState.value.activeCluster?.id)
+    val clusterKey = activeClusterId.orEmpty()
+    val podKey = selectedPodName?.let { "pod/$clusterKey/$selectedPodNamespace/$it" }
+    val deploymentKey = selectedDeploymentName?.let { "deployment/$clusterKey/$selectedDeploymentNamespace/$it" }
+    val serviceKey = selectedServiceName?.let { "service/$clusterKey/$selectedServiceNamespace/$it" }
+    val createDeploymentKey = "create-deployment/$clusterKey".takeIf { isCreatingDeployment }
+    val createPodKey = "create-pod/$clusterKey".takeIf { isCreatingPod }
+    val createServiceKey = "create-service/$clusterKey".takeIf { isCreatingService }
+    val deploymentsKey = "deployments/$clusterKey".takeIf { isViewingDeployments }
+    val servicesKey = "services/$clusterKey".takeIf { isViewingServices }
+    val logcatKey = "logcat".takeIf { isViewingLogcat }
+    val liveScreenKeys = setOfNotNull(
+        podKey, deploymentKey, serviceKey,
+        createDeploymentKey, createPodKey, createServiceKey,
+        deploymentsKey, servicesKey, logcatKey,
+    )
+    // Runs after the screen that was left has already gone from composition, so its
+    // ViewModels are cleared (streams, sessions and native terminals released) only once
+    // nothing on screen uses them.
+    LaunchedEffect(liveScreenKeys) { screenStores.retainOnly(liveScreenKeys) }
 
     LaunchedEffect(homeViewModel.effects) {
         homeViewModel.effects.collect { effect ->
@@ -84,102 +118,111 @@ fun MainScreen(
         selectedPodName != null && selectedPodNamespace != null -> {
             val podName = selectedPodName!!
             val podNamespace = selectedPodNamespace!!
-            val podDetailViewModel: PodDetailViewModel = hiltViewModel(
-                key = "pod_detail_${podNamespace}_$podName",
-                creationCallback = { factory: PodDetailViewModel.Factory ->
-                    factory.create(
-                        podName = podName,
-                        namespace = podNamespace,
-                    )
-                },
-            )
-            BackHandler {
-                selectedPodName = null
-                selectedPodNamespace = null
-            }
-            PodDetailRoute(
-                viewModel = podDetailViewModel,
-                onNavigateBack = {
+            ScreenViewModelScope(key = podKey!!, stores = screenStores) {
+                val podDetailViewModel: PodDetailViewModel = hiltViewModel(
+                    creationCallback = { factory: PodDetailViewModel.Factory ->
+                        factory.create(
+                            podName = podName,
+                            namespace = podNamespace,
+                        )
+                    },
+                )
+                BackHandler {
                     selectedPodName = null
                     selectedPodNamespace = null
-                },
-                modifier = modifier,
-            )
+                }
+                PodDetailRoute(
+                    viewModel = podDetailViewModel,
+                    onNavigateBack = {
+                        selectedPodName = null
+                        selectedPodNamespace = null
+                    },
+                    modifier = modifier,
+                )
+            }
         }
 
         selectedDeploymentName != null && selectedDeploymentNamespace != null -> {
             val deploymentName = selectedDeploymentName!!
             val deploymentNamespace = selectedDeploymentNamespace!!
-            val deploymentDetailViewModel: DeploymentDetailViewModel = hiltViewModel(
-                key = "deployment_detail_${deploymentNamespace}_$deploymentName",
-                creationCallback = { factory: DeploymentDetailViewModel.Factory ->
-                    factory.create(
-                        deploymentName = deploymentName,
-                        namespace = deploymentNamespace,
-                    )
-                },
-            )
-            BackHandler {
-                selectedDeploymentName = null
-                selectedDeploymentNamespace = null
-            }
-            DeploymentDetailRoute(
-                viewModel = deploymentDetailViewModel,
-                onNavigateBack = {
+            ScreenViewModelScope(key = deploymentKey!!, stores = screenStores) {
+                val deploymentDetailViewModel: DeploymentDetailViewModel = hiltViewModel(
+                    creationCallback = { factory: DeploymentDetailViewModel.Factory ->
+                        factory.create(
+                            deploymentName = deploymentName,
+                            namespace = deploymentNamespace,
+                        )
+                    },
+                )
+                BackHandler {
                     selectedDeploymentName = null
                     selectedDeploymentNamespace = null
-                },
-                onNavigateToPodDetail = { podName, podNamespace ->
-                    selectedPodName = podName
-                    selectedPodNamespace = podNamespace
-                },
-                modifier = modifier,
-            )
+                }
+                DeploymentDetailRoute(
+                    viewModel = deploymentDetailViewModel,
+                    onNavigateBack = {
+                        selectedDeploymentName = null
+                        selectedDeploymentNamespace = null
+                    },
+                    onNavigateToPodDetail = { podName, podNamespace ->
+                        selectedPodName = podName
+                        selectedPodNamespace = podNamespace
+                    },
+                    modifier = modifier,
+                )
+            }
         }
 
         selectedServiceName != null && selectedServiceNamespace != null -> {
             val serviceName = selectedServiceName!!
             val serviceNamespace = selectedServiceNamespace!!
-            val serviceDetailViewModel: ServiceDetailViewModel = hiltViewModel(
-                key = "service_detail_${serviceNamespace}_$serviceName",
-                creationCallback = { factory: ServiceDetailViewModel.Factory ->
-                    factory.create(
-                        serviceName = serviceName,
-                        namespace = serviceNamespace,
-                    )
-                },
-            )
-            BackHandler {
-                selectedServiceName = null
-                selectedServiceNamespace = null
-            }
-            ServiceDetailRoute(
-                viewModel = serviceDetailViewModel,
-                onNavigateBack = {
+            ScreenViewModelScope(key = serviceKey!!, stores = screenStores) {
+                val serviceDetailViewModel: ServiceDetailViewModel = hiltViewModel(
+                    creationCallback = { factory: ServiceDetailViewModel.Factory ->
+                        factory.create(
+                            serviceName = serviceName,
+                            namespace = serviceNamespace,
+                        )
+                    },
+                )
+                BackHandler {
                     selectedServiceName = null
                     selectedServiceNamespace = null
-                },
+                }
+                ServiceDetailRoute(
+                    viewModel = serviceDetailViewModel,
+                    onNavigateBack = {
+                        selectedServiceName = null
+                        selectedServiceNamespace = null
+                    },
+                    modifier = modifier,
+                )
+            }
+        }
+
+        isCreatingDeployment -> ScreenViewModelScope(key = createDeploymentKey!!, stores = screenStores) {
+            CreateDeploymentOverlay(
+                homeViewModel = homeViewModel,
+                onDismiss = { isCreatingDeployment = false },
                 modifier = modifier,
             )
         }
 
-        isCreatingDeployment -> CreateDeploymentOverlay(
-            homeViewModel = homeViewModel,
-            onDismiss = { isCreatingDeployment = false },
-            modifier = modifier,
-        )
+        isCreatingPod -> ScreenViewModelScope(key = createPodKey!!, stores = screenStores) {
+            CreatePodOverlay(
+                homeViewModel = homeViewModel,
+                onDismiss = { isCreatingPod = false },
+                modifier = modifier,
+            )
+        }
 
-        isCreatingPod -> CreatePodOverlay(
-            homeViewModel = homeViewModel,
-            onDismiss = { isCreatingPod = false },
-            modifier = modifier,
-        )
-
-        isCreatingService -> CreateServiceOverlay(
-            homeViewModel = homeViewModel,
-            onDismiss = { isCreatingService = false },
-            modifier = modifier,
-        )
+        isCreatingService -> ScreenViewModelScope(key = createServiceKey!!, stores = screenStores) {
+            CreateServiceOverlay(
+                homeViewModel = homeViewModel,
+                onDismiss = { isCreatingService = false },
+                modifier = modifier,
+            )
+        }
 
         isManagingClusters -> {
             val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -208,11 +251,10 @@ fun MainScreen(
             )
         }
 
-        isViewingDeployments -> {
+        isViewingDeployments -> ScreenViewModelScope(key = deploymentsKey!!, stores = screenStores) {
             val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
             val clusterId = homeUiState.activeCluster?.id
             val deploymentsViewModel: DeploymentsViewModel = hiltViewModel(
-                key = "deployments_list_${clusterId.orEmpty()}",
                 creationCallback = { factory: DeploymentsViewModel.Factory ->
                     factory.create(
                         clusterId = clusterId,
@@ -234,11 +276,10 @@ fun MainScreen(
             )
         }
 
-        isViewingServices -> {
+        isViewingServices -> ScreenViewModelScope(key = servicesKey!!, stores = screenStores) {
             val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
             val clusterId = homeUiState.activeCluster?.id
             val servicesViewModel: ServicesViewModel = hiltViewModel(
-                key = "services_list_${clusterId.orEmpty()}",
                 creationCallback = { factory: ServicesViewModel.Factory ->
                     factory.create(
                         clusterId = clusterId,
@@ -260,7 +301,8 @@ fun MainScreen(
             )
         }
 
-        isViewingLogcat -> {
+        // Scoped so the logcat process it streams from stops when the screen is left.
+        isViewingLogcat -> ScreenViewModelScope(key = logcatKey!!, stores = screenStores) {
             val logcatViewModel: LogcatViewModel = hiltViewModel()
             BackHandler { isViewingLogcat = false }
             LogcatRoute(

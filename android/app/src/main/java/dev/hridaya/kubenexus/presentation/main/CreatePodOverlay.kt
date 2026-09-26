@@ -24,7 +24,6 @@ internal fun CreatePodOverlay(
     val context = LocalContext.current
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val createPodViewModel: CreatePodViewModel = hiltViewModel(
-        key = "create_pod",
         creationCallback = { factory: CreatePodViewModel.Factory ->
             factory.create(
                 clusterId = homeUiState.activeCluster?.id,
@@ -59,5 +58,6 @@ internal fun CreatePodOverlay(
         viewModel = createPodViewModel,
         onNavigateBack = onDismiss,
         modifier = modifier,
+        targetClusterName = homeUiState.activeCluster?.name,
     )
 }

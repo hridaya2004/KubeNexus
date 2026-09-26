@@ -2,11 +2,11 @@ package dev.hridaya.kubenexus.presentation.services.create
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -34,6 +34,7 @@ fun CreateServiceRoute(
     viewModel: CreateServiceViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    targetClusterName: String? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -42,6 +43,7 @@ fun CreateServiceRoute(
         onAction = viewModel::onAction,
         onNavigateBack = onNavigateBack,
         modifier = modifier,
+        targetClusterName = targetClusterName,
     )
 }
 
@@ -52,6 +54,7 @@ fun CreateServiceScreen(
     onAction: (CreateServiceUiAction) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    targetClusterName: String? = null,
 ) {
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -59,10 +62,20 @@ fun CreateServiceScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Create Service",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    Column {
+                        Text(
+                            text = "Create Service",
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        // Always visible, so the cluster the object lands on is never a guess.
+                        if (targetClusterName != null) {
+                            Text(
+                                text = "on $targetClusterName",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {

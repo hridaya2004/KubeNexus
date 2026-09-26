@@ -24,7 +24,6 @@ internal fun CreateServiceOverlay(
     val context = LocalContext.current
     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val createServiceViewModel: CreateServiceViewModel = hiltViewModel(
-        key = "create_service",
         creationCallback = { factory: CreateServiceViewModel.Factory ->
             factory.create(
                 clusterId = homeUiState.activeCluster?.id,
@@ -59,5 +58,6 @@ internal fun CreateServiceOverlay(
         viewModel = createServiceViewModel,
         onNavigateBack = onDismiss,
         modifier = modifier,
+        targetClusterName = homeUiState.activeCluster?.name,
     )
 }
