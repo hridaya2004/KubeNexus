@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.data.repository
 
+import android.database.sqlite.SQLiteException
 import android.util.Log
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.AppError
@@ -19,10 +20,12 @@ import dev.hridaya.kubenexus.data.source.local.entity.OpenApiSchemaEntity
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.ResourceExplain
 import dev.hridaya.kubenexus.domain.repository.ExploreRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
@@ -38,7 +41,14 @@ class ExploreRepositoryImpl @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : ExploreRepository {
 
+    /** A schema too large to store, kept for the current session: (clusterId, json). */
+    @Volatile
+    private var oversizedSchema: Pair<String, String>? = null
+
     companion object {
+        /** Leaves headroom under Android's 2 MB CursorWindow for the rest of the row. */
+        private const val MAX_STORED_SCHEMA_BYTES = 1_800_000
+
         private const val TAG = "ExploreRepositoryImpl"
         private const val OFFLINE_CLUSTER_ID = "offline"
     }
@@ -139,6 +149,26 @@ class ExploreRepositoryImpl @Inject constructor(
         groupVersion: String,
         forceRefresh: Boolean,
     ): Result<ResourceExplain> = withContext(dispatcherProvider.io) {
+        // The schema is a multi-megabyte document from the cluster; a malformed one, or one
+        // too large to parse on this device, must end in an error, not a crash.
+        try {
+            explainResourceUnchecked(clusterId, resourceOrKind, groupVersion, forceRefresh)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, LogSanitizer.withStackTrace("Explaining $resourceOrKind failed", e))
+            Result.Error(AppError.Unknown("Couldn't read the API documentation for $resourceOrKind.", e))
+        } catch (e: OutOfMemoryError) {
+            Result.Error(AppError.Unknown("The cluster's API documentation is too large to load on this device."))
+        }
+    }
+
+    private suspend fun explainResourceUnchecked(
+        clusterId: String?,
+        resourceOrKind: String,
+        groupVersion: String,
+        forceRefresh: Boolean,
+    ): Result<ResourceExplain> {
         val resolvedClusterId = clusterId ?: OFFLINE_CLUSTER_ID
         val normalizedResourceOrKind = resourceOrKind.trim().lowercase()
 
@@ -164,8 +194,7 @@ class ExploreRepositoryImpl @Inject constructor(
         var hadStoredSchema = false
         var schemaJson: String? = null
         if (!forceRefresh) {
-            schemaJson =
-                openApiSchemaDao.getForCluster(resolvedClusterId)?.let { gunzip(it.schemaGzip) }
+            schemaJson = storedSchema(resolvedClusterId)
             hadStoredSchema = schemaJson != null
         }
         var explain = locate(schemaJson)
@@ -179,7 +208,7 @@ class ExploreRepositoryImpl @Inject constructor(
 
                 is Result.Error -> if (!hadStoredSchema) {
                     val sanitizedMsg = LogSanitizer.sanitize(fetched.error.message)
-                    return@withContext Result.Error(
+                    return Result.Error(
                         AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch schema for $resourceOrKind" })
                     )
                 }
@@ -197,7 +226,7 @@ class ExploreRepositoryImpl @Inject constructor(
             //
             // Deliberately not persisted: caching a stub would shadow the real
             // documentation if it later becomes available.
-            return@withContext Result.Success(
+            return Result.Success(
                 jsonParser.buildFallbackExplain(resourceOrKind, groupVersion),
             )
         }
@@ -205,7 +234,7 @@ class ExploreRepositoryImpl @Inject constructor(
         explainedResourceDao.insertExplainedResource(
             explain.toEntity(resolvedClusterId, normalizedResourceOrKind),
         )
-        Result.Success(explain)
+        return Result.Success(explain)
     }
 
     private suspend fun fetchFreshSchema(
@@ -218,13 +247,21 @@ class ExploreRepositoryImpl @Inject constructor(
 
         when (val nativeResult = nativeBridge.openAPISchemaJSON(decryptedKubeconfig)) {
             is Result.Success -> {
-                openApiSchemaDao.upsert(
-                    OpenApiSchemaEntity(
-                        clusterId = resolvedClusterId,
-                        schemaGzip = gzip(nativeResult.data),
-                        fetchedAt = System.currentTimeMillis(),
+                val compressed = gzip(nativeResult.data)
+                if (compressed.size <= MAX_STORED_SCHEMA_BYTES) {
+                    openApiSchemaDao.upsert(
+                        OpenApiSchemaEntity(
+                            clusterId = resolvedClusterId,
+                            schemaGzip = compressed,
+                            fetchedAt = System.currentTimeMillis(),
+                        )
                     )
-                )
+                } else {
+                    // Too big for a CursorWindow even compressed (CRD-heavy clusters): a stored
+                    // row could be written but never read back. Keep it for this session only.
+                    openApiSchemaDao.deleteForCluster(resolvedClusterId)
+                    oversizedSchema = resolvedClusterId to nativeResult.data
+                }
                 Result.Success(nativeResult.data)
             }
 
@@ -234,6 +271,25 @@ class ExploreRepositoryImpl @Inject constructor(
             }
 
             is Result.Loading -> Result.Error(AppError.Network("Schema fetch in progress"))
+        }
+    }
+
+    /**
+     * The cached schema for [clusterId], or null. A row that cannot be read back (larger than
+     * the 2 MB CursorWindow, or corrupt) is deleted, so the schema is fetched again instead of
+     * failing on every explain.
+     */
+    private suspend fun storedSchema(clusterId: String): String? {
+        oversizedSchema?.let { (id, json) -> if (id == clusterId) return json }
+        return try {
+            openApiSchemaDao.getForCluster(clusterId)?.let { gunzip(it.schemaGzip) }
+        } catch (e: SQLiteException) {
+            Log.w(TAG, "Dropping an unreadable cached OpenAPI schema: ${LogSanitizer.sanitize(e.message)}")
+            openApiSchemaDao.deleteForCluster(clusterId)
+            null
+        } catch (e: IOException) {
+            openApiSchemaDao.deleteForCluster(clusterId)
+            null
         }
     }
 

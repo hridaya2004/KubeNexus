@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.data.repository
 
+import android.database.sqlite.SQLiteBlobTooBigException
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
@@ -410,6 +411,49 @@ class ExploreRepositoryImplTest {
             assertEquals("Kyverno policy rule set.", explain.description)
         }
 
+    // A stored schema that can no longer be read must be dropped and fetched again, instead of
+    // failing every explain for that cluster until the app is reinstalled.
+    @Test
+    fun `an unreadable stored schema is replaced by a fresh one`() = runTest(testDispatcher) {
+        insertTestCluster("cluster-1")
+        fakeOpenApiSchemaDao.storage["cluster-1"] =
+            OpenApiSchemaEntity(clusterId = "cluster-1", schemaGzip = ByteArray(8), fetchedAt = 1L)
+        fakeOpenApiSchemaDao.failReads = true
+
+        val result = repository.explainResource("cluster-1", "pods", "v1")
+
+        assertTrue(result is Result.Success)
+        assertEquals("Pod", (result as Result.Success).data.kind)
+    }
+
+    @Test
+    fun `a schema that cannot be parsed is an error, not a crash`() = runTest(testDispatcher) {
+        insertTestCluster("cluster-1")
+        fakeNativeBridge.mockSchemaJson = "{ this is not json"
+
+        val result = repository.explainResource("cluster-1", "pods", "v1")
+
+        assertTrue(result is Result.Error)
+    }
+
+    private suspend fun insertTestCluster(id: String) {
+        fakeClusterDao.insertCluster(
+            ClusterEntity(
+                id = id,
+                name = "test-cluster",
+                serverUrl = "https://127.0.0.1:6443",
+                rawKubeconfig = "raw",
+                contextName = "ctx",
+                userName = "user",
+                namespace = "default",
+                isActive = true,
+                createdAt = 1000L,
+                lastConnectedAt = 1000L,
+                status = "Connected",
+            ),
+        )
+    }
+
     private class FakeNativeBridge : FakeKubeNexusNativeBridge() {
         var mockResources: List<APIResource> = emptyList()
         var mockSchemaJson: String = loadSchemaFixture()
@@ -433,10 +477,15 @@ class ExploreRepositoryImplTest {
     }
 
     private class FakeOpenApiSchemaDao : OpenApiSchemaDao {
-        private val storage = mutableMapOf<String, OpenApiSchemaEntity>()
+        val storage = mutableMapOf<String, OpenApiSchemaEntity>()
 
-        override suspend fun getForCluster(clusterId: String): OpenApiSchemaEntity? =
-            storage[clusterId]
+        /** Simulates a stored row larger than the 2 MB CursorWindow. */
+        var failReads = false
+
+        override suspend fun getForCluster(clusterId: String): OpenApiSchemaEntity? {
+            if (failReads) throw SQLiteBlobTooBigException("Row too big to fit into CursorWindow")
+            return storage[clusterId]
+        }
 
         override suspend fun upsert(schema: OpenApiSchemaEntity) {
             storage[schema.clusterId] = schema
