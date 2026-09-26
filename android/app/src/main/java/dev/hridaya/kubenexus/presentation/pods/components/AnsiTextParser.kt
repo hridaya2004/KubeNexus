@@ -92,12 +92,13 @@ private fun appendWithHighlight(
         return
     }
 
+    // Matched case-insensitively in place. Searching a lowercase() copy gave indices into a
+    // string that can be longer than the original ("İ" lowercases to two chars), and
+    // substring() then threw during composition.
     var start = 0
-    val lowerText = text.lowercase()
-    val lowerQuery = query.lowercase()
 
     while (start < text.length) {
-        val index = lowerText.indexOf(lowerQuery, start)
+        val index = text.indexOf(query, start, ignoreCase = true)
         if (index == -1) {
             builder.withStyle(
                 SpanStyle(
