@@ -15,14 +15,13 @@ import dev.hridaya.kubenexus.domain.model.TerminalSession
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeletePodUseCase
 import dev.hridaya.kubenexus.domain.usecase.DescribePodUseCase
-import dev.hridaya.kubenexus.domain.usecase.ExecPodCommandUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodLogsUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodMetricsUseCase
 import dev.hridaya.kubenexus.domain.usecase.StartExecSessionUseCase
-import dev.hridaya.kubenexus.domain.usecase.StartPodTerminalUseCase
 import dev.hridaya.kubenexus.domain.usecase.StreamPodLogsUseCase
 import dev.hridaya.kubenexus.presentation.pods.components.terminal.GhosttyTerminalEngine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -30,11 +29,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val METRICS_POLL_INTERVAL_MS = 5_000L
 
@@ -55,8 +56,6 @@ class PodDetailViewModel @AssistedInject constructor(
     private val getPodLogsUseCase: GetPodLogsUseCase,
     private val streamPodLogsUseCase: StreamPodLogsUseCase,
     private val deletePodUseCase: DeletePodUseCase,
-    private val execPodCommandUseCase: ExecPodCommandUseCase,
-    private val startPodTerminalUseCase: StartPodTerminalUseCase,
     private val startExecSessionUseCase: StartExecSessionUseCase,
     private val checkClusterHealthUseCase: CheckClusterHealthUseCase,
     private val networkMonitor: NetworkMonitor,
@@ -86,8 +85,21 @@ class PodDetailViewModel @AssistedInject constructor(
 
     private var activeClusterId: String? = null
     private var streamJob: Job? = null
+    private var logsJob: Job? = null
     private var metricsJob: Job? = null
+
+    /** Container the current log lines belong to, so the Logs tab never shows another's. */
+    private var logsContainer: String? = null
+
+    private var terminalJob: Job? = null
     private var activeTerminalSession: TerminalSession? = null
+
+    /**
+     * Incremented for every attach attempt and on stop. Session callbacks arrive on native
+     * threads, possibly after a newer attempt began, and only act if their attempt is current.
+     */
+    @Volatile
+    private var terminalAttempt = 0
 
     init {
         terminalEngine.initialize(80, 24)
@@ -134,13 +146,16 @@ class PodDetailViewModel @AssistedInject constructor(
         return when (val result = getPodMetricsUseCase.forPod(clusterId, namespace, podName)) {
             is Result.Success -> {
                 result.data?.let { sample ->
-                    val cutoff = System.currentTimeMillis() - MetricsRange.MINUTES_5.durationMs
                     _uiState.update { state ->
-                        state.copy(
-                            metricsSamples = (state.metricsSamples + sample)
-                                .filter { it.timestampMillis >= cutoff }
-                                .sortedBy { it.timestampMillis },
-                        )
+                        // metrics-server refreshes every ~15 s, so most polls return the sample
+                        // already held. The window is measured in server time, from the newest
+                        // sample, so a device clock that disagrees with the cluster's cannot
+                        // empty the chart.
+                        val samples = (state.metricsSamples + sample)
+                            .distinctBy { it.timestampMillis }
+                            .sortedBy { it.timestampMillis }
+                        val cutoff = samples.last().timestampMillis - MetricsRange.MINUTES_5.durationMs
+                        state.copy(metricsSamples = samples.filter { it.timestampMillis >= cutoff })
                     }
                 }
                 _uiState.update { it.copy(isLoadingMetrics = false) }
@@ -170,25 +185,13 @@ class PodDetailViewModel @AssistedInject constructor(
                     }
                 } else {
                     if (_uiState.value.isTerminalActive) {
-                        _uiState.update {
-                            it.copy(
-                                isTerminalActive = false,
-                                terminalLines = it.terminalLines + TerminalLine(
-                                    text = "[Network disconnected - terminal session closed]",
-                                    type = TerminalLineType.SYSTEM,
-                                ),
-                            )
-                        }
-                        stopTerminal()
+                        stopTerminal(notice = "Network disconnected - terminal session closed")
                     }
                     if (_uiState.value.isStreamingLogs) {
-                        _uiState.update {
-                            it.copy(
-                                isStreamingLogs = false,
-                                logs = it.logs + "[Network disconnected - log stream stopped]",
-                            )
-                        }
                         stopStreaming()
+                        _uiState.update {
+                            it.copy(logs = it.logs.appendCapped("[Network disconnected - log stream stopped]"))
+                        }
                     }
                 }
             }
@@ -254,13 +257,23 @@ class PodDetailViewModel @AssistedInject constructor(
 
             is PodDetailUiAction.SelectTab -> {
                 _uiState.update { it.copy(selectedTab = action.tab) }
-                if (action.tab == PodDetailTab.LOGS && _uiState.value.logs.isEmpty()) {
+                val state = _uiState.value
+                val logsAreForAnotherContainer = logsContainer != state.selectedContainer
+                if (action.tab == PodDetailTab.LOGS && !state.isStreamingLogs &&
+                    (state.logs.isEmpty() || logsAreForAnotherContainer)
+                ) {
                     fetchLogs()
                 }
             }
 
             is PodDetailUiAction.SelectContainer -> {
+                val previous = _uiState.value.selectedContainer
                 _uiState.update { it.copy(selectedContainer = action.containerName) }
+                // A shell stays attached to the container it was opened in; switching the
+                // selected container ends it rather than silently typing into the old one.
+                if (previous != action.containerName && _uiState.value.isTerminalActive) {
+                    stopTerminal(notice = "Switched to container '${action.containerName}'. Start a shell to attach.")
+                }
                 if (_uiState.value.isStreamingLogs) {
                     startStreaming()
                 } else if (_uiState.value.selectedTab == PodDetailTab.LOGS) {
@@ -300,14 +313,6 @@ class PodDetailViewModel @AssistedInject constructor(
                 _uiState.update { it.copy(logs = emptyList()) }
             }
 
-            is PodDetailUiAction.UpdateExecInput -> {
-                _uiState.update { it.copy(execInputText = action.input) }
-            }
-
-            is PodDetailUiAction.ExecuteCommand -> {
-                handleExecuteCommand(action.command)
-            }
-
             is PodDetailUiAction.StartInteractiveTerminal -> {
                 startTerminal(action.shell)
             }
@@ -316,14 +321,9 @@ class PodDetailViewModel @AssistedInject constructor(
                 stopTerminal()
             }
 
-            is PodDetailUiAction.SendTerminalInput -> {
-                sendInputToTerminal(action.input)
-            }
-
             is PodDetailUiAction.ClearTerminal -> {
                 // Keeps the current grid size; the canvas only re-sends it when it changes.
                 terminalEngine.initialize()
-                _uiState.update { it.copy(terminalLines = emptyList()) }
             }
 
             is PodDetailUiAction.ShowDeleteDialog -> {
@@ -398,11 +398,14 @@ class PodDetailViewModel @AssistedInject constructor(
         val container = _uiState.value.selectedContainer
         _uiState.update { it.copy(isLoadingLogs = true) }
 
-        viewModelScope.launch(dispatcherProvider.main) {
+        // A newer fetch (another container or tail size) supersedes an older one still running.
+        logsJob?.cancel()
+        logsJob = viewModelScope.launch(dispatcherProvider.main) {
             when (val result =
                 getPodLogsUseCase(cid, namespace, podName, container, overrideTail)) {
                 is Result.Success -> {
-                    val lines = result.data.lines()
+                    logsContainer = container
+                    val lines = result.data.lines().takeLast(MAX_LOG_LINES)
                     _uiState.update {
                         it.copy(
                             isLoadingLogs = false,
@@ -412,6 +415,7 @@ class PodDetailViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> {
+                    logsContainer = container
                     _uiState.update {
                         it.copy(
                             isLoadingLogs = false,
@@ -427,9 +431,11 @@ class PodDetailViewModel @AssistedInject constructor(
 
     private fun startStreaming() {
         stopStreaming()
+        logsJob?.cancel()
         val cid = activeClusterId ?: return
         val container = _uiState.value.selectedContainer
         val tail = _uiState.value.tailLines
+        logsContainer = container
 
         _uiState.update {
             it.copy(
@@ -445,17 +451,26 @@ class PodDetailViewModel @AssistedInject constructor(
                     val tailDesc = if (tail != null && tail > 0) " (tail $tail lines)" else ""
                     _uiState.update { it.copy(logs = listOf("[Streaming logs initiated for container '${container ?: "default"}'$tailDesc]...")) }
                 }
+                .onCompletion { cause ->
+                    // The stream ends by itself when the container stops or the connection
+                    // drops; say so, and stop showing it as live. Cancellation is a user stop.
+                    if (cause == null) {
+                        _uiState.update {
+                            it.copy(isStreamingLogs = false, logs = it.logs.appendCapped("[Log stream ended]"))
+                        }
+                    }
+                }
                 .catch { t ->
                     _uiState.update {
                         it.copy(
                             isStreamingLogs = false,
-                            logs = it.logs + "[Log stream closed: ${t.message}]",
+                            logs = it.logs.appendCapped("[Log stream closed: ${t.message}]"),
                         )
                     }
                 }
                 .collect { line ->
                     _uiState.update {
-                        it.copy(logs = it.logs + line)
+                        it.copy(logs = it.logs.appendCapped(line))
                     }
                 }
         }
@@ -467,134 +482,41 @@ class PodDetailViewModel @AssistedInject constructor(
         _uiState.update { it.copy(isStreamingLogs = false) }
     }
 
-    private fun handleExecuteCommand(cmd: String) {
-        val command = cmd.trim()
-        if (command.isBlank()) return
-
-        _uiState.update { it.copy(execInputText = "") }
-
-        if (_uiState.value.isTerminalActive && activeTerminalSession != null) {
-            sendInputToTerminal(command)
-            return
-        }
-
-        val cid = activeClusterId ?: return
-        val container = _uiState.value.selectedContainer ?: "default"
-
-        _uiState.update {
-            it.copy(
-                isExecutingCommand = true,
-                terminalLines = it.terminalLines + TerminalLine(
-                    text = "$ $command",
-                    type = TerminalLineType.INPUT,
-                ),
-            )
-        }
-
-        viewModelScope.launch(dispatcherProvider.main) {
-            when (
-                val result =
-                    execPodCommandUseCase(cid, namespace, podName, container, command, "")
-            ) {
-                is Result.Success -> {
-                    val execResult = result.data
-                    val newLines = mutableListOf<TerminalLine>()
-                    val stdout = execResult.stdout
-                    val stderr = execResult.stderr
-
-                    if (stdout.isNotBlank()) {
-                        stdout.lines().forEach { line ->
-                            newLines.add(TerminalLine(text = line, type = TerminalLineType.STDOUT))
-                        }
-                    }
-                    if (stderr.isNotBlank()) {
-                        stderr.lines().forEach { line ->
-                            newLines.add(TerminalLine(text = line, type = TerminalLineType.STDERR))
-                        }
-                    }
-                    if (stdout.isBlank() && stderr.isBlank()) {
-                        newLines.add(
-                            TerminalLine(
-                                text = "[Exit code 0]",
-                                type = TerminalLineType.SYSTEM,
-                            ),
-                        )
-                    }
-
-                    _uiState.update {
-                        it.copy(
-                            isExecutingCommand = false,
-                            terminalLines = it.terminalLines + newLines,
-                        )
-                    }
-                }
-
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isExecutingCommand = false,
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "Error: ${result.error.message}",
-                                type = TerminalLineType.ERROR,
-                            ),
-                        )
-                    }
-                }
-
-                is Result.Loading -> Unit
-            }
-        }
-    }
-
     private fun startTerminal(preferredShell: String? = null) {
         stopTerminal()
         val cid = activeClusterId ?: return
         val container = _uiState.value.selectedContainer ?: "default"
 
-        _uiState.update {
-            it.copy(
-                isTerminalActive = true,
-                activeShellCommand = preferredShell ?: "bash",
-                terminalLines = it.terminalLines + TerminalLine(
-                    text = "[Attaching interactive shell on container '$container' ...]",
-                    type = TerminalLineType.SYSTEM,
-                ),
-            )
-        }
+        _uiState.update { it.copy(isTerminalActive = true, activeShellCommand = preferredShell ?: "bash") }
+        terminalNotice("Attaching to container '$container'...")
 
-        viewModelScope.launch(dispatcherProvider.main) {
-            if (preferredShell != null) {
-                val success = tryAttachExec(cid, container, preferredShell)
-                if (!success) {
-                    tryAttachDefaultTerminal(cid, container)
-                }
-            } else {
-                val bashSuccess = tryAttachExec(cid, container, "/bin/bash")
-                if (!bashSuccess) {
-                    _uiState.update {
-                        it.copy(
-                            activeShellCommand = "sh",
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "[bash not available, falling back to /bin/sh ...]",
-                                type = TerminalLineType.SYSTEM,
-                            ),
-                        )
-                    }
-                    val shSuccess = tryAttachExec(cid, container, "/bin/sh")
-                    if (!shSuccess) {
-                        tryAttachDefaultTerminal(cid, container)
-                    }
+        terminalJob = viewModelScope.launch(dispatcherProvider.main) {
+            val shells = (listOfNotNull(preferredShell) + DEFAULT_SHELLS).distinct()
+            for ((index, shell) in shells.withIndex()) {
+                if (tryAttachExec(cid, container, shell)) return@launch
+                shells.getOrNull(index + 1)?.let { next ->
+                    terminalNotice("$shell is not available, trying $next...")
                 }
             }
+            _uiState.update { it.copy(isTerminalActive = false) }
+            terminalNotice("No shell found in container '$container' (tried ${shells.joinToString()}).")
         }
     }
 
+    /**
+     * Opens [command] as the terminal's shell. Returns false if the container cannot run it,
+     * which the runtime reports as an exec error shortly after the stream opens.
+     */
     private suspend fun tryAttachExec(
         clusterId: String,
         container: String,
-        command: String
+        command: String,
     ): Boolean {
-        var hadFatalError = false
+        val attempt = ++terminalAttempt
+        // Set from native callback threads, read here on the main thread.
+        val shellMissing = AtomicBoolean(false)
+        var attached = false
+
         val sessionResult = startExecSessionUseCase(
             clusterId = clusterId,
             namespace = namespace,
@@ -602,253 +524,98 @@ class PodDetailViewModel @AssistedInject constructor(
             containerName = container,
             command = command,
             tty = true,
-            onStdout = { output ->
-                terminalEngine.feedRemoteOutput(output)
-                viewModelScope.launch(dispatcherProvider.main) {
-                    output.lines().forEach { line ->
-                        _uiState.update {
-                            it.copy(
-                                terminalLines = it.terminalLines + TerminalLine(
-                                    text = line,
-                                    type = TerminalLineType.STDOUT,
-                                ),
-                            )
-                        }
-                    }
-                }
-            },
+            onStdout = { output -> terminalEngine.feedRemoteOutput(output) },
             onStderr = { output ->
+                if (isMissingExecutable(output)) shellMissing.set(true)
                 terminalEngine.feedRemoteOutput(output)
-                if (output.contains("executable file not found", ignoreCase = true) ||
-                    output.contains("no such file", ignoreCase = true) ||
-                    output.contains("OCI runtime exec failed", ignoreCase = true)
-                ) {
-                    hadFatalError = true
-                }
-                viewModelScope.launch(dispatcherProvider.main) {
-                    output.lines().forEach { line ->
-                        _uiState.update {
-                            it.copy(
-                                terminalLines = it.terminalLines + TerminalLine(
-                                    text = line,
-                                    type = TerminalLineType.STDERR,
-                                ),
-                            )
-                        }
-                    }
-                }
             },
             onError = { err ->
-                if (err.contains("executable file not found", ignoreCase = true) ||
-                    err.contains("no such file", ignoreCase = true) ||
-                    err.contains("exit status 127", ignoreCase = true) ||
-                    err.contains("OCI runtime exec failed", ignoreCase = true)
-                ) {
-                    hadFatalError = true
-                }
-                viewModelScope.launch(dispatcherProvider.main) {
-                    _uiState.update {
-                        it.copy(
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "[Shell Error: $err]",
-                                type = TerminalLineType.ERROR,
-                            ),
-                            isTerminalActive = false,
-                        )
-                    }
-                }
-            },
-            onDone = {
-                viewModelScope.launch(dispatcherProvider.main) {
-                    _uiState.update {
-                        it.copy(
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "[Session closed]",
-                                type = TerminalLineType.SYSTEM,
-                            ),
-                            isTerminalActive = false,
-                        )
-                    }
-                }
-            },
-        )
-
-        return when (sessionResult) {
-            is Result.Success -> {
-                // Brief delay to let error callbacks (e.g. "executable not found") fire
-                delay(500)
-                if (!hadFatalError) {
-                    activeTerminalSession = sessionResult.data
-                    terminalEngine.attachSession(sessionResult.data)
-                    _uiState.update {
-                        it.copy(
-                            isTerminalActive = true,
-                            activeShellCommand = command.substringAfterLast('/'),
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "[Interactive session attached ($command)]",
-                                type = TerminalLineType.SYSTEM,
-                            ),
-                        )
-                    }
-                    true
+                if (isMissingExecutable(err)) {
+                    shellMissing.set(true)
                 } else {
-                    terminalEngine.detachSession()
-                    activeTerminalSession?.close()
-                    activeTerminalSession = null
-                    false
-                }
-            }
-
-            is Result.Error -> false
-            is Result.Loading -> false
-        }
-    }
-
-    private suspend fun tryAttachDefaultTerminal(clusterId: String, container: String) {
-        val defaultResult = startPodTerminalUseCase(
-            clusterId = clusterId,
-            namespace = namespace,
-            podName = podName,
-            containerName = container,
-            onStdout = { output ->
-                terminalEngine.feedRemoteOutput(output)
-                viewModelScope.launch(dispatcherProvider.main) {
-                    output.lines().forEach { line ->
-                        _uiState.update {
-                            it.copy(
-                                terminalLines = it.terminalLines + TerminalLine(
-                                    text = line,
-                                    type = TerminalLineType.STDOUT,
-                                ),
-                            )
-                        }
-                    }
-                }
-            },
-            onStderr = { output ->
-                terminalEngine.feedRemoteOutput(output)
-                viewModelScope.launch(dispatcherProvider.main) {
-                    output.lines().forEach { line ->
-                        _uiState.update {
-                            it.copy(
-                                terminalLines = it.terminalLines + TerminalLine(
-                                    text = line,
-                                    type = TerminalLineType.STDERR,
-                                ),
-                            )
-                        }
-                    }
-                }
-            },
-            onError = { err ->
-                viewModelScope.launch(dispatcherProvider.main) {
-                    _uiState.update {
-                        it.copy(
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "[Shell Error: $err]",
-                                type = TerminalLineType.ERROR,
-                            ),
-                            isTerminalActive = false,
-                        )
+                    viewModelScope.launch(dispatcherProvider.main) {
+                        if (attempt == terminalAttempt && attached) endTerminalSession("Shell error: $err")
                     }
                 }
             },
             onDone = {
                 viewModelScope.launch(dispatcherProvider.main) {
-                    _uiState.update {
-                        it.copy(
-                            terminalLines = it.terminalLines + TerminalLine(
-                                text = "[Session closed]",
-                                type = TerminalLineType.SYSTEM,
-                            ),
-                            isTerminalActive = false,
-                        )
-                    }
+                    if (attempt == terminalAttempt && attached) endTerminalSession("Session closed")
                 }
             },
         )
 
-        when (defaultResult) {
-            is Result.Success -> {
-                activeTerminalSession = defaultResult.data
-                terminalEngine.attachSession(defaultResult.data)
-                _uiState.update {
-                    it.copy(
-                        isTerminalActive = true,
-                        activeShellCommand = "default",
-                        terminalLines = it.terminalLines + TerminalLine(
-                            text = "[Interactive terminal attached]",
-                            type = TerminalLineType.SYSTEM,
-                        ),
-                    )
-                }
-            }
-
+        val session = when (sessionResult) {
+            is Result.Success -> sessionResult.data
             is Result.Error -> {
-                _uiState.update {
-                    it.copy(
-                        isTerminalActive = false,
-                        terminalLines = it.terminalLines + TerminalLine(
-                            text = "[Failed to attach terminal: ${defaultResult.error.message}]",
-                            type = TerminalLineType.ERROR,
-                        ),
-                    )
-                }
+                terminalNotice("Failed to start $command: ${sessionResult.error.message}")
+                return false
             }
-
-            is Result.Loading -> Unit
+            is Result.Loading -> return false
         }
-    }
 
-    private fun sendInputToTerminal(input: String) {
-        val session = activeTerminalSession
-        if (session != null) {
-            try {
-                session.write(input + "\n")
-                _uiState.update {
-                    it.copy(
-                        terminalLines = it.terminalLines + TerminalLine(
-                            text = input,
-                            type = TerminalLineType.INPUT,
-                        ),
-                    )
-                }
-            } catch (t: Throwable) {
-                _uiState.update {
-                    it.copy(
-                        terminalLines = it.terminalLines + TerminalLine(
-                            text = "[Write error: ${t.message}]",
-                            type = TerminalLineType.ERROR,
-                        ),
-                    )
-                }
-            }
-        } else {
-            handleExecuteCommand(input)
-        }
-    }
-
-    private fun stopTerminal() {
-        terminalEngine.detachSession()
         try {
-            activeTerminalSession?.close()
-        } catch (_: Throwable) {
+            // A missing shell is reported by the runtime just after the stream opens.
+            delay(SHELL_PROBE_MS)
+        } catch (e: CancellationException) {
+            // Stopped while attaching: never leave the session open.
+            closeQuietly(session)
+            throw e
         }
-        activeTerminalSession = null
+        if (shellMissing.get() || attempt != terminalAttempt) {
+            closeQuietly(session)
+            return false
+        }
+
+        attached = true
+        activeTerminalSession = session
+        terminalEngine.attachSession(session)
         _uiState.update {
-            if (it.isTerminalActive) {
-                it.copy(
-                    isTerminalActive = false,
-                    terminalLines = it.terminalLines + TerminalLine(
-                        text = "[Terminal disconnected]",
-                        type = TerminalLineType.SYSTEM,
-                    ),
-                )
-            } else {
-                it
-            }
+            it.copy(isTerminalActive = true, activeShellCommand = command.substringAfterLast('/'))
+        }
+        return true
+    }
+
+    /** Called when the attached shell ends on its own. */
+    private fun endTerminalSession(reason: String) {
+        terminalAttempt++
+        terminalEngine.detachSession()
+        activeTerminalSession = null
+        _uiState.update { it.copy(isTerminalActive = false) }
+        terminalNotice(reason)
+    }
+
+    private fun stopTerminal(notice: String? = "Terminal disconnected") {
+        val wasActive = _uiState.value.isTerminalActive
+        terminalJob?.cancel()
+        terminalJob = null
+        terminalAttempt++
+        terminalEngine.detachSession()
+        activeTerminalSession?.let(::closeQuietly)
+        activeTerminalSession = null
+        _uiState.update { it.copy(isTerminalActive = false) }
+        if (wasActive && notice != null) terminalNotice(notice)
+    }
+
+    /**
+     * Shows a status line in the terminal itself, dimmed like a shell's own notices, and
+     * keeps it in the UI state for the header.
+     */
+    private fun terminalNotice(message: String) {
+        terminalEngine.feedRemoteOutput("\r\n\u001B[2m[$message]\u001B[0m\r\n")
+        _uiState.update { it.copy(terminalNotice = message) }
+    }
+
+    private fun closeQuietly(session: TerminalSession) {
+        try {
+            session.close()
+        } catch (_: Exception) {
+            // Already closed on the remote side.
         }
     }
+
+    private fun isMissingExecutable(message: String): Boolean =
+        MISSING_EXECUTABLE_MARKERS.any { message.contains(it, ignoreCase = true) }
 
     private fun deletePod() {
         val cid = activeClusterId ?: return
@@ -884,11 +651,27 @@ class PodDetailViewModel @AssistedInject constructor(
 
     override fun onCleared() {
         stopStreaming()
-        stopTerminal()
+        stopTerminal(notice = null)
         terminalEngine.destroy()
     }
 
     companion object {
+        /** Shells tried in order when the user does not pick one. */
+        private val DEFAULT_SHELLS = listOf("/bin/bash", "/bin/sh", "/busybox/sh")
+
+        /** How long to wait for the runtime to report that a shell does not exist. */
+        private const val SHELL_PROBE_MS = 500L
+
+        /** Upper bound for the log view, so a long stream cannot grow without limit. */
+        const val MAX_LOG_LINES = 5_000
+
+        private val MISSING_EXECUTABLE_MARKERS = listOf(
+            "executable file not found",
+            "no such file",
+            "exit status 127",
+            "OCI runtime exec failed",
+        )
+
         fun provideFactory(
             factory: Factory,
             podName: String,
@@ -901,3 +684,7 @@ class PodDetailViewModel @AssistedInject constructor(
         }
     }
 }
+
+/** Appends [line], dropping the oldest lines beyond [PodDetailViewModel.MAX_LOG_LINES]. */
+private fun List<String>.appendCapped(line: String): List<String> =
+    if (size < PodDetailViewModel.MAX_LOG_LINES) this + line else drop(size - PodDetailViewModel.MAX_LOG_LINES + 1) + line

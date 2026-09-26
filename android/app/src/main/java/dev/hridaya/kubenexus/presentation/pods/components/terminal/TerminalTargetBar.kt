@@ -105,7 +105,7 @@ internal fun TerminalTargetBar(
         } else {
             Button(
                 onClick = { onAction(PodDetailUiAction.StartInteractiveTerminal()) },
-                enabled = uiState.isContainerAttachable && !uiState.isExecutingCommand,
+                enabled = uiState.isContainerAttachable,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier.height(34.dp),
             ) {

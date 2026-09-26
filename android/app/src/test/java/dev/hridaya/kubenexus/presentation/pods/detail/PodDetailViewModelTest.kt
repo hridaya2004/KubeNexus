@@ -23,19 +23,19 @@ import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeletePodUseCase
 import dev.hridaya.kubenexus.domain.usecase.DescribePodUseCase
-import dev.hridaya.kubenexus.domain.usecase.ExecPodCommandUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodLogsUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodMetricsUseCase
 import dev.hridaya.kubenexus.domain.usecase.StartExecSessionUseCase
-import dev.hridaya.kubenexus.domain.usecase.StartPodTerminalUseCase
 import dev.hridaya.kubenexus.domain.usecase.StreamPodLogsUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -56,9 +56,9 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Why not [kotlinx.coroutines.test.advanceUntilIdle]: the ViewModel starts an
- * endless metrics polling loop (while(isActive) { ...; delay(5s) }) in init,
- * so the virtual-time queue is never empty and idle-based waiting hangs forever.
+ * Why not [kotlinx.coroutines.test.advanceUntilIdle]: open-ended work such as a
+ * followed log stream (and metrics polling, once the screen starts it) never
+ * finishes, so idle-based waiting would hang.
  *
  * Every test therefore:
  *  1. advances virtual time in fixed slices ([idleNow]) - bounded, deterministic;
@@ -104,8 +104,6 @@ class PodDetailViewModelTest {
             getPodLogsUseCase = GetPodLogsUseCase(fakePodRepository),
             streamPodLogsUseCase = StreamPodLogsUseCase(fakePodRepository),
             deletePodUseCase = DeletePodUseCase(fakePodRepository),
-            execPodCommandUseCase = ExecPodCommandUseCase(fakePodRepository),
-            startPodTerminalUseCase = StartPodTerminalUseCase(fakePodRepository),
             startExecSessionUseCase = StartExecSessionUseCase(fakePodRepository),
             checkClusterHealthUseCase = CheckClusterHealthUseCase(
                 fakeClusterRepository,
@@ -183,37 +181,78 @@ class PodDetailViewModelTest {
     }
 
     @Test
-    fun `executing command appends input line and stdout`() = vmTest {
-        idleNow()
-
-        viewModel.onAction(PodDetailUiAction.ExecuteCommand("uname -a"))
-        idleNow()
-
-        val lines = viewModel.uiState.value.terminalLines.map { it.text }
-        assertTrue(lines.contains("$ uname -a"))
-        assertTrue(lines.contains("Linux k8s-node 5.15.0"))
-        assertFalse(viewModel.uiState.value.isExecutingCommand)
-    }
-
-    @Test
-    fun `interactive terminal session connects handles input and stops`() = vmTest {
+    fun `interactive terminal attaches the first available shell and stops`() = vmTest {
         idleNow()
 
         viewModel.onAction(PodDetailUiAction.StartInteractiveTerminal())
         idleNow()
         assertTrue(viewModel.uiState.value.isTerminalActive)
-
-        viewModel.onAction(PodDetailUiAction.SendTerminalInput("whoami"))
-        idleNow()
-        assertTrue(
-            viewModel.uiState.value.terminalLines.any {
-                it.text == "echo: whoami" || it.text == "whoami"
-            },
-        )
+        assertEquals("bash", viewModel.uiState.value.activeShellCommand)
+        assertEquals(listOf("/bin/bash"), fakePodRepository.execCommands)
 
         viewModel.onAction(PodDetailUiAction.StopInteractiveTerminal)
         idleNow()
         assertFalse(viewModel.uiState.value.isTerminalActive)
+        assertEquals("Terminal disconnected", viewModel.uiState.value.terminalNotice)
+        assertTrue(fakePodRepository.sessions.single().closed)
+    }
+
+    // With direct exec, a missing shell is reported by the container runtime.
+    @Test
+    fun `a missing shell falls back to the next one and closes the failed session`() = vmTest {
+        idleNow()
+        fakePodRepository.missingShells += listOf("/bin/bash", "/bin/sh")
+
+        viewModel.onAction(PodDetailUiAction.StartInteractiveTerminal())
+        idleNow()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isTerminalActive)
+        assertEquals("sh", state.activeShellCommand)
+        assertEquals(listOf("/bin/bash", "/bin/sh", "/busybox/sh"), fakePodRepository.execCommands)
+        assertTrue(fakePodRepository.sessions.dropLast(1).all { it.closed })
+        assertFalse(fakePodRepository.sessions.last().closed)
+    }
+
+    @Test
+    fun `no available shell ends the attempt with a notice`() = vmTest {
+        idleNow()
+        fakePodRepository.missingShells += listOf("/bin/bash", "/bin/sh", "/busybox/sh")
+
+        viewModel.onAction(PodDetailUiAction.StartInteractiveTerminal())
+        idleNow()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isTerminalActive)
+        assertTrue(state.terminalNotice.orEmpty().startsWith("No shell found"))
+        assertTrue(fakePodRepository.sessions.all { it.closed })
+    }
+
+    @Test
+    fun `stopping while the shell is still attaching closes it and never attaches`() = vmTest {
+        idleNow()
+
+        viewModel.onAction(PodDetailUiAction.StartInteractiveTerminal())
+        runCurrent() // the session is open, the attach probe is still waiting
+        viewModel.onAction(PodDetailUiAction.StopInteractiveTerminal)
+        idleNow()
+
+        assertFalse(viewModel.uiState.value.isTerminalActive)
+        assertTrue(fakePodRepository.sessions.single().closed)
+    }
+
+    @Test
+    fun `a shell that exits by itself marks the terminal inactive`() = vmTest {
+        idleNow()
+        viewModel.onAction(PodDetailUiAction.StartInteractiveTerminal())
+        idleNow()
+        assertTrue(viewModel.uiState.value.isTerminalActive)
+
+        fakePodRepository.sessions.single().remoteExit()
+        idleNow()
+
+        assertFalse(viewModel.uiState.value.isTerminalActive)
+        assertEquals("Session closed", viewModel.uiState.value.terminalNotice)
     }
 
     @Test
@@ -235,6 +274,48 @@ class PodDetailViewModelTest {
 
         viewModel.onAction(PodDetailUiAction.StopStreamingLogs)
         assertFalse(viewModel.uiState.value.isStreamingLogs)
+    }
+
+    @Test
+    fun `a log stream that ends by itself is no longer shown as streaming`() = vmTest {
+        idleNow()
+        fakePodRepository.streamEnds = true
+
+        viewModel.onAction(PodDetailUiAction.StartStreamingLogs)
+        idleNow()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isStreamingLogs)
+        assertEquals("[Log stream ended]", state.logs.last())
+    }
+
+    @Test
+    fun `the log view keeps only the newest lines`() = vmTest {
+        idleNow()
+        fakePodRepository.streamLines = (0 until 6_000).map { "line $it" }
+
+        viewModel.onAction(PodDetailUiAction.StartStreamingLogs)
+        idleNow()
+
+        val logs = viewModel.uiState.value.logs
+        assertEquals(PodDetailViewModel.MAX_LOG_LINES, logs.size)
+        assertEquals("line 5999", logs.last())
+    }
+
+    // "View logs" on a container card selects it while the Describe tab is still open.
+    @Test
+    fun `opening the logs tab refetches when the logs belong to another container`() = vmTest {
+        idleNow()
+        viewModel.onAction(PodDetailUiAction.SelectTab(PodDetailTab.LOGS))
+        idleNow()
+        assertEquals("container-app", fakePodRepository.lastGetPodLogsContainer)
+
+        viewModel.onAction(PodDetailUiAction.SelectTab(PodDetailTab.DESCRIBE))
+        viewModel.onAction(PodDetailUiAction.SelectContainer("sidecar"))
+        viewModel.onAction(PodDetailUiAction.SelectTab(PodDetailTab.LOGS))
+        idleNow()
+
+        assertEquals("sidecar", fakePodRepository.lastGetPodLogsContainer)
     }
 
     @Test
@@ -312,7 +393,7 @@ class PodDetailViewModelTest {
             assertFalse(state.isOnline)
             assertFalse(state.isContainerAttachable)
             assertFalse(state.isTerminalActive)
-            assertTrue(state.terminalLines.any { it.text.contains("Network disconnected") })
+            assertTrue(state.terminalNotice.orEmpty().contains("Network disconnected"))
         }
 
     @Test
@@ -332,10 +413,15 @@ class PodDetailViewModelTest {
                 viewModel.uiState.value.logs.any { it.contains("Network disconnected") },
             )
 
+            val describesBeforeReconnect = fakePodRepository.describeCalls
             onlineFlow.value = true
             idleNow()
             assertTrue(viewModel.uiState.value.isOnline)
             assertNotNull(viewModel.uiState.value.podDetails)
+            assertTrue(
+                "reconnecting must refetch the describe",
+                fakePodRepository.describeCalls > describesBeforeReconnect,
+            )
         }
 
     @Test
@@ -452,8 +538,33 @@ class PodDetailViewModelTest {
 
     private class FakePodRepository : PodRepository {
         var describeError: String? = null
+        var describeCalls = 0
         var lastGetPodLogsTail: Long? = null
+        var lastGetPodLogsContainer: String? = null
         var lastStreamPodLogsTail: Long? = null
+        var streamLines: List<String> = listOf("Log line 1", "Log line 2", "Log line 3")
+
+        /** A followed stream stays open until cancelled, like the real one. */
+        var streamEnds = false
+
+        /** Shells the fake container does not have; exec reports them as missing. */
+        val missingShells = mutableListOf<String>()
+        val execCommands = mutableListOf<String>()
+        val sessions = mutableListOf<FakeSession>()
+
+        class FakeSession(private val onDone: () -> Unit) : TerminalSession {
+            var closed = false
+            override fun write(input: String) = Unit
+            override fun writeBytes(bytes: ByteArray) = Unit
+            override fun close() {
+                if (!closed) {
+                    closed = true
+                    onDone()
+                }
+            }
+
+            fun remoteExit() = onDone()
+        }
 
         override fun getPodsStream(
             clusterId: String?,
@@ -498,6 +609,7 @@ class PodDetailViewModelTest {
             namespace: String,
             podName: String,
         ): Result<PodDetails> {
+            describeCalls++
             describeError?.let { return Result.Error(AppError.Network(it)) }
             return Result.Success(defaultDetails(podName, namespace))
         }
@@ -531,6 +643,7 @@ class PodDetailViewModelTest {
             tailLines: Long?,
         ): Result<String> {
             lastGetPodLogsTail = tailLines
+            lastGetPodLogsContainer = containerName
             return Result.Success(
                 "Starting service...\nListening on port 8080\nReady to accept connections.",
             )
@@ -544,7 +657,12 @@ class PodDetailViewModelTest {
             tailLines: Long?,
         ): Flow<String> {
             lastStreamPodLogsTail = tailLines
-            return flowOf("Log line 1", "Log line 2", "Log line 3")
+            val lines = streamLines
+            val ends = streamEnds
+            return flow {
+                lines.forEach { emit(it) }
+                if (!ends) awaitCancellation()
+            }
         }
 
         override suspend fun execCommand(
@@ -579,7 +697,15 @@ class PodDetailViewModelTest {
             onStderr: (String) -> Unit,
             onError: (String) -> Unit,
             onDone: () -> Unit,
-        ): Result<TerminalSession> = Result.Success(echoSession(onStdout, onDone))
+        ): Result<TerminalSession> {
+            execCommands += command
+            val session = FakeSession(onDone)
+            sessions += session
+            if (command in missingShells) {
+                onError("OCI runtime exec failed: exec: \"$command\": stat $command: no such file or directory")
+            }
+            return Result.Success(session)
+        }
 
         private fun echoSession(
             onStdout: (String) -> Unit,

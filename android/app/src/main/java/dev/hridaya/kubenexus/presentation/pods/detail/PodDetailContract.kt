@@ -34,20 +34,6 @@ enum class MetricsRange(val label: String, val durationMs: Long) {
     }
 }
 
-enum class TerminalLineType {
-    INPUT,
-    STDOUT,
-    STDERR,
-    SYSTEM,
-    ERROR,
-}
-
-data class TerminalLine(
-    val text: String,
-    val type: TerminalLineType = TerminalLineType.STDOUT,
-    val timestamp: Long = System.currentTimeMillis(),
-)
-
 data class PodDetailUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
@@ -63,10 +49,9 @@ data class PodDetailUiState(
     val isLoadingLogs: Boolean = false,
     val tailLines: Long? = 250L,
     val errorMessage: String? = null,
-    val terminalLines: List<TerminalLine> = emptyList(),
     val isTerminalActive: Boolean = false,
-    val isExecutingCommand: Boolean = false,
-    val execInputText: String = "",
+    /** Latest terminal status notice, e.g. "Session closed"; also shown in the terminal. */
+    val terminalNotice: String? = null,
     val activeShellCommand: String = "/bin/sh",
     val showDeleteConfirmDialog: Boolean = false,
     val isDeletingPod: Boolean = false,
@@ -102,12 +87,9 @@ sealed interface PodDetailUiAction {
     data object StopStreamingLogs : PodDetailUiAction
     data object ClearLogs : PodDetailUiAction
 
-    data class UpdateExecInput(val input: String) : PodDetailUiAction
-    data class ExecuteCommand(val command: String) : PodDetailUiAction
     data class StartInteractiveTerminal(val shell: String? = null) : PodDetailUiAction
     data object StopInteractiveTerminal : PodDetailUiAction
     data class SelectMetricsRange(val range: MetricsRange) : PodDetailUiAction
-    data class SendTerminalInput(val input: String) : PodDetailUiAction
     data object ClearTerminal : PodDetailUiAction
 
     data class ShowDeleteDialog(val show: Boolean) : PodDetailUiAction
