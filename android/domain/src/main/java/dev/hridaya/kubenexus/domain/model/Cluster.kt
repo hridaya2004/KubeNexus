@@ -30,6 +30,15 @@ data class Cluster(
         "Cluster(id=$id, name=$name, serverUrl=$serverUrl, contextName=$contextName, " +
             "isActive=$isActive, status=$status, credentialsUnavailable=$credentialsUnavailable, " +
             "rawKubeconfig=<redacted>)"
+
+    companion object {
+        /**
+         * Largest kubeconfig accepted, in UTF-8 bytes. Real kubeconfigs are kilobytes even with
+         * many contexts and embedded certificates, and the encrypted copy is stored in a single
+         * database row that has to fit in SQLite's 2 MB cursor window when it is read back.
+         */
+        const val MAX_KUBECONFIG_BYTES = 1024 * 1024
+    }
 }
 
 data class ParsedKubeconfig(

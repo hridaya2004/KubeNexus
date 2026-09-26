@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.data.kubeconfig
 
+import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ParsedKubeconfig
 import org.snakeyaml.engine.v2.api.Load
 import org.snakeyaml.engine.v2.api.LoadSettings
@@ -23,6 +24,9 @@ object KubeconfigParser {
     fun parse(rawContent: String, customName: String? = null): ParsedKubeconfig {
         val trimmed = rawContent.trim()
         require(trimmed.isNotBlank()) { "Kubeconfig content cannot be empty." }
+        require(trimmed.length <= Cluster.MAX_KUBECONFIG_BYTES && trimmed.encodeToByteArray().size <= Cluster.MAX_KUBECONFIG_BYTES) {
+            "This kubeconfig is larger than 1 MB, which is more than any kubeconfig needs. Check that it is the right file."
+        }
 
         val document = try {
             Load(LoadSettings.builder().setLabel("kubeconfig").build()).loadFromString(trimmed)

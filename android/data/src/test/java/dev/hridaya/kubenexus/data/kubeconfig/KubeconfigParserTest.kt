@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.data.kubeconfig
 
+import dev.hridaya.kubenexus.domain.model.Cluster
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -222,5 +223,24 @@ class KubeconfigParserTest {
     @Test(expected = IllegalArgumentException::class)
     fun `parse rejects text that is not yaml`() {
         KubeconfigParser.parse("clusters: [unclosed")
+    }
+
+    @Test
+    fun `parse rejects kubeconfigs over the size limit, counted in utf-8 bytes`() {
+        // Pads with a comment, so only the size can make the kubeconfig invalid.
+        fun padded(filler: String, bytes: Int): String {
+            val prefix = sampleKubeconfig + "\n# "
+            val count = (bytes - prefix.encodeToByteArray().size) / filler.encodeToByteArray().size
+            return prefix + filler.repeat(count)
+        }
+
+        assertEquals("minikube", KubeconfigParser.parse(padded("x", Cluster.MAX_KUBECONFIG_BYTES)).clusterName)
+
+        listOf(padded("x", Cluster.MAX_KUBECONFIG_BYTES + 1), padded("é", Cluster.MAX_KUBECONFIG_BYTES + 2)).forEach { oversized ->
+            val error = runCatching { KubeconfigParser.parse(oversized) }.exceptionOrNull()
+
+            assertTrue(error is IllegalArgumentException)
+            assertTrue(error!!.message!!.contains("larger than 1 MB"))
+        }
     }
 }
