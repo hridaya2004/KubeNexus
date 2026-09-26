@@ -86,9 +86,10 @@ fun GhosttyTerminalLogViewer(
         }
     }
 
-    // Update autoScrollEnabled when user scrolls manually
+    // Decided when a scroll ends: scrolled away from the bottom pauses following, scrolled
+    // back to it resumes. Checking when a scroll starts pulled the user back on the next line.
     LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
             autoScrollEnabled = isAtBottom
         }
     }
@@ -105,8 +106,9 @@ fun GhosttyTerminalLogViewer(
         }
     }
 
-    // Follow the tail when new logs arrive while auto-scroll is enabled
-    LaunchedEffect(filteredLogs.size, autoScrollEnabled) {
+    // Follow the tail when new logs arrive while auto-scroll is enabled. The last line is part
+    // of the key because the count stops changing once the log view reaches its line cap.
+    LaunchedEffect(filteredLogs.size, filteredLogs.lastOrNull(), autoScrollEnabled) {
         if (autoScrollEnabled && filteredLogs.isNotEmpty()) {
             listState.scrollToItem(filteredLogs.size - 1)
         }

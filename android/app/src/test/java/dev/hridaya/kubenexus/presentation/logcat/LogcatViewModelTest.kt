@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -72,7 +74,19 @@ class LogcatViewModelTest {
     private val fakeRepository = object : LogcatRepository {
         var clearCalled = false
 
-        override fun streamLogs(maxBufferSize: Int): Flow<List<LogcatEntry>> = flowOf(sampleLogs)
+        /** Lines logged after the stream started. */
+        val newLines = MutableSharedFlow<LogcatEntry>(extraBufferCapacity = 16)
+
+        // Like the real stream, each collection keeps its own rolling buffer and re-sends the
+        // whole of it with every new line; lines from before a clear are gone for a new one.
+        override fun streamLogs(maxBufferSize: Int): Flow<List<LogcatEntry>> = flow {
+            val buffer = if (clearCalled) mutableListOf() else sampleLogs.toMutableList()
+            emit(buffer.toList())
+            newLines.collect { line ->
+                buffer += line
+                emit(buffer.toList())
+            }
+        }
 
         override suspend fun dumpLogs(maxLines: Int): Result<List<LogcatEntry>> {
             return Result.Success(sampleLogs)
@@ -150,6 +164,20 @@ class LogcatViewModelTest {
         assertTrue(state.logs.isEmpty())
         assertTrue(state.filteredLogs.isEmpty())
         assertTrue(fakeRepository.clearCalled)
+    }
+
+    // The next line logged after a clear must not bring the cleared ones back.
+    @Test
+    fun `cleared logs stay cleared when new lines arrive`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.onAction(LogcatUiAction.ClearLogs)
+        advanceUntilIdle()
+
+        val next = sampleLogs.first().copy(id = 99L, message = "after clear", raw = "after clear")
+        fakeRepository.newLines.emit(next)
+        advanceUntilIdle()
+
+        assertEquals(listOf(99L), viewModel.uiState.value.logs.map { it.id })
     }
 
     @Test

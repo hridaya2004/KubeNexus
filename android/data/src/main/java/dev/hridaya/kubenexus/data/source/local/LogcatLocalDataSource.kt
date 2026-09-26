@@ -1,20 +1,25 @@
 package dev.hridaya.kubenexus.data.source.local
 
+import android.os.Process as AndroidProcess
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.domain.model.LogLevel
 import dev.hridaya.kubenexus.domain.model.LogcatEntry
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
 import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.Pattern
 import javax.inject.Inject
-import android.os.Process as AndroidProcess
 
 interface LogcatLocalDataSource {
     fun streamLogs(maxBufferSize: Int): Flow<List<LogcatEntry>>
@@ -30,69 +35,76 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
         """^(\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(\d+)\s+(\d+)\s+([VDIWEFA])\s+(.+?)(?::\s*|\s+:\s*)(.*)$""",
     )
 
+    /**
+     * Streams this app's own logcat as rolling snapshots of the newest [maxBufferSize] entries.
+     *
+     * Snapshots are conflated, since only the latest matters, and sent at most every
+     * [EMIT_INTERVAL_MS]; a timer flushes the last lines of a burst even when nothing follows.
+     * Cancelling the collector destroys the logcat process straight away, which also unblocks
+     * the reader waiting in readLine().
+     */
     override fun streamLogs(maxBufferSize: Int): Flow<List<LogcatEntry>> = callbackFlow {
         val pid = AndroidProcess.myPid().toString()
         val buffer = ArrayDeque<LogcatEntry>(maxBufferSize)
+        var pendingChanges = false
+        val lock = Any()
 
-        val processBuilder = try {
-            ProcessBuilder("logcat", "-v", "threadtime", "--pid=$pid")
-        } catch (_: Exception) {
-            ProcessBuilder("logcat", "-v", "threadtime")
+        fun flush() {
+            val snapshot = synchronized(lock) {
+                if (!pendingChanges) return
+                pendingChanges = false
+                buffer.toList()
+            }
+            trySend(snapshot)
         }
 
-        var process: Process? = null
-        try {
-            process = processBuilder.start()
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-
-            var lastEmitTime = System.currentTimeMillis()
-            var pendingChanges = false
-
-            while (isActive) {
-                val line = reader.readLine() ?: break
-                val entry = parseLogLine(line)
-
-                if (entry.pid.isNotEmpty() && entry.pid != pid) {
-                    continue
-                }
-                if (entry.level == LogLevel.UNKNOWN &&
-                    entry.tag == "System" &&
-                    !entry.message.contains(
-                        pid,
-                    )
-                ) {
-                    continue
-                }
-
-                if (buffer.size >= maxBufferSize) {
-                    buffer.removeFirst()
-                }
-                buffer.addLast(entry)
-                pendingChanges = true
-
-                val now = System.currentTimeMillis()
-                if (now - lastEmitTime >= 100L || buffer.size < 10) {
-                    trySend(buffer.toList())
-                    lastEmitTime = now
-                    pendingChanges = false
-                }
-            }
-
-            if (pendingChanges) {
-                trySend(buffer.toList())
-            }
+        val process = try {
+            ProcessBuilder("logcat", "-v", "threadtime", "--pid=$pid").start()
         } catch (e: Exception) {
-            if (isActive) {
-                trySend(buffer.toList())
+            close(e)
+            return@callbackFlow
+        }
+
+        val reader = launch(dispatcherProvider.io) {
+            try {
+                BufferedReader(InputStreamReader(process.inputStream)).use { input ->
+                    while (isActive) {
+                        val line = input.readLine() ?: break
+                        val entry = parseLogLine(line)
+                        if (entry.pid.isNotEmpty() && entry.pid != pid) continue
+                        if (entry.level == LogLevel.UNKNOWN &&
+                            entry.tag == "System" &&
+                            !entry.message.contains(pid)
+                        ) {
+                            continue
+                        }
+                        synchronized(lock) {
+                            if (buffer.size >= maxBufferSize) buffer.removeFirst()
+                            buffer.addLast(entry)
+                            pendingChanges = true
+                        }
+                    }
+                }
+            } catch (_: IOException) {
+                // The process was destroyed because the collector went away.
             }
-        } finally {
-            process?.destroy()
+            flush()
+            channel.close()
+        }
+
+        val ticker = launch {
+            while (isActive) {
+                delay(EMIT_INTERVAL_MS)
+                flush()
+            }
         }
 
         awaitClose {
-            process?.destroy()
+            process.destroy()
+            ticker.cancel()
+            reader.cancel()
         }
-    }.flowOn(dispatcherProvider.io)
+    }.buffer(Channel.CONFLATED).flowOn(dispatcherProvider.io)
 
     override suspend fun dumpLogs(maxLines: Int): List<LogcatEntry> =
         withContext(dispatcherProvider.io) {
@@ -191,5 +203,9 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
                 raw = line,
             )
         }
+    }
+
+    private companion object {
+        const val EMIT_INTERVAL_MS = 100L
     }
 }

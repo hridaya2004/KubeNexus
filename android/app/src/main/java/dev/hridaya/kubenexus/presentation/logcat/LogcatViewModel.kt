@@ -88,6 +88,9 @@ class LogcatViewModel @Inject constructor(
 
             is LogcatUiAction.ClearLogs -> {
                 viewModelScope.launch {
+                    // The stream keeps its own rolling buffer and would re-send the old lines
+                    // with the next new one, so it is stopped and started afresh around the clear.
+                    logStreamJob?.cancel()
                     clearLogcatUseCase()
                     _uiState.update {
                         it.copy(
@@ -96,6 +99,7 @@ class LogcatViewModel @Inject constructor(
                             levelCounts = emptyMap(),
                         )
                     }
+                    if (!_uiState.value.isPaused) startLogStream()
                     _events.send(LogcatUiEvent.ShowMessage("Logs cleared"))
                 }
             }

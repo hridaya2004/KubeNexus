@@ -102,15 +102,17 @@ fun LogcatScreen(
 
     var autoScrollEnabled by remember { mutableStateOf(true) }
 
-    // Update autoScrollEnabled when user scrolls manually
+    // Decided when a scroll ends: scrolled away from the bottom pauses following, scrolled
+    // back to it resumes. Checking when a scroll starts pulled the user back on the next line.
     LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
             autoScrollEnabled = isAtBottom
         }
     }
 
-    // Auto-scroll when new logs arrive ONLY if auto-scroll is currently active
-    LaunchedEffect(uiState.filteredLogs.size) {
+    // Keyed on the newest entry rather than the count: once the rolling buffer is full the
+    // count stops changing while new lines keep arriving.
+    LaunchedEffect(uiState.filteredLogs.lastOrNull()?.id) {
         if (autoScrollEnabled && uiState.filteredLogs.isNotEmpty()) {
             listState.scrollToItem(uiState.filteredLogs.size - 1)
         }
