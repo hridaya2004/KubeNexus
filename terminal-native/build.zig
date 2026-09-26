@@ -189,8 +189,11 @@ fn buildNativeLibrary(
         .link_libc = true,
         // Unstripped: AGP strips the shipped copy and keeps the symbols for Play.
         .strip = false,
-        .unwind_tables = .none,
-        .omit_frame_pointer = true,
+        // Unwind tables and frame pointers let Android's unwinder walk native frames, so a
+        // crash report shows the whole stack rather than stopping at the first native frame,
+        // which would leave the debug symbols shipped to Play with nothing to symbolicate.
+        .unwind_tables = .async,
+        .omit_frame_pointer = false,
     });
     root_module.addIncludePath(b.path("src"));
     root_module.addImport("ghostty-vt", ghostty_dep.module("ghostty-vt"));
@@ -225,15 +228,13 @@ fn buildNativeLibrary(
     lib.link_function_sections = true;
     lib.link_data_sections = true;
     lib.link_gc_sections = true;
-    lib.link_eh_frame_hdr = false;
+    lib.link_eh_frame_hdr = true;
     // Google Play requires 16 KB-aligned LOAD segments for apps targeting Android 15+.
     // LLD only defaults to that on arm64 (64 KB); x86_64 and x86 would otherwise get 4 KB.
     lib.link_z_max_page_size = 16384;
     lib.link_z_common_page_size = 16384;
     lib.lto = .thin;
     root_module.strip = false;
-    root_module.unwind_tables = .none;
-    root_module.omit_frame_pointer = true;
 
     lib.setLibCFile(libc_config);
     lib.version_script = b.path("src/version-script.map");
