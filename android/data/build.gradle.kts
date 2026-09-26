@@ -60,7 +60,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.yamlkt)
+    implementation(libs.snakeyaml.engine)
     implementation(libs.androidx.datastore.preferences)
 
 

@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.data.kubeconfig
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KubeconfigParserTest {
@@ -117,5 +118,109 @@ class KubeconfigParserTest {
             current-context: dev-cluster
         """.trimIndent()
         KubeconfigParser.parse(invalidKubeconfig)
+    }
+
+    // Cluster, context and user entries sharing names is the norm (kind, EKS, GKE). The
+    // stored identity must be the one clientcmd connects to, whatever the entry order.
+    private fun sharedNamesKubeconfig(order: List<String>, current: String): String {
+        fun cluster(n: String) = "- cluster:\n    server: https://$n.example:6443\n  name: $n"
+        fun context(n: String) = "- context:\n    cluster: $n\n    namespace: $n-ns\n    user: $n-user\n  name: $n"
+        fun user(n: String) = "- name: $n-user\n  user:\n    token: $n-token"
+        return buildString {
+            appendLine("apiVersion: v1")
+            appendLine("kind: Config")
+            appendLine("clusters:"); order.forEach { appendLine(cluster(it)) }
+            appendLine("contexts:"); order.forEach { appendLine(context(it)) }
+            appendLine("users:"); order.forEach { appendLine(user(it)) }
+            appendLine("current-context: $current")
+        }
+    }
+
+    @Test
+    fun `parse resolves the current context when names are shared, in either order`() {
+        for (order in listOf(listOf("staging", "prod"), listOf("prod", "staging"))) {
+            val parsed = KubeconfigParser.parse(sharedNamesKubeconfig(order, current = "prod"))
+
+            assertEquals("order $order", "prod", parsed.clusterName)
+            assertEquals("order $order", "https://prod.example:6443", parsed.serverUrl)
+            assertEquals("order $order", "prod", parsed.contextName)
+            assertEquals("order $order", "prod-user", parsed.userName)
+            assertEquals("order $order", "prod-ns", parsed.namespace)
+        }
+    }
+
+    @Test
+    fun `parse does not confuse a name with another that it prefixes`() {
+        val parsed = KubeconfigParser.parse(
+            sharedNamesKubeconfig(listOf("production", "prod"), current = "prod"),
+        )
+
+        assertEquals("https://prod.example:6443", parsed.serverUrl)
+        assertEquals("prod-user", parsed.userName)
+    }
+
+    @Test
+    fun `parse reads json kubeconfigs`() {
+        val json = """
+            {"apiVersion": "v1", "kind": "Config",
+             "clusters": [{"name": "c1", "cluster": {"server": "https://c1.example:6443", "insecure-skip-tls-verify": true}}],
+             "contexts": [{"name": "ctx", "context": {"cluster": "c1", "user": "u1"}}],
+             "users": [{"name": "u1", "user": {"token": "t"}}],
+             "current-context": "ctx"}
+        """.trimIndent()
+
+        val parsed = KubeconfigParser.parse(json)
+
+        assertEquals("c1", parsed.clusterName)
+        assertEquals("https://c1.example:6443", parsed.serverUrl)
+        assertEquals("ctx", parsed.contextName)
+        assertEquals("u1", parsed.userName)
+        assertEquals(true, parsed.insecureSkipTlsVerify)
+    }
+
+    @Test
+    fun `parse handles comments and quoted values`() {
+        val kubeconfig = """
+            # exported from the dashboard
+            apiVersion: v1
+            kind: Config
+            clusters:
+            - name: "edge"   # the lab cluster
+              cluster:
+                server: 'https://edge.example:6443'
+            contexts:
+            - name: "edge-admin"
+              context:
+                cluster: "edge"
+                user: 'admin'
+            current-context: "edge-admin"
+        """.trimIndent()
+
+        val parsed = KubeconfigParser.parse(kubeconfig)
+
+        assertEquals("edge", parsed.clusterName)
+        assertEquals("https://edge.example:6443", parsed.serverUrl)
+        assertEquals("edge-admin", parsed.contextName)
+        assertEquals("admin", parsed.userName)
+        assertEquals("default", parsed.namespace)
+    }
+
+    @Test
+    fun `parse explains a missing or dangling current-context instead of guessing`() {
+        val withoutCurrent = sharedNamesKubeconfig(listOf("a"), current = "a").replace("current-context: a\n", "")
+        val noCurrent = runCatching { KubeconfigParser.parse(withoutCurrent) }.exceptionOrNull()
+        assertTrue(noCurrent is IllegalArgumentException)
+        assertTrue(noCurrent!!.message!!.contains("no current-context"))
+
+        val dangling = runCatching {
+            KubeconfigParser.parse(sharedNamesKubeconfig(listOf("a"), current = "missing"))
+        }.exceptionOrNull()
+        assertTrue(dangling is IllegalArgumentException)
+        assertTrue(dangling!!.message!!.contains("\"missing\""))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `parse rejects text that is not yaml`() {
+        KubeconfigParser.parse("clusters: [unclosed")
     }
 }
