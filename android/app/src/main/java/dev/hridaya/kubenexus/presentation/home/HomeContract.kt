@@ -68,6 +68,7 @@ sealed interface HomeUiAction {
     data class RequestDeleteCluster(val cluster: Cluster) : HomeUiAction
     data object DismissDeleteCluster : HomeUiAction
     data class ConfirmDeleteCluster(val clusterId: String) : HomeUiAction
+    data object ClearCachedData : HomeUiAction
     data class RequestDeleteNamespace(val namespace: String) : HomeUiAction
     data object DismissDeleteNamespace : HomeUiAction
     data class ConfirmDeleteNamespace(val namespace: String) : HomeUiAction

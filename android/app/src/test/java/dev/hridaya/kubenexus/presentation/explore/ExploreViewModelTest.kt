@@ -354,6 +354,8 @@ class ExploreViewModelTest {
 
         override suspend fun setActiveCluster(id: String): Result<Unit> = Result.Success(Unit)
         override suspend fun deleteCluster(id: String): Result<Unit> = Result.Success(Unit)
+
+        override suspend fun clearCachedData(): Result<Unit> = Result.Success(Unit)
         override suspend fun updateClusterName(id: String, newName: String): Result<Unit> =
             Result.Success(Unit)
 

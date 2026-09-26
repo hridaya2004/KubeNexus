@@ -18,6 +18,9 @@ interface ClusterRepository {
 
     suspend fun setActiveCluster(id: String): Result<Unit>
     suspend fun deleteCluster(id: String): Result<Unit>
+
+    /** Deletes cached cluster data for every cluster, keeping the clusters and credentials. */
+    suspend fun clearCachedData(): Result<Unit>
     suspend fun testConnection(kubeconfigRaw: String): Result<String>
     suspend fun testClusterById(id: String): Result<String>
     suspend fun checkClusterHealth(id: String): Result<ClusterHealth>

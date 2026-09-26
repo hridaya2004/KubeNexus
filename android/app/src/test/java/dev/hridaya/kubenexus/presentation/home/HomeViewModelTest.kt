@@ -17,6 +17,7 @@ import dev.hridaya.kubenexus.domain.repository.ClusterRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.usecase.AddClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
+import dev.hridaya.kubenexus.domain.usecase.ClearCachedDataUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteNamespaceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -89,6 +91,7 @@ class HomeViewModelTest {
                 fakeClusterRepository,
                 testDispatcherProvider,
             ),
+            clearCachedDataUseCase = ClearCachedDataUseCase(fakeClusterRepository),
             deleteNamespaceUseCase = DeleteNamespaceUseCase(fakePodRepository),
             updateClusterNameUseCase = UpdateClusterNameUseCase(fakeClusterRepository),
             testClusterConnectionUseCase = TestClusterConnectionUseCase(
@@ -383,8 +386,26 @@ class HomeViewModelTest {
             )
         }
 
+    @Test
+    fun `clearing cached data keeps clusters and confirms`() = runTest(testDispatcher) {
+        val toasts = mutableListOf<String>()
+        val job = launch {
+            viewModel.effects.collect { if (it is HomeUiEffect.ShowToast) toasts += it.message }
+        }
+        advanceUntilIdle()
+        val clustersBefore = fakeClusterRepository.clustersFlow.value
+
+        viewModel.onAction(HomeUiAction.ClearCachedData)
+        advanceUntilIdle()
+
+        assertTrue(fakeClusterRepository.cacheCleared)
+        assertEquals(clustersBefore, fakeClusterRepository.clustersFlow.value)
+        assertTrue(toasts.any { it.startsWith("Cached cluster data cleared") })
+        job.cancel()
+    }
+
     private class FakeClusterRepository : ClusterRepository {
-        private val clustersFlow = MutableStateFlow<List<Cluster>>(emptyList())
+        val clustersFlow = MutableStateFlow<List<Cluster>>(emptyList())
 
         override fun getClustersStream(): Flow<List<Cluster>> = clustersFlow.asStateFlow()
 
@@ -428,6 +449,13 @@ class HomeViewModelTest {
 
         override suspend fun deleteCluster(id: String): Result<Unit> {
             clustersFlow.value = clustersFlow.value.filterNot { it.id == id }
+            return Result.Success(Unit)
+        }
+
+        var cacheCleared = false
+
+        override suspend fun clearCachedData(): Result<Unit> {
+            cacheCleared = true
             return Result.Success(Unit)
         }
 

@@ -11,6 +11,7 @@ import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.usecase.AddClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
+import dev.hridaya.kubenexus.domain.usecase.ClearCachedDataUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteNamespaceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
@@ -48,6 +49,7 @@ class HomeViewModel @Inject constructor(
     private val addClusterUseCase: AddClusterUseCase,
     private val setActiveClusterUseCase: SetActiveClusterUseCase,
     private val deleteClusterUseCase: DeleteClusterUseCase,
+    private val clearCachedDataUseCase: ClearCachedDataUseCase,
     private val deleteNamespaceUseCase: DeleteNamespaceUseCase,
     private val updateClusterNameUseCase: UpdateClusterNameUseCase,
     private val testClusterConnectionUseCase: TestClusterConnectionUseCase,
@@ -301,6 +303,8 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(clusterToDelete = null) }
                 deleteCluster(action.clusterId)
             }
+
+            is HomeUiAction.ClearCachedData -> clearCachedData()
 
             is HomeUiAction.RequestDeleteNamespace -> {
                 _uiState.update { it.copy(namespaceToDelete = action.namespace) }
@@ -571,6 +575,22 @@ class HomeViewModel @Inject constructor(
                 is Result.Error -> {
                     _effects.send(HomeUiEffect.ShowToast("Couldn't remove the cluster. Check your connection and try again."))
                 }
+
+                is Result.Loading -> Unit
+            }
+        }
+    }
+
+    private fun clearCachedData() {
+        viewModelScope.launch(dispatcherProvider.main) {
+            when (clearCachedDataUseCase()) {
+                is Result.Success -> _effects.send(
+                    HomeUiEffect.ShowToast("Cached cluster data cleared. Your clusters are kept."),
+                )
+
+                is Result.Error -> _effects.send(
+                    HomeUiEffect.ShowToast("Couldn't clear cached data. Please try again."),
+                )
 
                 is Result.Loading -> Unit
             }

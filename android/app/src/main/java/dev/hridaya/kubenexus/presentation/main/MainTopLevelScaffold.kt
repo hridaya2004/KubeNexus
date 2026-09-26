@@ -13,6 +13,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dev.hridaya.kubenexus.presentation.explore.ExploreRoute
 import dev.hridaya.kubenexus.presentation.explore.ExploreViewModel
 import dev.hridaya.kubenexus.presentation.home.HomeRoute
+import dev.hridaya.kubenexus.presentation.home.HomeUiAction
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.navigation.Destination
 import dev.hridaya.kubenexus.presentation.settings.SettingsScreen
@@ -95,6 +96,7 @@ internal fun MainTopLevelScaffold(
                     SettingsScreen(
                         onNavigateToLogcat = onNavigateToLogcat,
                         onNavigateToOpenSourceLicenses = onNavigateToOpenSourceLicenses,
+                        onClearCachedData = { homeViewModel.onAction(HomeUiAction.ClearCachedData) },
                     )
                 }
             }

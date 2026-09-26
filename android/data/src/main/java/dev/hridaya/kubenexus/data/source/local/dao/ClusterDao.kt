@@ -51,6 +51,12 @@ abstract class ClusterDao {
     @Query("DELETE FROM sync_metadata WHERE clusterId = :id")
     abstract suspend fun deleteSyncMetadataForCluster(id: String)
 
+    @Query("DELETE FROM deployments WHERE clusterId = :id")
+    abstract suspend fun deleteDeploymentsForCluster(id: String)
+
+    @Query("DELETE FROM services WHERE clusterId = :id")
+    abstract suspend fun deleteServicesForCluster(id: String)
+
     /**
      * Removes a cluster and everything cached against it.
      *
@@ -66,8 +72,51 @@ abstract class ClusterDao {
         deleteAPIResourcesForCluster(id)
         deleteNamespacesForCluster(id)
         deletePodsForCluster(id)
+        deleteDeploymentsForCluster(id)
+        deleteServicesForCluster(id)
         deleteSyncMetadataForCluster(id)
         deleteCluster(id)
+    }
+
+    @Query("DELETE FROM pods")
+    abstract suspend fun deleteAllPods()
+
+    @Query("DELETE FROM namespaces")
+    abstract suspend fun deleteAllNamespaces()
+
+    @Query("DELETE FROM deployments")
+    abstract suspend fun deleteAllDeployments()
+
+    @Query("DELETE FROM services")
+    abstract suspend fun deleteAllServices()
+
+    @Query("DELETE FROM api_resources")
+    abstract suspend fun deleteAllAPIResources()
+
+    @Query("DELETE FROM explained_resources")
+    abstract suspend fun deleteAllExplainedResources()
+
+    @Query("DELETE FROM open_api_schemas")
+    abstract suspend fun deleteAllOpenApiSchemas()
+
+    @Query("DELETE FROM sync_metadata")
+    abstract suspend fun deleteAllSyncMetadata()
+
+    /**
+     * Removes everything cached from every cluster (workloads, discovery, explains, schemas
+     * and sync timestamps) and keeps the clusters themselves, credentials included. It is
+     * all re-fetched on the next refresh.
+     */
+    @Transaction
+    open suspend fun clearCachedData() {
+        deleteAllPods()
+        deleteAllNamespaces()
+        deleteAllDeployments()
+        deleteAllServices()
+        deleteAllAPIResources()
+        deleteAllExplainedResources()
+        deleteAllOpenApiSchemas()
+        deleteAllSyncMetadata()
     }
 
     @Query("UPDATE clusters SET isActive = 0")

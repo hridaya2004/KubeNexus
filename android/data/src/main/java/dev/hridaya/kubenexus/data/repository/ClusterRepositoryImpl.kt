@@ -16,6 +16,7 @@ import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -119,13 +120,25 @@ class ClusterRepositoryImpl @Inject constructor(
     override suspend fun deleteCluster(id: String): Result<Unit> =
         withContext(dispatcherProvider.io) {
             try {
-                // Removes the cached pods, namespaces, discovery, explains and
+                // Removes the cached workloads, namespaces, discovery, explains and
                 // OpenAPI schema blob along with the cluster row.
                 clusterDao.deleteClusterWithCachedData(id)
                 Result.Success(Unit)
             } catch (t: Throwable) {
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Result.Error(AppError.Unknown("Failed to delete cluster: $sanitizedMsg", t))
+            }
+        }
+
+    override suspend fun clearCachedData(): Result<Unit> =
+        withContext(dispatcherProvider.io) {
+            try {
+                clusterDao.clearCachedData()
+                Result.Success(Unit)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                val sanitizedMsg = LogSanitizer.sanitize(t.message)
+                Result.Error(AppError.Database("Failed to clear cached data: $sanitizedMsg"))
             }
         }
 

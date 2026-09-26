@@ -18,17 +18,24 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DataObject
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -57,8 +64,33 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onNavigateToLogcat: () -> Unit = {},
     onNavigateToOpenSourceLicenses: () -> Unit = {},
+    onClearCachedData: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    var confirmClearCache by rememberSaveable { mutableStateOf(false) }
+
+    if (confirmClearCache) {
+        AlertDialog(
+            onDismissRequest = { confirmClearCache = false },
+            title = { Text("Clear cached cluster data?") },
+            text = {
+                Text(
+                    "Deletes the pods, deployments, services, namespaces and API schemas KubeNexus " +
+                        "has cached from your clusters. Your clusters and their credentials are " +
+                        "kept, and the data is fetched again the next time you open it.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmClearCache = false
+                    onClearCachedData()
+                }) { Text("Clear") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearCache = false }) { Text("Cancel") }
+            },
+        )
+    }
     val currentThemeMode = LocalThemeMode.current
     val onThemeModeChange = LocalOnThemeModeChange.current
     val amoledDark = LocalAmoledDark.current
@@ -138,6 +170,25 @@ fun SettingsScreen(
                     title = "Logcat",
                     subtitle = "Inspect, filter, and share runtime application logs",
                     onClick = onNavigateToLogcat,
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Data",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
+
+            item {
+                PreferenceNavigationCard(
+                    icon = Icons.Outlined.DeleteSweep,
+                    title = "Clear cached cluster data",
+                    subtitle = "Keeps your clusters and credentials",
+                    onClick = { confirmClearCache = true },
                 )
             }
 

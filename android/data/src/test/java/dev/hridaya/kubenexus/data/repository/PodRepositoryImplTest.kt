@@ -327,6 +327,16 @@ class PodRepositoryImplTest {
         override suspend fun deleteExplainedResourcesForCluster(id: String) = Unit
         override suspend fun deleteOpenApiSchemaForCluster(id: String) = Unit
         override suspend fun deleteSyncMetadataForCluster(id: String) = Unit
+        override suspend fun deleteDeploymentsForCluster(id: String) = Unit
+        override suspend fun deleteServicesForCluster(id: String) = Unit
+        override suspend fun deleteAllPods() = Unit
+        override suspend fun deleteAllNamespaces() = Unit
+        override suspend fun deleteAllDeployments() = Unit
+        override suspend fun deleteAllServices() = Unit
+        override suspend fun deleteAllAPIResources() = Unit
+        override suspend fun deleteAllExplainedResources() = Unit
+        override suspend fun deleteAllOpenApiSchemas() = Unit
+        override suspend fun deleteAllSyncMetadata() = Unit
 
         override suspend fun deactivateAllClusters() {
             clusters.replaceAll { _, v -> v.copy(isActive = false) }
