@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.presentation.main
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -9,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -90,8 +92,14 @@ fun MainScreen(
     // nothing on screen uses them.
     LaunchedEffect(liveScreenKeys) { screenStores.retainOnly(liveScreenKeys) }
 
+    val context = LocalContext.current
+    // The only collector of Home's effects. They come from a Channel, which hands each event to
+    // exactly one collector, so a second collector elsewhere silently took half of them.
     LaunchedEffect(homeViewModel.effects) {
         homeViewModel.effects.collect { effect ->
+            if (effect is HomeUiEffect.ShowToast) {
+                Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+            }
             if (effect is HomeUiEffect.NavigateToHome) {
                 isManagingClusters = false
                 isViewingPods = false
