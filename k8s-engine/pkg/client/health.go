@@ -118,21 +118,37 @@ func (c *Client) CheckHealthJSON() (string, error) {
 	defer cancel()
 
 	var health ClusterHealth
+	// firstErr keeps the reason when nothing answers, so a TLS failure or a 401 is not
+	// reported the same way as a cluster that is down.
+	var firstErr error
+	noteErr := func(err error) {
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
 
 	if ver, err := c.clientset.Discovery().ServerVersion(); err == nil && ver != nil {
 		health.ServerVersion = ver.GitVersion
+	} else if err != nil {
+		noteErr(err)
 	}
 
 	if livezData, err := c.clientset.Discovery().RESTClient().Get().AbsPath("/livez").DoRaw(ctx); err == nil {
 		health.Livez = strings.TrimSpace(string(livezData)) == "ok"
+	} else {
+		noteErr(err)
 	}
 
 	if readyzData, err := c.clientset.Discovery().RESTClient().Get().AbsPath("/readyz").DoRaw(ctx); err == nil {
 		health.Readyz = strings.TrimSpace(string(readyzData)) == "ok"
+	} else {
+		noteErr(err)
 	}
 
 	if healthzData, err := c.clientset.Discovery().RESTClient().Get().AbsPath("/healthz").DoRaw(ctx); err == nil {
 		health.Healthz = strings.TrimSpace(string(healthzData)) == "ok"
+	} else {
+		noteErr(err)
 	}
 
 	if health.Readyz {
@@ -143,6 +159,8 @@ func (c *Client) CheckHealthJSON() (string, error) {
 		health.StatusMessage = "Healthy"
 	} else if health.ServerVersion != "" {
 		health.StatusMessage = "Reachable"
+	} else if firstErr != nil {
+		health.StatusMessage = "Unhealthy: " + firstErr.Error()
 	} else {
 		health.StatusMessage = "Unhealthy"
 	}

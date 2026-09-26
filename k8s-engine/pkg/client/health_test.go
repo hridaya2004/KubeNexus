@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -106,5 +107,32 @@ func TestClient_HealthChecks_Unhealthy(t *testing.T) {
 	ping, err := client.Ping()
 	if err == nil {
 		t.Errorf("Ping() = %q, expected error", ping)
+	}
+}
+
+// When every probe fails, the status must say why: an expired token or a TLS problem
+// must not look the same as a cluster that is down.
+func TestCheckHealthJSON_ReportsWhyItIsUnhealthy(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"kind":"Status","apiVersion":"v1","status":"Failure","message":"Unauthorized","reason":"Unauthorized","code":401}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(tlsKubeconfig(server))
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	out, err := client.CheckHealthJSON()
+	if err != nil {
+		t.Fatalf("CheckHealthJSON() error = %v", err)
+	}
+	var health ClusterHealth
+	if err := json.Unmarshal([]byte(out), &health); err != nil {
+		t.Fatalf("decoding %s: %v", out, err)
+	}
+	if !strings.HasPrefix(health.StatusMessage, "Unhealthy: ") || !strings.Contains(health.StatusMessage, "provide credentials") {
+		t.Errorf("StatusMessage = %q, want the 401 reason", health.StatusMessage)
 	}
 }
