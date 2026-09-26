@@ -15,6 +15,7 @@ import dev.hridaya.kubenexus.data.source.local.dao.ServiceDao
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServiceSummary
 import dev.hridaya.kubenexus.domain.repository.ServiceRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -57,6 +58,7 @@ class ServiceRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create service" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to create service for cluster '$clusterId': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create service" }))
@@ -115,6 +117,7 @@ class ServiceRepositoryImpl @Inject constructor(
 
             Result.Success(Unit)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to sync services for cluster '$clusterId': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to connect to cluster API" }))
@@ -145,6 +148,7 @@ class ServiceRepositoryImpl @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to describe service '$name': $sanitizedMsg", t))
             Result.Error(

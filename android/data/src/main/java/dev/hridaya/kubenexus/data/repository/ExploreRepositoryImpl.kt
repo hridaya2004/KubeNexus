@@ -109,6 +109,7 @@ class ExploreRepositoryImpl @Inject constructor(
                     Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to discover API resources" }))
                 }
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Log.e(TAG, LogSanitizer.withStackTrace("Failed to fetch API resources: $sanitizedMsg", t))
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to discover API resources" }))
@@ -156,6 +157,7 @@ class ExploreRepositoryImpl @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, LogSanitizer.withStackTrace("Explaining $resourceOrKind failed", e))
             Result.Error(AppError.Unknown("Couldn't read the API documentation for $resourceOrKind.", e))
         } catch (e: OutOfMemoryError) {

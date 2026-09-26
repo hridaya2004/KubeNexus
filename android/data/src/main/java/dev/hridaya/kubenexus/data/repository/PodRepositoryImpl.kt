@@ -22,6 +22,7 @@ import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.TerminalSession
 import dev.hridaya.kubenexus.domain.repository.PodRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
@@ -115,6 +116,7 @@ class PodRepositoryImpl @Inject constructor(
                 labelSelector = labelSelector,
             )
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to list pods by selector: $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to list pods by selector" }))
@@ -191,6 +193,7 @@ class PodRepositoryImpl @Inject constructor(
 
                 Result.Success(Unit)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Log.e(TAG, LogSanitizer.withStackTrace("Failed to refresh workloads for cluster '$clusterId': $sanitizedMsg", t))
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to connect to cluster API" }))
@@ -219,6 +222,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to describe pod '$podName'" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to describe pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to describe pod from cluster API" }))
@@ -245,6 +249,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch pod metrics" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to fetch pod metrics: $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch pod metrics" }))
@@ -272,6 +277,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch metrics for pod '$podName'" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to fetch metrics for pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch pod metrics" }))
@@ -301,6 +307,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to delete pod $podName" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to delete pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to delete pod" }))
@@ -329,6 +336,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to delete namespace $namespace" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to delete namespace '$namespace': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to delete namespace" }))
@@ -355,6 +363,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create namespace $name" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to create namespace '$name': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create namespace '$name'" }))
@@ -384,6 +393,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create pod" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to create pod for cluster '$clusterId': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create pod" }))
@@ -420,6 +430,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch logs for pod '$podName'" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to fetch logs for pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to fetch logs from cluster API" }))
@@ -526,6 +537,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to exec command" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Exec command error on pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to exec command" }))
@@ -582,6 +594,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to start terminal session" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Start terminal error on pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to start terminal session" }))
@@ -642,6 +655,7 @@ class PodRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to start exec session" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Start exec session error on pod '$podName': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to start exec session" }))

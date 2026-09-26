@@ -76,6 +76,7 @@ class ClusterRepositoryImpl @Inject constructor(
 
             Result.Success(newCluster)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             val errorMsg = sanitizedMsg.ifEmpty { "Failed to add cluster due to unknown error." }
             Result.Error(AppError.Unknown(errorMsg, t))
@@ -107,6 +108,7 @@ class ClusterRepositoryImpl @Inject constructor(
 
                 Result.Success(Unit)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 clusterDao.updateStatus(id, ClusterStatus.ERROR.name, null)
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 val errorMsg = sanitizedMsg.ifEmpty { "Failed to switch active cluster." }
@@ -122,6 +124,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 clusterDao.deleteClusterWithCachedData(id)
                 Result.Success(Unit)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Result.Error(AppError.Unknown("Failed to delete cluster: $sanitizedMsg", t))
             }
@@ -146,6 +149,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 val info = connectionTester.testConnection(parsed)
                 Result.Success(info)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 val errorMsg = sanitizedMsg.ifEmpty { "Connection test failed." }
                 Result.Error(AppError.Unknown(errorMsg, t))
@@ -167,6 +171,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 )
                 Result.Success(info)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 clusterDao.updateStatus(id, ClusterStatus.ERROR.name, null)
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 val errorMsg = sanitizedMsg.ifEmpty { "Connection test failed." }
@@ -182,6 +187,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
                 nativeBridge.checkHealth(decryptedKubeconfig)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 val errorMsg = sanitizedMsg.ifEmpty { "Health check failed." }
                 Result.Error(AppError.Unknown(errorMsg, t))
@@ -193,6 +199,7 @@ class ClusterRepositoryImpl @Inject constructor(
             try {
                 nativeBridge.checkHealth(kubeconfigRaw)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 val errorMsg = sanitizedMsg.ifEmpty { "Health check failed." }
                 Result.Error(AppError.Unknown(errorMsg, t))
@@ -206,6 +213,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 clusterDao.updateClusterName(id, newName.trim())
                 Result.Success(Unit)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Result.Error(AppError.Unknown("Failed to update cluster name: $sanitizedMsg", t))
             }
@@ -220,6 +228,7 @@ class ClusterRepositoryImpl @Inject constructor(
             clusterDao.updateStatus(id, status.name, lastConnectedAt)
             Result.Success(Unit)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Result.Error(AppError.Unknown("Failed to update status: $sanitizedMsg", t))
         }
@@ -239,6 +248,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 }
                 Result.Success(migratedCount)
             } catch (t: Throwable) {
+                if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Result.Error(
                     AppError.Unknown(

@@ -13,6 +13,7 @@ import dev.hridaya.kubenexus.data.source.local.entity.NamespaceEntity
 import dev.hridaya.kubenexus.data.source.local.entity.PodEntity
 import dev.hridaya.kubenexus.data.source.local.entity.SyncMetadataEntity
 import dev.hridaya.kubenexus.domain.model.Pod
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -170,6 +171,21 @@ class PodRepositoryImplTest {
             val error = (result as Result.Error).error
             assertTrue(error is AppError.Network)
             assertEquals("connection reset by peer", error.message)
+        }
+
+    // A cancelled call (the screen closed, or a newer refresh replaced it) is not a failure:
+    // it must reach the caller as cancellation, not be logged and returned as an error.
+    @Test
+    fun `cancellation propagates instead of being reported as a failed request`() =
+        runTest(testDispatcher) {
+            seedCluster(id = "c-1", rawKubeconfig = encryptor.encrypt(sampleKubeconfig))
+            recordingBridge.errorToThrow = CancellationException("screen closed")
+
+            val thrown = runCatching {
+                repository.createPodFromManifest(clusterId = "c-1", manifestYaml = sampleManifest)
+            }.exceptionOrNull()
+
+            assertTrue(thrown is CancellationException)
         }
 
     @Test

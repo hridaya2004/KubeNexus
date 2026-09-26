@@ -15,6 +15,7 @@ import dev.hridaya.kubenexus.data.source.local.dao.DeploymentDao
 import dev.hridaya.kubenexus.domain.model.DeploymentDetails
 import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.domain.repository.DeploymentRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -63,6 +64,7 @@ class DeploymentRepositoryImpl @Inject constructor(
             }
             Result.Success(Unit)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to create deployment for cluster '$clusterId': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to create deployment" }))
@@ -89,6 +91,7 @@ class DeploymentRepositoryImpl @Inject constructor(
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to load deployments" }))
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to load deployments for cluster '$clusterId': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to load deployments" }))
@@ -147,6 +150,7 @@ class DeploymentRepositoryImpl @Inject constructor(
 
             Result.Success(Unit)
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to sync deployments for cluster '$clusterId': $sanitizedMsg", t))
             Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to connect to cluster API" }))
@@ -177,6 +181,7 @@ class DeploymentRepositoryImpl @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to describe deployment '$name': $sanitizedMsg", t))
             Result.Error(
@@ -210,6 +215,7 @@ class DeploymentRepositoryImpl @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to scale deployment '$name': $sanitizedMsg", t))
             Result.Error(
@@ -242,6 +248,7 @@ class DeploymentRepositoryImpl @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to restart deployment '$name': $sanitizedMsg", t))
             Result.Error(
@@ -275,6 +282,7 @@ class DeploymentRepositoryImpl @Inject constructor(
                 )
             }
         } catch (t: Throwable) {
+            if (t is CancellationException) throw t
             val sanitizedMsg = LogSanitizer.sanitize(t.message)
             Log.e(TAG, LogSanitizer.withStackTrace("Failed to delete deployment '$name': $sanitizedMsg", t))
             Result.Error(
