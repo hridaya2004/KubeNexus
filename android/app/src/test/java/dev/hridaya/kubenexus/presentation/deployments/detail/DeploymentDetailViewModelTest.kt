@@ -184,9 +184,14 @@ class DeploymentDetailViewModelTest {
         viewModel.onAction(DeploymentDetailUiAction.ScaleInputChanged(5))
         assertEquals(5, viewModel.uiState.value.scaleInput)
 
+        val requestsBeforeScale = fakeDeploymentRepository.detailsRequests
+        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails.copy(desiredReplicas = 5))
+
         viewModel.onAction(DeploymentDetailUiAction.ConfirmScale)
         advanceUntilIdle()
 
+        assertEquals(requestsBeforeScale + 1, fakeDeploymentRepository.detailsRequests)
+        assertEquals(5, viewModel.uiState.value.details?.desiredReplicas)
         assertEquals(5, fakeDeploymentRepository.capturedScaleReplicas)
         assertEquals("c1", fakeDeploymentRepository.capturedScaleClusterId)
         assertEquals("default", fakeDeploymentRepository.capturedScaleNamespace)
@@ -306,10 +311,15 @@ class DeploymentDetailViewModelTest {
 
         val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertTrue(initialRefreshedAt != null && initialRefreshedAt > 0)
+        val requestsBeforeRefresh = fakeDeploymentRepository.detailsRequests
+        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails.copy(readyReplicas = 1))
 
         viewModel.onAction(DeploymentDetailUiAction.Refresh)
         advanceUntilIdle()
 
+        // Refresh must fetch again and show what it fetched, not just keep the old state.
+        assertEquals(requestsBeforeRefresh + 1, fakeDeploymentRepository.detailsRequests)
+        assertEquals(1, viewModel.uiState.value.details?.readyReplicas)
         val refreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertTrue(refreshedAt != null && refreshedAt >= initialRefreshedAt!!)
         assertFalse(viewModel.uiState.value.isRefreshing)
@@ -370,8 +380,12 @@ class DeploymentDetailViewModelTest {
 
         override suspend fun syncDeployments(clusterId: String?, namespace: String?): Result<Unit> = Result.Success(Unit)
 
-        override suspend fun getDeploymentDetails(clusterId: String?, namespace: String, name: String): Result<DeploymentDetails> =
-            deploymentDetailsResult
+        var detailsRequests = 0
+
+        override suspend fun getDeploymentDetails(clusterId: String?, namespace: String, name: String): Result<DeploymentDetails> {
+            detailsRequests++
+            return deploymentDetailsResult
+        }
 
         override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
 

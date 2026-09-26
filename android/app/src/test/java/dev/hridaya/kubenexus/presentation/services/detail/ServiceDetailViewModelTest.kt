@@ -147,10 +147,15 @@ class ServiceDetailViewModelTest {
 
         val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertNotNull(initialRefreshedAt)
+        val requestsBeforeRefresh = fakeServiceRepository.detailsRequests
+        fakeServiceRepository.serviceDetailsResult = Result.Success(sampleDetails.copy(type = "NodePort"))
 
         viewModel.onAction(ServiceDetailUiAction.Refresh)
         advanceUntilIdle()
 
+        // Refresh must fetch again and show what it fetched, not just keep the old state.
+        assertEquals(requestsBeforeRefresh + 1, fakeServiceRepository.detailsRequests)
+        assertEquals("NodePort", viewModel.uiState.value.service?.type)
         val newRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertNotNull(newRefreshedAt)
         assertTrue(newRefreshedAt!! >= initialRefreshedAt!!)
@@ -202,7 +207,12 @@ class ServiceDetailViewModelTest {
         override suspend fun createFromManifest(clusterId: String?, manifestYaml: String): Result<Unit> = Result.Success(Unit)
         override fun getServicesStream(clusterId: String?, namespace: String?): Flow<List<ServiceSummary>> = cachedServicesFlow
         override suspend fun syncServices(clusterId: String?, namespace: String?): Result<Unit> = Result.Success(Unit)
-        override suspend fun getServiceDetails(clusterId: String?, namespace: String, name: String): Result<ServiceDetails> = serviceDetailsResult
+        var detailsRequests = 0
+
+        override suspend fun getServiceDetails(clusterId: String?, namespace: String, name: String): Result<ServiceDetails> {
+            detailsRequests++
+            return serviceDetailsResult
+        }
         override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
     }
 }
