@@ -133,6 +133,18 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `a failed file import is shown on the kubeconfig field until the input changes`() {
+        viewModel.onAction(HomeUiAction.OpenAddClusterSheet)
+        viewModel.onAction(HomeUiAction.FileImportFailed("That file is larger than 1 MB"))
+
+        assertEquals("That file is larger than 1 MB", viewModel.uiState.value.kubeconfigError)
+
+        viewModel.onAction(HomeUiAction.KubeconfigInputChanged("apiVersion: v1"))
+
+        assertEquals(null, viewModel.uiState.value.kubeconfigError)
+    }
+
+    @Test
     fun `ConnectAndSaveSubmitted with blank input sets error`() = runTest(testDispatcher) {
         viewModel.onAction(HomeUiAction.OpenAddClusterSheet)
         viewModel.onAction(HomeUiAction.ConnectAndSaveSubmitted)

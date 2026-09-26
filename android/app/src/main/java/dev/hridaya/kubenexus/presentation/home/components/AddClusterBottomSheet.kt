@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileUpload
@@ -39,12 +40,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +61,7 @@ fun AddClusterBottomSheet(
     onKubeconfigChanged: (String) -> Unit,
     onClusterNameChanged: (String) -> Unit,
     onFileImported: (content: String, fileName: String?) -> Unit,
+    onFileImportFailed: (message: String) -> Unit,
     onConnectAndSave: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -69,13 +75,13 @@ fun AddClusterBottomSheet(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                val fileName = getFileName(context, uri)
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    val content = BufferedReader(InputStreamReader(inputStream)).readText()
-                    onFileImported(content, fileName)
+            // The provider may be slow (a cloud document) and the file arbitrarily large, so it is
+            // read off the main thread and never beyond the size a kubeconfig can have.
+            scope.launch {
+                when (val file = withContext(Dispatchers.IO) { readKubeconfigFile(context, uri) }) {
+                    is KubeconfigFile.Loaded -> onFileImported(file.content, file.name)
+                    is KubeconfigFile.Failed -> onFileImportFailed(file.message)
                 }
-            } catch (_: Exception) {
             }
         }
     }
@@ -165,6 +171,12 @@ fun AddClusterBottomSheet(
                         )
                     }
                 },
+                // Autocorrect and auto-capitalisation would rewrite YAML keys and tokens as they are typed.
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = false,
+                    keyboardType = KeyboardType.Ascii,
+                ),
                 minLines = 7,
                 maxLines = 14,
                 enabled = !isConnecting,
@@ -212,6 +224,26 @@ fun AddClusterBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+private sealed interface KubeconfigFile {
+    data class Loaded(val content: String, val name: String?) : KubeconfigFile
+    data class Failed(val message: String) : KubeconfigFile
+}
+
+private fun readKubeconfigFile(context: Context, uri: Uri): KubeconfigFile = try {
+    val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
+        input.readNBytes(Cluster.MAX_KUBECONFIG_BYTES + 1)
+    }
+    when {
+        bytes == null -> KubeconfigFile.Failed("Couldn't open that file.")
+        bytes.size > Cluster.MAX_KUBECONFIG_BYTES ->
+            KubeconfigFile.Failed("That file is larger than 1 MB, which is more than any kubeconfig needs. Check that it is the right file.")
+        else -> KubeconfigFile.Loaded(bytes.decodeToString(), getFileName(context, uri))
+    }
+} catch (e: Exception) {
+    if (e is CancellationException) throw e
+    KubeconfigFile.Failed("Couldn't read that file: ${e.message ?: e.javaClass.simpleName}")
 }
 
 private fun getFileName(context: Context, uri: Uri): String? {

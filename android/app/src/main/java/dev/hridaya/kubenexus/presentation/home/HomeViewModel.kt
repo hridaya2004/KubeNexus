@@ -261,6 +261,10 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
+            is HomeUiAction.FileImportFailed -> {
+                _uiState.update { it.copy(kubeconfigError = action.message) }
+            }
+
             is HomeUiAction.ConnectAndSaveSubmitted -> {
                 connectAndSaveCluster()
             }

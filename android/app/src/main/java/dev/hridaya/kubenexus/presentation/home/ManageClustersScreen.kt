@@ -129,6 +129,7 @@ fun ManageClustersScreen(
                     ),
                 )
             },
+            onFileImportFailed = { onAction(HomeUiAction.FileImportFailed(it)) },
             onConnectAndSave = { onAction(HomeUiAction.ConnectAndSaveSubmitted) },
             onDismiss = { onAction(HomeUiAction.DismissAddClusterSheet) },
         )

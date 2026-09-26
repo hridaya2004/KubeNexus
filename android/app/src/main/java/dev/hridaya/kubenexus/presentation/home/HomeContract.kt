@@ -58,6 +58,7 @@ sealed interface HomeUiAction {
     data class KubeconfigInputChanged(val text: String) : HomeUiAction
     data class ClusterNameChanged(val name: String) : HomeUiAction
     data class FileImported(val content: String, val fileName: String?) : HomeUiAction
+    data class FileImportFailed(val message: String) : HomeUiAction
     data object ConnectAndSaveSubmitted : HomeUiAction
     data class SelectClusterClicked(val clusterId: String) : HomeUiAction
     data class TestClusterConnectionClicked(val clusterId: String) : HomeUiAction
