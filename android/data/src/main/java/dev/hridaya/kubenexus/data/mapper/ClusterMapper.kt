@@ -13,11 +13,13 @@ fun ClusterEntity.toDomain(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryp
         ClusterStatus.DISCONNECTED
     }
 
+    val decrypted = encryptor.decryptOrEmpty(rawKubeconfig)
     return Cluster(
         id = id,
         name = name,
         serverUrl = serverUrl,
-        rawKubeconfig = encryptor.decrypt(rawKubeconfig),
+        rawKubeconfig = decrypted,
+        credentialsUnavailable = rawKubeconfig.isNotBlank() && decrypted.isBlank(),
         contextName = contextName,
         userName = userName,
         namespace = namespace,

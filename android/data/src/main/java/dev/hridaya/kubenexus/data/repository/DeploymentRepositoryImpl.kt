@@ -42,7 +42,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val documents = splitYamlDocuments(manifestYaml)
@@ -77,7 +77,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.listDeployments(decryptedKubeconfig, namespace)
@@ -124,7 +124,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster with ID '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
         val queryNamespace = normalizedNamespaceOrNull(namespace)
 
         try {
@@ -162,7 +162,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             // The bridge assembles details, including best-effort events.
@@ -195,7 +195,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.scaleDeployment(decryptedKubeconfig, namespace, name, replicas)
@@ -227,7 +227,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.restartDeployment(decryptedKubeconfig, namespace, name)
@@ -259,7 +259,7 @@ class DeploymentRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.deleteDeployment(decryptedKubeconfig, namespace, name)

@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.core.security
 
+import java.security.GeneralSecurityException
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -98,22 +99,26 @@ open class AesGcmKubeconfigEncryptor(private val keyProvider: () -> SecretKey) :
         val combinedBytes = try {
             decodeBase64(base64Payload)
         } catch (e: Exception) {
-            throw IllegalArgumentException("Corrupted base64 encrypted payload.", e)
+            throw KubeconfigDecryptionException("Corrupted base64 encrypted payload.", e)
         }
 
         if (combinedBytes.size < MIN_PAYLOAD_BYTES) {
-            throw IllegalArgumentException("Malformed ciphertext payload: insufficient length.")
+            throw KubeconfigDecryptionException("Malformed ciphertext payload: insufficient length.")
         }
 
         val iv = combinedBytes.copyOfRange(0, GCM_IV_LENGTH_BYTES)
         val encryptedData = combinedBytes.copyOfRange(GCM_IV_LENGTH_BYTES, combinedBytes.size)
 
-        val secretKey = keyProvider()
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        val spec = GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv)
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
-
-        val decryptedBytes = cipher.doFinal(encryptedData)
-        return String(decryptedBytes, Charsets.UTF_8)
+        return try {
+            val secretKey = keyProvider()
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            val spec = GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+            String(cipher.doFinal(encryptedData), Charsets.UTF_8)
+        } catch (e: GeneralSecurityException) {
+            // AEADBadTagException when the key was replaced (the Keystore entry was lost and
+            // regenerated) or the payload was altered.
+            throw KubeconfigDecryptionException("Stored credentials cannot be decrypted with this device's key.", e)
+        }
     }
 }

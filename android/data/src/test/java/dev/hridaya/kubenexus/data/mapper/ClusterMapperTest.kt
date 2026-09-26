@@ -1,10 +1,13 @@
 package dev.hridaya.kubenexus.data.mapper
 
 import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
+import dev.hridaya.kubenexus.core.security.KubeconfigDecryptionException
+import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
 import dev.hridaya.kubenexus.data.source.local.entity.ClusterEntity
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -80,5 +83,48 @@ class ClusterMapperTest {
 
         val restoredDomain = entity.toDomain(encryptor)
         assertEquals(plainKubeconfig, restoredDomain.rawKubeconfig)
+    }
+
+    // One unreadable row must not break the cluster list: it maps with the flag set.
+    @Test
+    fun `an entity whose credentials cannot be decrypted maps with credentialsUnavailable`() {
+        val unreadable = object : KubeconfigEncryptor {
+            override fun encrypt(plainText: String) = plainText
+            override fun decrypt(cipherText: String): String =
+                throw KubeconfigDecryptionException("key lost")
+            override fun isEncrypted(text: String) = true
+        }
+        val entity = ClusterEntity(
+            id = "c1",
+            name = "prod",
+            serverUrl = "https://prod.example:6443",
+            rawKubeconfig = "enc:v1:AAAA",
+            contextName = "prod",
+            userName = "admin",
+            namespace = "default",
+            isActive = true,
+            createdAt = 0L,
+            lastConnectedAt = null,
+            status = "CONNECTED",
+        )
+
+        val cluster = entity.toDomain(unreadable)
+
+        assertTrue(cluster.credentialsUnavailable)
+        assertEquals("", cluster.rawKubeconfig)
+        assertEquals("prod", cluster.name)
+    }
+
+    @Test
+    fun `Cluster toString never prints the kubeconfig`() {
+        val cluster = Cluster(
+            id = "c1",
+            name = "prod",
+            serverUrl = "https://prod.example:6443",
+            rawKubeconfig = "users:\n- user:\n    token: super-secret",
+            contextName = "prod",
+        )
+
+        assertFalse(cluster.toString().contains("super-secret"))
     }
 }

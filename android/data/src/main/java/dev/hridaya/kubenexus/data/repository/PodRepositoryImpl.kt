@@ -130,7 +130,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
         listPodsBySelector(decryptedKubeconfig, namespace, labelSelector)
     }
 
@@ -143,7 +143,7 @@ class PodRepositoryImpl @Inject constructor(
             val cluster = clusterDao.getClusterById(clusterId)
                 ?: return@withContext Result.Error(AppError.NotFound("Cluster with ID '$clusterId' not found"))
 
-            val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+            val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
             val queryNamespace =
                 if (namespace.isNullOrBlank() ||
                     namespace == "All Namespaces" ||
@@ -207,7 +207,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.describePod(decryptedKubeconfig, namespace, podName)
@@ -233,7 +233,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.topPods(decryptedKubeconfig, namespace)
@@ -260,7 +260,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.topPod(decryptedKubeconfig, namespace, podName)
@@ -287,7 +287,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.deletePod(decryptedKubeconfig, namespace, podName)
@@ -315,7 +315,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.deleteNamespace(decryptedKubeconfig, namespace)
@@ -343,7 +343,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult = nativeBridge.createNamespace(decryptedKubeconfig, name)
@@ -369,7 +369,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             // The reviewed manifest carries its own namespace, so the bridge is
@@ -401,7 +401,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val nativeResult =
@@ -445,7 +445,7 @@ class PodRepositoryImpl @Inject constructor(
             return@callbackFlow
         }
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         // Callbacks arrive on a native thread. trySendBlocking applies backpressure to
         // the Go reader instead of dropping lines once the channel buffer is full, and
@@ -500,7 +500,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val result = nativeBridge.exec(
@@ -546,7 +546,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val callback = object : client.ExecCallback {
@@ -604,7 +604,7 @@ class PodRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             val callback = object : client.ExecCallback {

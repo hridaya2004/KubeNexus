@@ -96,6 +96,13 @@ fun ManageClusterCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        if (cluster.credentialsUnavailable) {
+                            Text(
+                                text = "Saved credentials can't be read on this device. Delete this cluster and add it again.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
 

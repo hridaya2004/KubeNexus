@@ -42,7 +42,7 @@ class ServiceRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             // The reviewed manifest carries its own namespace, so the bridge is
@@ -92,7 +92,7 @@ class ServiceRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster with ID '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
         val queryNamespace = normalizedNamespaceOrNull(namespace)
 
         try {
@@ -130,7 +130,7 @@ class ServiceRepositoryImpl @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return@withContext Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
 
-        val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
+        val decryptedKubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
 
         try {
             // The bridge assembles details, including best-effort events.

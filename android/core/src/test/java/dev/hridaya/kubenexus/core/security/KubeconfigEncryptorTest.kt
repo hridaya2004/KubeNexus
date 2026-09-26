@@ -90,23 +90,27 @@ class KubeconfigEncryptorTest {
         assertEquals("   ", encryptor.encrypt("   "))
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = KubeconfigDecryptionException::class)
     fun `decrypt throws exception on corrupted payload length`() {
         encryptor.decrypt("enc:v1:dGVzdA==") // "test" base64 is too short for GCM IV + Tag
     }
 
-    @Test
-    fun `different secret key fails decryption or throws`() {
+    // The Keystore key is lost and regenerated: the stored ciphertext no longer authenticates.
+    @Test(expected = KubeconfigDecryptionException::class)
+    fun `decrypting with a different key throws KubeconfigDecryptionException`() {
         val encrypted = encryptor.encrypt(sampleKubeconfig)
-        val differentKey = AesGcmKubeconfigEncryptor.generateKey()
-        val otherEncryptor = AesGcmKubeconfigEncryptor(differentKey)
+        val otherEncryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
 
-        var failed = false
-        try {
-            otherEncryptor.decrypt(encrypted)
-        } catch (e: Exception) {
-            failed = true
-        }
-        assertTrue("Decryption with a wrong key must fail", failed)
+        otherEncryptor.decrypt(encrypted)
+    }
+
+    @Test
+    fun `decryptOrEmpty returns empty for unreadable credentials instead of throwing`() {
+        val encrypted = encryptor.encrypt(sampleKubeconfig)
+        val otherEncryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+
+        assertEquals("", otherEncryptor.decryptOrEmpty(encrypted))
+        assertEquals("", encryptor.decryptOrEmpty("enc:v1:dGVzdA=="))
+        assertEquals(sampleKubeconfig, encryptor.decryptOrEmpty(encrypted))
     }
 }

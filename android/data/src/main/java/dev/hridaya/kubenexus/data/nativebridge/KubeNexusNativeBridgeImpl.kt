@@ -76,6 +76,10 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
          * covers realistic multi-cluster use without pinning memory.
          */
         private const val CLIENT_CACHE_SIZE = 4
+
+        const val CREDENTIALS_UNAVAILABLE_MESSAGE =
+            "This cluster's saved credentials can no longer be read on this device. " +
+                "Delete the cluster and add it again."
     }
 
     private var initialized = false
@@ -171,6 +175,8 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
      * on the IO dispatcher and [LinkedHashMap] is not thread safe.
      */
     private fun clientFor(rawKubeconfig: String): Client_ = synchronized(clientCache) {
+        // Repositories pass an empty kubeconfig when the stored one cannot be decrypted.
+        check(rawKubeconfig.isNotBlank()) { CREDENTIALS_UNAVAILABLE_MESSAGE }
         val key = digest(rawKubeconfig)
         clientCache.getOrPut(key) { Client.newClient(rawKubeconfig) }
     }

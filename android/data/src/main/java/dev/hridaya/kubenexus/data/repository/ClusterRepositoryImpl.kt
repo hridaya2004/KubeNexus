@@ -90,7 +90,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 val clusterEntity = clusterDao.getClusterById(id)
                     ?: return@withContext Result.Error(AppError.Unknown("Cluster with ID '$id' not found."))
 
-                val decryptedKubeconfig = encryptor.decrypt(clusterEntity.rawKubeconfig)
+                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
                 val parsed = KubeconfigParser.parse(decryptedKubeconfig, clusterEntity.name)
                 connectionTester.testConnection(parsed)
 
@@ -147,7 +147,7 @@ class ClusterRepositoryImpl @Inject constructor(
             try {
                 val clusterEntity = clusterDao.getClusterById(id)
                     ?: return@withContext Result.Error(AppError.Unknown("Cluster with ID '$id' not found."))
-                val decryptedKubeconfig = encryptor.decrypt(clusterEntity.rawKubeconfig)
+                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
                 val parsed = KubeconfigParser.parse(decryptedKubeconfig, clusterEntity.name)
                 val info = connectionTester.testConnection(parsed)
                 clusterDao.updateStatus(
@@ -169,7 +169,7 @@ class ClusterRepositoryImpl @Inject constructor(
             try {
                 val clusterEntity = clusterDao.getClusterById(id)
                     ?: return@withContext Result.Error(AppError.Unknown("Cluster with ID '$id' not found."))
-                val decryptedKubeconfig = encryptor.decrypt(clusterEntity.rawKubeconfig)
+                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
                 nativeBridge.checkHealth(decryptedKubeconfig)
             } catch (t: Throwable) {
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
