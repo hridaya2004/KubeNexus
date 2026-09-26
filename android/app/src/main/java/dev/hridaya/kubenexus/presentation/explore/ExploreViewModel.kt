@@ -38,6 +38,7 @@ class ExploreViewModel @Inject constructor(
     private var streamJob: Job? = null
     private var lastRefreshedJob: Job? = null
     private var explainJob: Job? = null
+    private var refreshJob: Job? = null
     private var lastObservedClusterId: String? = null
     private var hasCheckedEmptyForCluster = false
 
@@ -60,6 +61,9 @@ class ExploreViewModel @Inject constructor(
         if (lastObservedClusterId != clusterId) {
             lastObservedClusterId = clusterId
             hasCheckedEmptyForCluster = false
+            // A refresh still running for the previous cluster must not land on this one.
+            refreshJob?.cancel()
+            _uiState.update { it.copy(isRefreshing = false, isLoading = false, errorMessage = null) }
         }
         streamJob = viewModelScope.launch(dispatcherProvider.main) {
             getAPIResourcesUseCase.getStream(clusterId).collectLatest { list ->
@@ -223,7 +227,8 @@ class ExploreViewModel @Inject constructor(
     }
 
     private fun refreshResources(clusterId: String?) {
-        viewModelScope.launch(dispatcherProvider.main) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch(dispatcherProvider.main) {
             _uiState.update {
                 it.copy(
                     isRefreshing = true,

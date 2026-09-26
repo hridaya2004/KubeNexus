@@ -13,6 +13,7 @@ import dev.hridaya.kubenexus.domain.repository.ExploreRepository
 import dev.hridaya.kubenexus.domain.usecase.ExplainResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetAPIResourcesUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -320,6 +321,42 @@ class ExploreViewModelTest {
             assertFalse(state4.hasMorePages)
         }
 
+    @Test
+    fun `a refresh still running when the cluster changes does not land on the new cluster`() =
+        runTest(testDispatcher) {
+            val first = Cluster(
+                id = "c1",
+                name = "prod-cluster",
+                serverUrl = "https://127.0.0.1:6443",
+                contextName = "prod",
+                rawKubeconfig = "yaml",
+                isActive = true,
+            )
+            val second = first.copy(id = "c2", name = "staging-cluster", contextName = "staging")
+            fakeClusterRepository.setClusters(listOf(first, second.copy(isActive = false)))
+            advanceUntilIdle()
+
+            val gate = CompletableDeferred<Unit>()
+            fakeExploreRepository.fetchGate = gate
+            fakeExploreRepository.fetchResultOverride = listOf(
+                APIResource(name = "prodonlies", singularName = "prodonly", namespaced = true, kind = "ProdOnly", groupVersion = "v1"),
+            )
+            viewModel.onAction(ExploreUiAction.Refresh)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isRefreshing)
+
+            fakeClusterRepository.setClusters(listOf(first.copy(isActive = false), second))
+            advanceUntilIdle()
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            assertEquals("staging-cluster", state.activeCluster?.name)
+            assertFalse(state.resources.any { it.kind == "ProdOnly" })
+            assertFalse(state.isRefreshing)
+            assertFalse(state.isLoading)
+        }
+
     private class FakeClusterRepository : ClusterRepository {
         private val clustersFlow = MutableStateFlow<List<Cluster>>(emptyList())
 
@@ -441,8 +478,16 @@ class ExploreViewModelTest {
         override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> =
             lastRefreshedFlow.asStateFlow()
 
+        /** When set, fetches wait for it, like a slow API server. */
+        var fetchGate: CompletableDeferred<Unit>? = null
+
+        /** When set, fetches return this list without touching the cache stream. */
+        var fetchResultOverride: List<APIResource>? = null
+
         override suspend fun fetchAPIResources(clusterId: String?): Result<List<APIResource>> {
             fetchCount++
+            fetchGate?.await()
+            fetchResultOverride?.let { return Result.Success(it) }
             flow.value = currentResources
             lastRefreshedFlow.value = System.currentTimeMillis()
             return Result.Success(currentResources)
