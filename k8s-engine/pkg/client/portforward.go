@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/streaming/pkg/httpstream"
@@ -52,9 +52,24 @@ func defaultPortForwardDialerFactory(config *rest.Config, method string, u *url.
 	return spdyDialer, nil
 }
 
+// forwarderState tracks who owns the outcome of a starting forward. StartPortForward
+// and the owner goroutine race to report it; the state makes exactly one of them win,
+// so a forward either starts (and then reports its lifecycle through callbacks) or
+// fails to start (and reports only through the returned error).
+type forwarderState int
+
+const (
+	stateStarting forwarderState = iota
+	stateRunning
+	stateFailedToStart
+	stateAbandoned // StartPortForward gave up waiting; the goroutine cleans up silently
+)
+
 // activeForwarder manages the runtime state, channels, and lifecycle callbacks
 // of a single port-forwarding session.
 type activeForwarder struct {
+	stateMu     sync.Mutex
+	state       forwarderState
 	handleID    string
 	localPort   int32
 	remotePort  int32
@@ -102,6 +117,24 @@ func (f *activeForwarder) isStopped() bool {
 	return f.stopped.Load()
 }
 
+// transition moves from stateStarting to next and reports whether it did. Once the
+// state has left stateStarting it never changes again.
+func (f *activeForwarder) transition(next forwarderState) (forwarderState, bool) {
+	f.stateMu.Lock()
+	defer f.stateMu.Unlock()
+	if f.state != stateStarting {
+		return f.state, false
+	}
+	f.state = next
+	return next, true
+}
+
+func (f *activeForwarder) currentState() forwarderState {
+	f.stateMu.Lock()
+	defer f.stateMu.Unlock()
+	return f.state
+}
+
 func (f *activeForwarder) fireReady(port int32) {
 	f.readyOnce.Do(func() {
 		if f.cb != nil {
@@ -110,13 +143,18 @@ func (f *activeForwarder) fireReady(port int32) {
 	})
 }
 
+// fireError and fireStopped only report on a forward that started; before that, the
+// outcome is StartPortForward's return value and the caller does not know the handle.
 func (f *activeForwarder) fireError(msg string) {
-	if f.cb != nil {
+	if f.cb != nil && f.currentState() == stateRunning {
 		f.cb.PortForwardError(f.handleID, msg)
 	}
 }
 
 func (f *activeForwarder) fireStopped(reason string) {
+	if f.currentState() != stateRunning {
+		return
+	}
 	f.stoppedOnce.Do(func() {
 		if f.cb != nil {
 			f.cb.PortForwardStopped(f.handleID, reason)
@@ -178,9 +216,13 @@ func generateHandleID() (string, error) {
 // StartPortForward initiates port-forwarding from 127.0.0.1:<localPort> to the
 // specified pod's <remotePort>.
 //
-// Returns an opaque handle ID string on success.
-// Returns an error synchronously if parameters are invalid, localPort is already
-// bound or in use, client construction fails, or initial network dial fails.
+// Returns an opaque handle ID string once the tunnel is listening. PortForwardReady is
+// delivered before it returns; PortForwardError and PortForwardStopped follow for the
+// rest of the tunnel's life.
+//
+// Returns an error, and delivers no callbacks, if parameters are invalid, localPort is
+// already bound or in use, client construction fails, the initial dial fails, or the
+// tunnel is not up within the client timeout. On error the local port is released.
 func (c *Client) StartPortForward(
 	kubeconfig string,
 	namespace string,
@@ -223,14 +265,15 @@ func (c *Client) StartPortForward(
 	var config *rest.Config
 	var clientset *kubernetes.Clientset
 
+	timeout := defaultTimeout
+	if c != nil && c.timeout > 0 {
+		timeout = c.timeout
+	}
+
 	if strings.TrimSpace(kubeconfig) != "" {
-		timeout := defaultTimeout
-		if c != nil && c.timeout > 0 {
-			timeout = c.timeout
-		}
-		cfg, parseErr := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
+		cfg, parseErr := restConfigFromKubeconfig([]byte(kubeconfig))
 		if parseErr != nil {
-			return "", fmt.Errorf("parsing kubeconfig: %w", parseErr)
+			return "", parseErr
 		}
 		cfg.Timeout = timeout
 		cs, csErr := kubernetes.NewForConfig(cfg)
@@ -310,36 +353,61 @@ func (c *Client) StartPortForward(
 		defer globalRegistry.remove(handleID)
 
 		forwardErr := pf.ForwardPorts()
-		if forwardErr != nil {
-			// If failure occurs before readyChan is closed, notify the synchronous starter
-			select {
-			case startErrChan <- forwardErr:
-			default:
-			}
+		if forwardErr == nil {
+			forwardErr = errForwardEnded
+		}
 
-			if f.isStopped() {
-				f.fireStopped("stopped")
-			} else {
-				f.fireError(forwardErr.Error())
-				f.fireStopped(forwardErr.Error())
-			}
+		// Still starting: this failure is the start outcome, reported by the caller.
+		if _, ok := f.transition(stateFailedToStart); ok {
+			startErrChan <- forwardErr
 			return
 		}
 
-		f.fireStopped("stopped")
+		if f.isStopped() || errors.Is(forwardErr, errForwardEnded) {
+			f.fireStopped("stopped")
+			return
+		}
+		f.fireError(forwardErr.Error())
+		f.fireStopped(forwardErr.Error())
 	}()
 
-	// Wait for listener readiness or synchronous startup failure.
+	startTimer := time.NewTimer(timeout)
+	defer startTimer.Stop()
+
 	select {
 	case <-readyChan:
-		f.fireReady(localPort)
-		return handleID, nil
+		if _, ok := f.transition(stateRunning); ok {
+			f.fireReady(localPort)
+			return handleID, nil
+		}
+		// The tunnel died between becoming ready and being reported.
+		globalRegistry.remove(handleID)
+		return "", fmt.Errorf("starting port forward: %w", <-startErrChan)
 
 	case startErr := <-startErrChan:
 		globalRegistry.remove(handleID)
 		return "", fmt.Errorf("starting port forward: %w", startErr)
+
+	case <-startTimer.C:
+		if _, ok := f.transition(stateAbandoned); ok {
+			// The dial has no deadline of its own. Stop the forwarder so it closes as soon
+			// as the dial returns, and free the port now so the user can retry.
+			f.stop()
+			globalRegistry.remove(handleID)
+			return "", fmt.Errorf("port forward to %s/%s did not connect within %v", ns, pod, timeout)
+		}
+		if f.currentState() == stateFailedToStart {
+			globalRegistry.remove(handleID)
+			return "", fmt.Errorf("starting port forward: %w", <-startErrChan)
+		}
+		// Unreachable: only this function moves the state to stateRunning.
+		return handleID, nil
 	}
 }
+
+// errForwardEnded stands in for a nil error from ForwardPorts, which means the
+// forwarder was stopped or its connection closed cleanly.
+var errForwardEnded = errors.New("port forward ended")
 
 // StopPortForward terminates an active port-forward session by handle ID.
 // Returns an error if the handle ID is empty or not found in the active registry.

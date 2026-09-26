@@ -505,3 +505,102 @@ func TestStartPortForward_ConcurrentForwards(t *testing.T) {
 func TestStartPortForward_LiveCluster_NetworkLevel_TODO(t *testing.T) {
 	t.Skip("skipping network-level test requiring a live Kubernetes cluster")
 }
+
+// A dial that never completes (TCP accepted, TLS never finishes) must not block
+// StartPortForward forever, and must not leave the local port reserved.
+func TestStartPortForward_StalledDialTimesOutAndFreesPort(t *testing.T) {
+	release := make(chan struct{})
+	defer close(release)
+
+	var dials sync.Mutex
+	dialCount := 0
+	dialer := &mockPortForwardDialer{
+		dialFunc: func(protocols ...string) (httpstream.Connection, string, error) {
+			dials.Lock()
+			dialCount++
+			first := dialCount == 1
+			dials.Unlock()
+			if first {
+				<-release
+				return nil, "", fmt.Errorf("dial finally failed")
+			}
+			return newMockConnection(), portforward.PortForwardProtocolV1Name, nil
+		},
+	}
+	c := newTestClientWithMockDialer(t, dialer)
+	c.timeout = 200 * time.Millisecond
+	cb := newMockPortForwardCallback()
+	port := findFreePort(t)
+
+	started := time.Now()
+	_, err := c.StartPortForward("", "default", "my-pod", port, 80, cb)
+	if err == nil {
+		t.Fatal("StartPortForward() with a stalled dial error = nil, want a timeout")
+	}
+	if elapsed := time.Since(started); elapsed > 2*time.Second {
+		t.Fatalf("StartPortForward() took %v, want it bounded by the client timeout", elapsed)
+	}
+
+	// The port must be free for an immediate retry.
+	handleID, err := c.StartPortForward("", "default", "my-pod", port, 80, cb)
+	if err != nil {
+		t.Fatalf("retry on the same port error = %v, want the port to have been released", err)
+	}
+	if err := c.StopPortForward(handleID); err != nil {
+		t.Errorf("StopPortForward() error = %v", err)
+	}
+}
+
+// A forward that fails to start reports through the returned error only. The caller
+// never learns its handle, so callbacks for it could not be attributed to anything.
+func TestStartPortForward_FailedStartDeliversNoCallbacks(t *testing.T) {
+	dialer := &mockPortForwardDialer{
+		dialFunc: func(protocols ...string) (httpstream.Connection, string, error) {
+			return nil, "", fmt.Errorf("pods \"my-pod\" not found")
+		},
+	}
+	c := newTestClientWithMockDialer(t, dialer)
+	cb := newMockPortForwardCallback()
+
+	if _, err := c.StartPortForward("", "default", "my-pod", findFreePort(t), 80, cb); err == nil {
+		t.Fatal("StartPortForward() error = nil, want the dial failure")
+	}
+	time.Sleep(50 * time.Millisecond) // give a stray callback time to arrive
+
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	if cb.readyCalled || cb.stoppedCalled || len(cb.errors) != 0 {
+		t.Errorf("callbacks after a failed start: ready=%v stopped=%v errors=%v",
+			cb.readyCalled, cb.stoppedCalled, cb.errors)
+	}
+}
+
+// StartPortForward applies the same kubeconfig restrictions as NewClient.
+func TestStartPortForward_RejectsExecPluginKubeconfig(t *testing.T) {
+	c := newTestClientWithMockDialer(t, nil)
+	kubeconfig := `
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://127.0.0.1:6443
+  name: c
+contexts:
+- context:
+    cluster: c
+    user: u
+  name: c
+current-context: c
+users:
+- name: u
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1
+      command: sh
+      interactiveMode: Never
+`
+	_, err := c.StartPortForward(kubeconfig, "default", "my-pod", findFreePort(t), 80, newMockPortForwardCallback())
+	if err == nil {
+		t.Fatal("StartPortForward(exec plugin kubeconfig) error = nil, want a refusal")
+	}
+}
