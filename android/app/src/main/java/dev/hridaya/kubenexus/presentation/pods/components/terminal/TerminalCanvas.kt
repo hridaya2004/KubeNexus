@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -134,6 +135,11 @@ fun TerminalCanvas(
         val totalCells = snap.cols * snap.rows
         if (totalCells <= 0 || snap.codepoints.size < totalCells) return@Canvas
 
+        // Cells in the default background are skipped below, so paint the grid with it once.
+        if (snap.defaultBgArgb != 0 && snap.defaultBgArgb != 0xFF000000.toInt()) {
+            drawRect(Color(snap.defaultBgArgb), size = Size(snap.cols * cellWidth, snap.rows * cellHeight))
+        }
+
         val normalizedSelection = selection?.normalized(totalCells)
         val selBgArgb = selectionBackgroundColor.toArgb()
         val bgRect = RectF()
@@ -155,15 +161,17 @@ fun TerminalCanvas(
 
                     val cellX = col * cellWidth
                     val isSelected = normalizedSelection != null && idx in normalizedSelection
-                    val rawFg = snap.fgArgb[idx]
-                    val rawBg = snap.bgArgb[idx]
+                    val colors = cellColors(
+                        fg = snap.fgArgb[idx],
+                        bg = snap.bgArgb[idx],
+                        cellFlags = cellFlag,
+                        defaultFg = snap.defaultFgArgb,
+                    )
+                    val effectiveBg = if (isSelected) selBgArgb else colors.background
+                    val effectiveFg = if (isSelected) 0xFFFFFFFF.toInt() else colors.foreground
 
-                    val effectiveBg = if (isSelected) selBgArgb else rawBg
-                    val effectiveFg =
-                        if (isSelected) 0xFFFFFFFF.toInt() else if (rawFg == 0 || rawFg == 0xFF000000.toInt()) 0xFFFFFFFF.toInt() else rawFg
-
-                    // Draw cell background if non-black or selected
-                    if (effectiveBg != 0xFF000000.toInt() && effectiveBg != 0) {
+                    // The surface is already painted with the default background.
+                    if (effectiveBg != snap.defaultBgArgb && effectiveBg != 0) {
                         bgRect.set(cellX, rowY, cellX + cellWidth, rowY + cellHeight)
                         textPaint.color = effectiveBg
                         native.drawRect(bgRect, textPaint)

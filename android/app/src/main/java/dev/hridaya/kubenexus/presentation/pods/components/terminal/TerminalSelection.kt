@@ -44,13 +44,30 @@ internal fun TerminalSnapshot.isSpacerContinuation(cellIndex: Int): Boolean {
     return ((flags[cellIndex].toInt() and 0xFF) and TerminalSnapshot.CELL_FLAG_SPACER) != 0
 }
 
+/** Codepoints below this (ASCII, Latin, box drawing, CJK punctuation) have cached glyph strings. */
+private const val GLYPH_CACHE_SIZE = 0x3000
+
+/**
+ * The canvas draws every non-blank cell on every frame, so single-codepoint glyphs are cached
+ * instead of allocating a String per cell per frame. Written only from the UI thread.
+ */
+private val glyphCache = arrayOfNulls<String>(GLYPH_CACHE_SIZE)
+
+private fun glyphString(codepoint: Int): String {
+    if (!Character.isValidCodePoint(codepoint)) return "\uFFFD"
+    if (codepoint < GLYPH_CACHE_SIZE) {
+        return glyphCache[codepoint] ?: String(Character.toChars(codepoint)).also { glyphCache[codepoint] = it }
+    }
+    return String(Character.toChars(codepoint))
+}
+
 internal fun TerminalSnapshot.glyphAt(cellIndex: Int): String {
     val codepoint = codepoints[cellIndex]
     val extras = graphemeExtras[cellIndex]
-    if (extras == null || extras.isEmpty()) return String(Character.toChars(codepoint))
+    if (extras == null || extras.isEmpty()) return glyphString(codepoint)
     val builder = StringBuilder(1 + extras.size)
-    builder.appendCodePoint(codepoint)
-    for (cp in extras) builder.appendCodePoint(cp)
+    builder.appendCodePoint(if (Character.isValidCodePoint(codepoint)) codepoint else 0xFFFD)
+    for (cp in extras) if (Character.isValidCodePoint(cp)) builder.appendCodePoint(cp)
     return builder.toString()
 }
 
