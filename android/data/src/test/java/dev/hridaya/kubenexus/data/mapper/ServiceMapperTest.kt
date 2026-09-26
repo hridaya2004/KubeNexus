@@ -46,6 +46,9 @@ class ServiceMapperTest {
         assertEquals(NAMED_PORT_UNRESOLVED, https.targetPort)
         assertEquals(443, https.port)
         assertEquals("https", https.name)
+        // The name is kept so port-forwarding can resolve it against the pod's ports.
+        assertEquals("https-port", https.targetPortName)
+        assertEquals(null, http.targetPortName)
     }
 
     @Test

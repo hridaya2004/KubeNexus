@@ -74,6 +74,10 @@ fun PodDto.toDomain(): Pod = Pod(
     // The flattened Gomobile struct had no image field, so the pod list could
     // never show one. The full spec is available now.
     image = spec.containers.firstOrNull()?.image?.ifBlank { null },
+    namedContainerPorts = spec.containers
+        .flatMap { it.ports }
+        .filter { !it.name.isNullOrBlank() && it.containerPort > 0 }
+        .associate { it.name!! to it.containerPort },
 )
 
 /**

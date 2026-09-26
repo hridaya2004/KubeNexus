@@ -30,6 +30,11 @@ data class Pod(
     val ip: String? = null,
     val node: String? = null,
     val image: String? = null,
+    /**
+     * Named container ports (name to port number) across the pod's containers, used to
+     * resolve a Service's named targetPort. Only populated from live API responses.
+     */
+    val namedContainerPorts: Map<String, Int> = emptyMap(),
 ) {
     /** Human readable age in kubectl's format, derived from [creationTimestampMillis]. */
     val age: String

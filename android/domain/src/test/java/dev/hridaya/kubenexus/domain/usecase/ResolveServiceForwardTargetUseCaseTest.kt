@@ -72,6 +72,69 @@ class ResolveServiceForwardTargetUseCaseTest {
         assertEquals(8080, target.podPort)
     }
 
+    private fun serviceWithPort(port: ServicePortDetail) = ServiceDetails(
+        name = "web-service",
+        namespace = "default",
+        creationTimestampMillis = 1000L,
+        type = "ClusterIP",
+        clusterIP = "10.96.0.1",
+        clusterIPs = listOf("10.96.0.1"),
+        externalIPs = emptyList(),
+        selector = mapOf("app" to "web"),
+        ports = listOf(port),
+        labels = emptyMap(),
+        annotations = emptyMap(),
+        events = emptyList(),
+    )
+
+    // targetPort: http with the pod exposing http on 8080 must forward to 8080, not to the
+    // Service's own port 80.
+    @Test
+    fun `resolves a named targetPort to the pod's container port`() = runTest {
+        val service = serviceWithPort(
+            ServicePortDetail(port = 80, targetPort = -1, nodePort = null, protocol = "TCP", name = "web", targetPortName = "http"),
+        )
+        fakePodRepository.podsToReturn = listOf(
+            Pod(id = "1", name = "web-1", namespace = "default", namedContainerPorts = mapOf("http" to 8080)),
+        )
+
+        val target = (useCase("cfg", service, 80) as Result.Success).data
+
+        assertEquals("web-1", target.podName)
+        assertEquals(8080, target.podPort)
+    }
+
+    @Test
+    fun `a named targetPort no running pod defines is an error, not a guess`() = runTest {
+        val service = serviceWithPort(
+            ServicePortDetail(port = 80, targetPort = -1, nodePort = null, protocol = "TCP", name = "web", targetPortName = "http"),
+        )
+        fakePodRepository.podsToReturn = listOf(
+            Pod(id = "1", name = "web-1", namespace = "default", namedContainerPorts = mapOf("metrics" to 9090)),
+        )
+
+        val result = useCase("cfg", service, 80)
+
+        assertTrue(result is Result.Error)
+        assertTrue((result as Result.Error).error.message.contains("'http'"))
+    }
+
+    @Test
+    fun `pods that are not running are never chosen`() = runTest {
+        val service = serviceWithPort(
+            ServicePortDetail(port = 80, targetPort = 8080, nodePort = null, protocol = "TCP", name = "web"),
+        )
+        fakePodRepository.podsToReturn = listOf(
+            Pod(id = "1", name = "done", namespace = "default", status = PodStatus.COMPLETED, readyContainers = "0/1"),
+            Pod(id = "2", name = "pending", namespace = "default", status = PodStatus.PENDING, readyContainers = "0/1"),
+        )
+
+        val result = useCase("cfg", service, 80)
+
+        assertTrue(result is Result.Error)
+        assertTrue((result as Result.Error).error.message.startsWith("No running pods"))
+    }
+
     @Test
     fun `returns validation error when service has empty selector`() = runTest {
         val service = ServiceDetails(

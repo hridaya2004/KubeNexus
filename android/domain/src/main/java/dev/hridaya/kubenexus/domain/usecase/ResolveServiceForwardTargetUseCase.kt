@@ -2,6 +2,7 @@ package dev.hridaya.kubenexus.domain.usecase
 
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
+import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodStatus
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServiceForwardTarget
@@ -13,8 +14,9 @@ import javax.inject.Inject
  * forwarding into a Service.
  *
  * Kubernetes Services do not listen directly; kubectl port-forward service/name
- * queries the matching pods, selects an active endpoint pod, and resolves
- * targetPort (which may be numeric or a named container port).
+ * queries the matching pods, selects a running endpoint pod, and resolves
+ * targetPort, which may be a number or the name of one of that pod's container
+ * ports.
  */
 class ResolveServiceForwardTargetUseCase @Inject constructor(
     private val podRepository: PodRepository,
@@ -43,21 +45,33 @@ class ResolveServiceForwardTargetUseCase @Inject constructor(
             is Result.Loading -> return Result.Error(AppError.Validation("Pods loading"))
         }
 
-        val targetPod = pods.firstOrNull { pod ->
-            pod.status == PodStatus.RUNNING && pod.readyContainers.split("/").let { parts ->
-                parts.size == 2 && parts[0] == parts[1] && parts[0] != "0"
-            }
-        } ?: pods.firstOrNull { it.status == PodStatus.RUNNING }
-        ?: pods.firstOrNull()
-        ?: return Result.Error(
-            AppError.NotFound("No active pods found matching selector for service '${service.name}'."),
-        )
-
         val portDetail = service.ports.firstOrNull { it.port == servicePort }
-        val targetPort = if (portDetail != null && portDetail.targetPort > 0) {
-            portDetail.targetPort
+        val namedTarget = portDetail?.targetPortName?.takeIf { portDetail.targetPort <= 0 }
+
+        // Like kubectl, only a running pod can be forwarded to. With a named targetPort the
+        // pod must also define that container port.
+        val running = pods.filter { it.status == PodStatus.RUNNING }
+        val candidates = if (namedTarget != null) {
+            running.filter { namedTarget in it.namedContainerPorts }
         } else {
-            servicePort
+            running
+        }
+        val targetPod = candidates.firstOrNull { it.isFullyReady() } ?: candidates.firstOrNull()
+            ?: return Result.Error(
+                AppError.NotFound(
+                    when {
+                        running.isEmpty() -> "No running pods match service '${service.name}'."
+                        else -> "No running pod behind service '${service.name}' defines a container port named '$namedTarget'."
+                    },
+                ),
+            )
+
+        val targetPort = when {
+            portDetail == null -> servicePort
+            portDetail.targetPort > 0 -> portDetail.targetPort
+            namedTarget != null -> targetPod.namedContainerPorts.getValue(namedTarget)
+            // An omitted targetPort defaults to the Service port.
+            else -> servicePort
         }
 
         return Result.Success(
@@ -67,4 +81,8 @@ class ResolveServiceForwardTargetUseCase @Inject constructor(
             ),
         )
     }
+}
+
+private fun Pod.isFullyReady(): Boolean = readyContainers.split("/").let { parts ->
+    parts.size == 2 && parts[0] == parts[1] && parts[0] != "0"
 }

@@ -45,6 +45,14 @@ data class ListMetaDto(
 data class ContainerDto(
     val name: String = "",
     val image: String = "",
+    val ports: List<ContainerPortDto> = emptyList(),
+)
+
+@Serializable
+data class ContainerPortDto(
+    val name: String? = null,
+    val containerPort: Int = 0,
+    val protocol: String? = null,
 )
 
 @Serializable

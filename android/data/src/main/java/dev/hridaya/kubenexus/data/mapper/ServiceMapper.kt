@@ -60,13 +60,21 @@ private fun ServiceDto.externalIps(): List<String> =
         }
     }.distinct()
 
-fun ServicePortDto.toDomain(): ServicePortDetail = ServicePortDetail(
-    port = port,
-    targetPort = targetPort.toTargetPortInt(),
-    nodePort = nodePort,
-    protocol = protocol,
-    name = name?.ifBlank { null },
-)
+fun ServicePortDto.toDomain(): ServicePortDetail {
+    val numericTarget = targetPort.toTargetPortInt()
+    return ServicePortDetail(
+        port = port,
+        targetPort = numericTarget,
+        nodePort = nodePort,
+        protocol = protocol,
+        name = name?.ifBlank { null },
+        targetPortName = if (numericTarget == NAMED_PORT_UNRESOLVED) {
+            targetPort?.content?.trim()?.ifBlank { null }
+        } else {
+            null
+        },
+    )
+}
 
 private fun JsonPrimitive?.toTargetPortInt(): Int =
     this?.intOrNull ?: this?.content?.trim()?.toIntOrNull() ?: NAMED_PORT_UNRESOLVED

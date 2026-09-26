@@ -2,6 +2,7 @@ package dev.hridaya.kubenexus.data.mapper
 
 import dev.hridaya.kubenexus.data.source.remote.dto.EventListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.K8sJson
+import dev.hridaya.kubenexus.data.source.remote.dto.PodDto
 import dev.hridaya.kubenexus.data.source.remote.dto.NamespaceListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.PodListDto
 import dev.hridaya.kubenexus.domain.model.PodStatus
@@ -259,5 +260,22 @@ class PodMapperTest {
 
         assertEquals(1, details.events.size)
         assertEquals("Pulled", details.events[0].reason)
+    }
+
+    @Test
+    fun `collects named container ports for resolving service targetPorts`() {
+        val pod = K8sJson.decodeFromString<PodDto>(
+            """
+            {"metadata": {"name": "web-1", "namespace": "default"},
+             "spec": {"containers": [
+               {"name": "app", "image": "web:1", "ports": [
+                 {"name": "http", "containerPort": 8080}, {"containerPort": 9000}]},
+               {"name": "sidecar", "image": "proxy:1", "ports": [{"name": "metrics", "containerPort": 9090}]}
+             ]},
+             "status": {"phase": "Running"}}
+            """.trimIndent(),
+        )
+
+        assertEquals(mapOf("http" to 8080, "metrics" to 9090), pod.toDomain().namedContainerPorts)
     }
 }

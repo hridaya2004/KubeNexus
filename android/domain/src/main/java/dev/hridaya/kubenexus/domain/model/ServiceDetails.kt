@@ -13,6 +13,8 @@ data class ServicePortDetail(
     val nodePort: Int?,
     val protocol: String,
     val name: String?,
+    /** The container port name when [targetPort] is named (e.g. "http"), else null. */
+    val targetPortName: String? = null,
 )
 
 /**
