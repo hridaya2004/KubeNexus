@@ -401,13 +401,34 @@ func (c *Client) PatchResource(gvr *GroupVersionResource, namespace, name, patch
 }
 
 // ScaleDeployment updates the replica count for an apps/v1 Deployment in namespace.
+//
+// It patches the scale subresource, as kubectl scale does, so it works for users
+// whose role grants deployments/scale without full patch rights on deployments.
 func (c *Client) ScaleDeployment(namespace, name string, replicas int64) error {
+	if c == nil || c.dynamic == nil {
+		return fmt.Errorf("client is not configured")
+	}
 	if replicas < 0 {
 		return fmt.Errorf("replicas cannot be negative")
 	}
+	if strings.TrimSpace(namespace) == "" || strings.TrimSpace(name) == "" {
+		return fmt.Errorf("namespace and name are required")
+	}
+	resource, err := DeploymentsResource().validate()
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
 	patchJSON := fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas)
-	_, err := c.PatchResource(DeploymentsResource(), namespace, name, patchJSON)
-	return err
+	_, err = c.dynamic.Resource(resource).Namespace(namespace).
+		Patch(ctx, name, types.MergePatchType, []byte(patchJSON), metav1.PatchOptions{}, "scale")
+	if err != nil {
+		return fmt.Errorf("scaling deployment %q: %w", name, err)
+	}
+	return nil
 }
 
 // RestartDeployment triggers a rolling restart for an apps/v1 Deployment by updating the kubectl.kubernetes.io/restartedAt annotation.

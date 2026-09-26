@@ -1,11 +1,16 @@
 package client
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/rest"
 )
 
 func TestNewListOptions_Empty(t *testing.T) {
@@ -333,5 +338,36 @@ func TestScaleDeployment_NegativeReplicas(t *testing.T) {
 	c := &Client{timeout: defaultTimeout}
 	if err := c.ScaleDeployment("default", "nginx", -1); err == nil {
 		t.Error("ScaleDeployment() with negative replicas expected error, got nil")
+	}
+}
+
+// Scaling must go through the scale subresource, which is what an RBAC role that only
+// grants deployments/scale allows.
+func TestScaleDeployment_PatchesScaleSubresource(t *testing.T) {
+	var gotMethod, gotPath, gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		body, _ := io.ReadAll(r.Body)
+		gotBody = string(body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"apiVersion":"autoscaling/v1","kind":"Scale","metadata":{"name":"nginx","namespace":"default"},"spec":{"replicas":3}}`))
+	}))
+	defer srv.Close()
+
+	c, err := newClientFromConfig(&rest.Config{Host: srv.URL}, 15*time.Second)
+	if err != nil {
+		t.Fatalf("newClientFromConfig() error = %v", err)
+	}
+	if err := c.ScaleDeployment("default", "nginx", 3); err != nil {
+		t.Fatalf("ScaleDeployment() error = %v", err)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Errorf("method = %s, want PATCH", gotMethod)
+	}
+	if gotPath != "/apis/apps/v1/namespaces/default/deployments/nginx/scale" {
+		t.Errorf("path = %s, want the scale subresource", gotPath)
+	}
+	if gotBody != `{"spec":{"replicas":3}}` {
+		t.Errorf("body = %s", gotBody)
 	}
 }
