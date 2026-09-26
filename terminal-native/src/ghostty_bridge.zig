@@ -453,9 +453,14 @@ fn enableGraphemeClusterMode(terminal: *ChuchuTerminal) void {
     terminal.stream.nextSlice("\x1b[?2027h");
 }
 
+/// Upper bound for queued replies to the remote side (device attributes, cursor position,
+/// size reports, encoded mouse events). Kotlin drains the queue after every write, so this
+/// only matters if draining stalls, e.g. output full of query sequences with no session.
+const max_pty_write_bytes: usize = 64 * 1024;
+
 fn appendPtyWrite(terminal: *ChuchuTerminal, bytes: []const u8) void {
     if (bytes.len == 0) return;
-    if (std.math.maxInt(usize) - terminal.pty_write_len < bytes.len) return;
+    if (bytes.len > max_pty_write_bytes - terminal.pty_write_len) return;
     const size_needed = terminal.pty_write_len + bytes.len;
     _ = ensureListSize(&terminal.pty_write_buffer, size_needed) orelse return;
     @memcpy(terminal.pty_write_buffer.items[terminal.pty_write_len .. terminal.pty_write_len + bytes.len], bytes);
@@ -673,6 +678,22 @@ export fn Java_dev_hridaya_kubenexus_core_terminal_GhosttyBridge_nativeSetMouseE
     chuchu_set_mouse_encoding_size(handle, screen_width, screen_height, cell_width, cell_height, padding_top, padding_bottom, padding_left, padding_right);
 }
 
+/// Returns the contents of a Java string as standard UTF-8, allocated with `allocator`.
+///
+/// GetStringUTFChars yields Java's *modified* UTF-8, which encodes characters outside the
+/// BMP (emoji, many CJK extensions) as two 3-byte surrogate halves and U+0000 as C0 80, so
+/// sending it to a remote shell garbles those characters. This reads the UTF-16 contents and
+/// converts them properly. Returns null for a null string or one with unpaired surrogates.
+fn jstringToUtf8Alloc(env: *c.JNIEnv, str: c.jstring) ?[]u8 {
+    if (str == null) return null;
+    const len: usize = @intCast(env.*.*.GetStringLength.?(env, str));
+    if (len == 0) return allocator.alloc(u8, 0) catch null;
+    const chars = env.*.*.GetStringChars.?(env, str, null) orelse return null;
+    defer env.*.*.ReleaseStringChars.?(env, str, chars);
+    const units: [*]const u16 = @ptrCast(chars);
+    return std.unicode.utf16LeToUtf8Alloc(allocator, units[0..len]) catch null;
+}
+
 export fn Java_dev_hridaya_kubenexus_core_terminal_GhosttyBridge_nativeEncodeKey(env: *c.JNIEnv, thiz: c.jobject, handle: c.jlong, key: c.jint, codepoint: c.jint, mods: c.jint, action: c.jint, utf8_jstring: c.jstring) callconv(.c) c.jbyteArray {
     _ = thiz;
     const terminal = chuchuFromHandle(handle) orelse return jniEmptyByteArray(env);
@@ -683,16 +704,9 @@ export fn Java_dev_hridaya_kubenexus_core_terminal_GhosttyBridge_nativeEncodeKey
     // For printable characters this allows the legacy encoding path to emit
     // raw text when the remote terminal doesn't support Kitty keyboard protocol.
     // Must outlive the encodeKey call because Ghostty references it.
-    var utf8_buf: [256]u8 = undefined;
-    const utf8_slice: []const u8 = blk: {
-        if (utf8_jstring == null) break :blk "";
-        const chars = env.*.*.GetStringUTFChars.?(env, utf8_jstring, null) orelse break :blk "";
-        defer env.*.*.ReleaseStringUTFChars.?(env, utf8_jstring, chars);
-        const len = std.mem.span(chars).len;
-        if (len > utf8_buf.len) break :blk "";
-        @memcpy(utf8_buf[0..len], chars[0..len]);
-        break :blk utf8_buf[0..len];
-    };
+    const utf8_owned: ?[]u8 = jstringToUtf8Alloc(env, utf8_jstring);
+    defer if (utf8_owned) |bytes| allocator.free(bytes);
+    const utf8_slice: []const u8 = if (utf8_owned) |bytes| (if (bytes.len <= 256) bytes else "") else "";
 
     var buf: [128]u8 = undefined;
     var writer: std.Io.Writer = .fixed(&buf);
@@ -712,17 +726,12 @@ export fn Java_dev_hridaya_kubenexus_core_terminal_GhosttyBridge_nativeEncodePas
     const terminal = chuchuFromHandle(handle) orelse return jniEmptyByteArray(env);
     if (data_jstring == null) return jniEmptyByteArray(env);
 
-    const chars = env.*.*.GetStringUTFChars.?(env, data_jstring, null) orelse return jniEmptyByteArray(env);
-    defer env.*.*.ReleaseStringUTFChars.?(env, data_jstring, chars);
-    const data_len = std.mem.span(chars).len;
-    if (data_len == 0) return jniEmptyByteArray(env);
-
     // encodePaste may need to mutate the data in place (stripping unsafe
-    // bytes and, for non-bracketed pastes, converting newlines to \r), so
-    // copy the JNI string into a mutable buffer before encoding.
-    const data_copy = allocator.alloc(u8, data_len) catch return jniEmptyByteArray(env);
+    // bytes and, for non-bracketed pastes, converting newlines to \r), so it
+    // gets its own mutable UTF-8 copy of the JNI string.
+    const data_copy = jstringToUtf8Alloc(env, data_jstring) orelse return jniEmptyByteArray(env);
     defer allocator.free(data_copy);
-    @memcpy(data_copy, chars[0..data_len]);
+    if (data_copy.len == 0) return jniEmptyByteArray(env);
 
     const segments = ghostty.input.encodePaste(data_copy, ghostty.input.PasteOptions.fromTerminal(&terminal.terminal));
     const total = segments[0].len + segments[1].len + segments[2].len;
