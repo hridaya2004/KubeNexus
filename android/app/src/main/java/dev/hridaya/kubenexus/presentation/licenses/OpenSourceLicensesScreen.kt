@@ -43,8 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibrariesDensity
@@ -141,10 +143,11 @@ private fun BoxedLoading(modifier: Modifier = Modifier) {
 private fun KubeNexusOwnLicenseHeader(modifier: Modifier = Modifier) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val resources = LocalResources.current
 
-    val trademarkNotice by produceState(initialValue = "") {
+    val trademarkNotice by produceState(initialValue = "", resources) {
         value = runCatching {
-            context.resources.openRawResource(R.raw.license_kubenexus_trademark)
+            resources.openRawResource(R.raw.license_kubenexus_trademark)
                 .bufferedReader()
                 .use { it.readText() }
         }.getOrDefault("")
@@ -272,7 +275,7 @@ private fun AttributionFooter(modifier: Modifier = Modifier) {
             onClick = {
                 val intent = android.content.Intent(
                     android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse(openSource),
+                    openSource.toUri(),
                 )
                 runCatching { context.startActivity(intent) }
             },
