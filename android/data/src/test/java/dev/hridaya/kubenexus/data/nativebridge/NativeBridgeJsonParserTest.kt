@@ -160,8 +160,9 @@ class NativeBridgeJsonParserTest {
         val fromParsed = parser.findDefinitionByGVK(definitions, "", "v1", "Pod")
 
         assertNotNull(fromString)
-        assertEquals(fromString, fromParsed)
-        assertEquals("Pod", fromParsed!!.kind)
+        // lastUpdated is stamped at construction, so the two calls can differ by a millisecond.
+        assertEquals(fromString!!.copy(lastUpdated = 0), fromParsed!!.copy(lastUpdated = 0))
+        assertEquals("Pod", fromParsed.kind)
     }
 
     @Test
@@ -173,7 +174,8 @@ class NativeBridgeJsonParserTest {
         val fromParsed = parser.findDefinition(definitions, "pods", "v1")
 
         assertNotNull(fromString)
-        assertEquals(fromString, fromParsed)
+        // lastUpdated is stamped at construction, so the two calls can differ by a millisecond.
+        assertEquals(fromString!!.copy(lastUpdated = 0), fromParsed!!.copy(lastUpdated = 0))
     }
 
     @Test
