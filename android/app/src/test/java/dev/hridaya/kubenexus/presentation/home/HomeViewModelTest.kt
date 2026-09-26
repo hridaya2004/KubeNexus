@@ -2,6 +2,7 @@ package dev.hridaya.kubenexus.presentation.home
 
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
+import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
@@ -31,6 +32,7 @@ import dev.hridaya.kubenexus.domain.usecase.TestClusterConnectionUseCase
 import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,6 +41,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -404,6 +407,30 @@ class HomeViewModelTest {
         job.cancel()
     }
 
+    // Switch from an unreachable cluster to a healthy one: the old cluster's slow failure must
+    // not mark the new one disconnected or raise a toast about it.
+    @Test
+    fun `a slow refresh of the previous cluster does not overwrite the new one`() = runTest(testDispatcher) {
+        val toasts = mutableListOf<String>()
+        val job = launch {
+            viewModel.effects.collect { if (it is HomeUiEffect.ShowToast) toasts += it.message }
+        }
+        fakePodRepository.refreshBehaviour["a"] = 10_000L to Result.Error(AppError.Network("timeout"))
+        fakeClusterRepository.clustersFlow.value = listOf(
+            Cluster(id = "a", name = "a", serverUrl = "https://a:6443", rawKubeconfig = "x", contextName = "a", isActive = true),
+            Cluster(id = "b", name = "b", serverUrl = "https://b:6443", rawKubeconfig = "x", contextName = "b"),
+        )
+        runCurrent()
+
+        fakeClusterRepository.setActiveCluster("b")
+        advanceUntilIdle()
+
+        assertEquals("b", viewModel.uiState.value.activeCluster?.id)
+        assertEquals(ClusterConnectionStatus.CONNECTED, viewModel.uiState.value.clusterConnectionStatus)
+        assertTrue(toasts.none { it.startsWith("Couldn't load your pods") })
+        job.cancel()
+    }
+
     private class FakeClusterRepository : ClusterRepository {
         val clustersFlow = MutableStateFlow<List<Cluster>>(emptyList())
 
@@ -534,10 +561,17 @@ class HomeViewModelTest {
             return lastRefreshedFlow.asStateFlow()
         }
 
+        /** Per-cluster refresh behaviour: how long it takes and what it returns. */
+        val refreshBehaviour = mutableMapOf<String, Pair<Long, Result<Unit>>>()
+
         override suspend fun refreshWorkloads(
             clusterId: String?,
             namespace: String?
         ): Result<Unit> {
+            refreshBehaviour[clusterId]?.let { (delayMs, result) ->
+                delay(delayMs)
+                return result
+            }
             lastRefreshedFlow.value = System.currentTimeMillis()
             return Result.Success(Unit)
         }

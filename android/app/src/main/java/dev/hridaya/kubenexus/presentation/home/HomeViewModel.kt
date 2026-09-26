@@ -1,11 +1,13 @@
 package dev.hridaya.kubenexus.presentation.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
 import dev.hridaya.kubenexus.core.common.result.Result
+import dev.hridaya.kubenexus.core.security.LogSanitizer
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.domain.model.Pod
@@ -24,6 +26,7 @@ import dev.hridaya.kubenexus.domain.usecase.SetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.TestClusterConnectionUseCase
 import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +66,14 @@ class HomeViewModel @Inject constructor(
 
     private val _selectedNamespace = MutableStateFlow("All Namespaces")
     private var lastSyncedClusterId: String? = null
+
+    // At most one refresh and one health check run at a time. A newer one cancels the
+    // older, and results are applied only while their cluster is still the active one, so a
+    // slow answer from the previous cluster cannot overwrite the new cluster's state.
+    private var refreshJob: Job? = null
+    private var healthJob: Job? = null
+
+    private fun isActiveCluster(clusterId: String) = _uiState.value.activeCluster?.id == clusterId
 
     private val _effects = Channel<HomeUiEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
@@ -130,6 +141,10 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                 }
+            }.catch { t ->
+                // The cluster list itself failed (e.g. the database). Keep the app usable.
+                Log.w(TAG, LogSanitizer.withStackTrace("Could not load clusters", t))
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
             }.collect { data ->
                 val status = when {
                     data.activeCluster == null -> ClusterConnectionStatus.OFFLINE
@@ -169,8 +184,11 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(clusterConnectionStatus = ClusterConnectionStatus.DISCONNECTED) }
             return
         }
-        viewModelScope.launch(dispatcherProvider.io) {
-            when (val result = checkClusterHealthUseCase.checkHealth(clusterId)) {
+        healthJob?.cancel()
+        healthJob = viewModelScope.launch(dispatcherProvider.io) {
+            val result = checkClusterHealthUseCase.checkHealth(clusterId)
+            if (!isActiveCluster(clusterId)) return@launch
+            when (result) {
                 is Result.Success -> {
                     val status = if (result.data.livez && result.data.readyz) {
                         ClusterConnectionStatus.CONNECTED
@@ -373,8 +391,11 @@ class HomeViewModel @Inject constructor(
             )
         }
 
-        viewModelScope.launch(dispatcherProvider.main) {
-            when (val result = refreshWorkloadsUseCase(clusterId, namespace)) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch(dispatcherProvider.main) {
+            val result = refreshWorkloadsUseCase(clusterId, namespace)
+            if (!isActiveCluster(clusterId)) return@launch
+            when (result) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -629,5 +650,9 @@ class HomeViewModel @Inject constructor(
                 is Result.Loading -> Unit
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "HomeViewModel"
     }
 }
