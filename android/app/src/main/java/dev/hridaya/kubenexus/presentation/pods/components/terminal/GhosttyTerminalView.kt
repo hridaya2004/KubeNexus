@@ -183,7 +183,6 @@ fun GhosttyTerminalView(
                     },
                     onClear = {
                         onAction(PodDetailUiAction.ClearTerminal)
-                        engine.initialize()
                         terminalSelection = null
                     },
                 )

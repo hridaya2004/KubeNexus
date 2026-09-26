@@ -321,7 +321,8 @@ class PodDetailViewModel @AssistedInject constructor(
             }
 
             is PodDetailUiAction.ClearTerminal -> {
-                terminalEngine.initialize(80, 24)
+                // Keeps the current grid size; the canvas only re-sends it when it changes.
+                terminalEngine.initialize()
                 _uiState.update { it.copy(terminalLines = emptyList()) }
             }
 
