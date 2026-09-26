@@ -32,6 +32,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/** Upper bound for the scale dialog, matching the Create Deployment form's limit. */
+private const val MAX_SCALE_REPLICAS = 500
+
 @Composable
 internal fun ScaleDeploymentDialog(
     deploymentName: String,
@@ -85,9 +88,9 @@ internal fun ScaleDeploymentDialog(
                     OutlinedTextField(
                         value = currentReplicas.toString(),
                         onValueChange = { input ->
-                            val parsed = input.filter { it.isDigit() }.toIntOrNull()
-                            if (parsed != null && parsed >= 0) {
-                                onReplicasChanged(parsed)
+                            val parsed = input.filter { it.isDigit() }.take(4).toIntOrNull()
+                            if (parsed != null) {
+                                onReplicasChanged(parsed.coerceAtMost(MAX_SCALE_REPLICAS))
                             } else if (input.isEmpty()) {
                                 onReplicasChanged(0)
                             }
@@ -103,7 +106,8 @@ internal fun ScaleDeploymentDialog(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     FilledIconButton(
-                        onClick = { onReplicasChanged(currentReplicas + 1) },
+                        onClick = { onReplicasChanged((currentReplicas + 1).coerceAtMost(MAX_SCALE_REPLICAS)) },
+                        enabled = currentReplicas < MAX_SCALE_REPLICAS,
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                             contentColor = MaterialTheme.colorScheme.onSurface,
@@ -111,6 +115,15 @@ internal fun ScaleDeploymentDialog(
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = "Increase replicas")
                     }
+                }
+
+                if (currentReplicas == 0) {
+                    Text(
+                        text = "Scaling to 0 stops every pod of \"$deploymentName\".",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         },
