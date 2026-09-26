@@ -23,6 +23,7 @@ import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.TerminalSession
 import dev.hridaya.kubenexus.domain.repository.PodRepository
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOf
@@ -446,45 +447,44 @@ class PodRepositoryImpl @Inject constructor(
 
         val decryptedKubeconfig = encryptor.decrypt(cluster.rawKubeconfig)
 
-        var isStreamClosed = false
+        // Callbacks arrive on a native thread. trySendBlocking applies backpressure to
+        // the Go reader instead of dropping lines once the channel buffer is full, and
+        // fails fast once the flow is cancelled and the channel closed.
         val logCallback = object : LogCallback {
             override fun onLogLine(line: String) {
-                if (!isStreamClosed) {
-                    trySend(line)
-                }
+                trySendBlocking(line)
             }
 
             override fun onError(err: String) {
-                if (!isStreamClosed) {
-                    trySend("[Log error] ${LogSanitizer.sanitize(err)}")
-                }
+                trySendBlocking("[Log error] ${LogSanitizer.sanitize(err)}")
             }
 
             override fun onDone() {
-                if (!isStreamClosed) {
-                    isStreamClosed = true
-                    close()
-                }
+                close()
             }
         }
 
-        val nativeResult = nativeBridge.streamPodLogs(
-            rawKubeconfig = decryptedKubeconfig,
-            namespace = namespace,
-            podName = podName,
-            container = containerName,
-            tailLines = tailLines,
-            callback = logCallback,
-        )
-
-        if (nativeResult.isFailure) {
-            val ex = nativeResult.exceptionOrNull()
-            trySend("[Stream error] ${LogSanitizer.sanitize(ex?.message)}")
-            close()
-        } else {
-            awaitClose {
-                isStreamClosed = true
+        when (
+            val nativeResult = nativeBridge.streamPodLogs(
+                rawKubeconfig = decryptedKubeconfig,
+                namespace = namespace,
+                podName = podName,
+                container = containerName,
+                tailLines = tailLines,
+                callback = logCallback,
+            )
+        ) {
+            is Result.Success -> {
+                val stream = nativeResult.data
+                awaitClose { stream.cancel() }
             }
+
+            is Result.Error -> {
+                trySend("[Stream error] ${LogSanitizer.sanitize(nativeResult.error.message)}")
+                close()
+            }
+
+            Result.Loading -> close()
         }
     }.flowOn(dispatcherProvider.io)
 

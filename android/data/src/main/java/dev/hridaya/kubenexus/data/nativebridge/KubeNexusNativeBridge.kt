@@ -18,6 +18,14 @@ import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServiceSummary
 
 /**
+ * A running native log stream started by [KubeNexusNativeBridge.streamPodLogs].
+ * [cancel] closes the underlying HTTP stream and is safe to call more than once.
+ */
+fun interface LogStreamHandle {
+    fun cancel()
+}
+
+/**
  * Bridge interface defining the contract for interacting with the native Go
  * runtime provided by kubenexus.aar.
  *
@@ -233,7 +241,11 @@ interface KubeNexusNativeBridge {
     ): Result<String>
 
     /**
-     * Streams live logs for a pod container via callback with optional tail line limit.
+     * Starts following live logs for a pod container and returns immediately.
+     *
+     * Lines, errors and completion arrive on [callback] from a native thread, with
+     * `onDone` always last. The stream has no overall timeout; it runs until the
+     * container stops, the connection fails, or [LogStreamHandle.cancel] is called.
      */
     fun streamPodLogs(
         rawKubeconfig: String,
@@ -242,7 +254,7 @@ interface KubeNexusNativeBridge {
         container: String? = null,
         tailLines: Long? = null,
         callback: LogCallback,
-    ): Result<Unit>
+    ): Result<LogStreamHandle>
 
     /**
      * Executes a non-interactive command inside a container and captures stdout and stderr.

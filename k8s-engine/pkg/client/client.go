@@ -40,7 +40,12 @@ func defaultExecutorFactory(config *rest.Config, method string, u *url.URL) (rem
 // deletes go through dynamic, which returns unstructured objects that can be
 // handed to Android as verbatim JSON.
 type Client struct {
-	clientset                *kubernetes.Clientset
+	clientset *kubernetes.Clientset
+	// streamingClientset has no overall request timeout. The rest.Config
+	// timeout becomes http.Client.Timeout, which also bounds reading the
+	// response body, so a followed log stream on clientset would be cut off
+	// after c.timeout no matter how the request context is set up.
+	streamingClientset       *kubernetes.Clientset
 	dynamic                  dynamic.Interface
 	config                   *rest.Config
 	timeout                  time.Duration
@@ -93,6 +98,13 @@ func newClientFromConfig(config *rest.Config, timeout time.Duration) (*Client, e
 		return nil, fmt.Errorf("creating clientset: %w", err)
 	}
 
+	streamingConfig := rest.CopyConfig(config)
+	streamingConfig.Timeout = 0
+	streamingClientset, err := kubernetes.NewForConfig(streamingConfig)
+	if err != nil {
+		return nil, fmt.Errorf("creating streaming clientset: %w", err)
+	}
+
 	// dynamic.NewForConfig copies the config before forcing JSON, so the shared
 	// config used by exec and logs below is left untouched.
 	dyn, err := dynamic.NewForConfig(config)
@@ -102,6 +114,7 @@ func newClientFromConfig(config *rest.Config, timeout time.Duration) (*Client, e
 
 	return &Client{
 		clientset:                clientset,
+		streamingClientset:       streamingClientset,
 		dynamic:                  dyn,
 		config:                   config,
 		timeout:                  timeout,

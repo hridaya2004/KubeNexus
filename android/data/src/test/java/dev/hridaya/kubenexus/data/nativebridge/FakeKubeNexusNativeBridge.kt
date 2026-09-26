@@ -157,7 +157,7 @@ open class FakeKubeNexusNativeBridge : KubeNexusNativeBridge {
         container: String?,
         tailLines: Long?,
         callback: LogCallback,
-    ): Result<Unit> = Result.Success(Unit)
+    ): Result<LogStreamHandle> = Result.Success(LogStreamHandle {})
 
     override fun exec(
         rawKubeconfig: String,

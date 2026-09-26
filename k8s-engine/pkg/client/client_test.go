@@ -73,6 +73,9 @@ func TestNewClientFromConfig_BuildsBothClients(t *testing.T) {
 	if c.clientset == nil {
 		t.Error("clientset is nil")
 	}
+	if c.streamingClientset == nil {
+		t.Error("streamingClientset is nil, log streaming would fail on device")
+	}
 	if c.dynamic == nil {
 		t.Error("dynamic client is nil, generic resource methods would fail on device")
 	}
