@@ -45,8 +45,9 @@ data class ServiceDraft(
 
         when {
             selectorApp.isBlank() -> errors["selectorApp"] = "Selector is required"
-            !K8sNames.isValidDnsLabel(selectorApp) ->
-                errors["selectorApp"] = "Use lowercase letters, numbers and '-'"
+            // A label value, not a DNS name: "MyApp", "my_app" and "web.v2" are all valid.
+            !K8sNames.isValidLabelValue(selectorApp) ->
+                errors["selectorApp"] = "Use up to 63 letters, numbers, '-', '_' or '.', starting and ending with a letter or number"
         }
 
         if (port !in MIN_PORT..MAX_PORT) {

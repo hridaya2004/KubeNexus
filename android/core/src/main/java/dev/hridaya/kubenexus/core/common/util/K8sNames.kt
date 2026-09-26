@@ -22,4 +22,13 @@ object K8sNames {
 
     fun isValidDns1035Label(value: String): Boolean =
         value.length <= MAX_LABEL_LENGTH && DNS_1035_LABEL.matches(value)
+
+    /**
+     * Label value: up to 63 characters of alphanumerics, '-', '_' and '.', beginning and ending
+     * with an alphanumeric. Unlike DNS labels, uppercase is allowed ("MyApp", "web.v2").
+     */
+    private val LABEL_VALUE = Regex("^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$")
+
+    fun isValidLabelValue(value: String): Boolean =
+        value.length <= MAX_LABEL_LENGTH && LABEL_VALUE.matches(value)
 }

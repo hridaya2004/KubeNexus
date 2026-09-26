@@ -66,11 +66,20 @@ class ServiceDraftTest {
     }
 
     @Test
-    fun `selector must be a dns1123 label`() {
-        val draft = validDraft().copy(selectorApp = "Web.Frontend")
+    fun `selector must be a label value`() {
+        listOf("-web", "web-", "web frontend", "web/frontend", "a".repeat(64)).forEach { value ->
+            val errors = validDraft().copy(selectorApp = value).validate()
 
-        assertEquals(1, draft.validate().size)
-        assertTrue(draft.validate().containsKey("selectorApp"))
+            assertEquals(value, setOf("selectorApp"), errors.keys)
+        }
+    }
+
+    // Label values are not DNS names: uppercase, underscores and dots are all allowed.
+    @Test
+    fun `selector accepts label values that are not dns labels`() {
+        listOf("Web.Frontend", "MyApp", "my_app", "web.v2", "a".repeat(63)).forEach { value ->
+            assertEquals(value, emptyMap<String, String>(), validDraft().copy(selectorApp = value).validate())
+        }
     }
 
     // Unlike Service names, selectors may target any app label, including
