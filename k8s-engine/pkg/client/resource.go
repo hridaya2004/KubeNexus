@@ -1,9 +1,13 @@
 package client
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -11,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 )
 
@@ -250,7 +255,13 @@ func (c *Client) CreateResource(gvr *GroupVersionResource, namespace, manifest s
 	}
 
 	// YAMLToJSON also accepts pure JSON input, so both manifest flavors take
-	// the same path.
+	// the same path. It only reads the first YAML document, so a multi-document
+	// manifest is refused up front rather than silently creating just its first object.
+	if count, err := countManifestObjects(manifest); err != nil {
+		return "", fmt.Errorf("parsing manifest: %w", err)
+	} else if count > 1 {
+		return "", fmt.Errorf("manifest contains %d objects; create them one at a time", count)
+	}
 	data, err := yaml.YAMLToJSON([]byte(manifest))
 	if err != nil {
 		return "", fmt.Errorf("parsing manifest: %w", err)
@@ -303,6 +314,29 @@ func (c *Client) CreateResource(gvr *GroupVersionResource, namespace, manifest s
 		return "", fmt.Errorf("marshaling %s %q: %w", resource.String(), name, err)
 	}
 	return string(data), nil
+}
+
+// countManifestObjects returns how many non-empty YAML documents manifest holds.
+// Documents that contain only comments or whitespace do not count.
+func countManifestObjects(manifest string) (int, error) {
+	reader := utilyaml.NewYAMLReader(bufio.NewReader(strings.NewReader(manifest)))
+	count := 0
+	for {
+		doc, err := reader.Read()
+		if errors.Is(err, io.EOF) {
+			return count, nil
+		}
+		if err != nil {
+			return 0, err
+		}
+		jsonDoc, err := yaml.YAMLToJSON(doc)
+		if err != nil {
+			return 0, err
+		}
+		if trimmed := bytes.TrimSpace(jsonDoc); len(trimmed) > 0 && !bytes.Equal(trimmed, []byte("null")) {
+			count++
+		}
+	}
 }
 
 // Well-known resource identifiers, exposed so Android does not have to hardcode

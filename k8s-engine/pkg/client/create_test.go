@@ -266,6 +266,28 @@ spec:
 	}
 }
 
+func TestCountManifestObjects(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest string
+		want     int
+	}{
+		{"single document", "apiVersion: v1\nkind: Pod\n", 1},
+		{"leading separator", "---\napiVersion: v1\nkind: Pod\n", 1},
+		{"trailing separator and comment", "apiVersion: v1\nkind: Pod\n---\n# nothing here\n", 1},
+		{"two documents", "apiVersion: v1\nkind: Pod\n---\napiVersion: v1\nkind: Service\n", 2},
+		{"json", `{"apiVersion":"v1","kind":"Pod"}`, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := countManifestObjects(tt.manifest)
+			if err != nil || got != tt.want {
+				t.Errorf("countManifestObjects() = %d, %v; want %d", got, err, tt.want)
+			}
+		})
+	}
+}
+
 // Argument validation must happen before any network call is attempted.
 func TestCreateResource_Validation(t *testing.T) {
 	serverURL := newFailingServerURL(t)
@@ -316,6 +338,12 @@ func TestCreateResource_Validation(t *testing.T) {
 			gvr:      NewGroupVersionResource("apps", "v1", "deployments"),
 			manifest: "   \n\t  ",
 			wantErr:  "manifest is required",
+		},
+		{
+			name:     "multi-document manifest",
+			gvr:      NewGroupVersionResource("apps", "v1", "deployments"),
+			manifest: nginxDeploymentYAML + "\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: nginx\n",
+			wantErr:  "manifest contains 2 objects",
 		},
 		{
 			name:     "nil resource identifier",
