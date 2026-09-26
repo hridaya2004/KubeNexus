@@ -52,28 +52,10 @@ func TestNewClientWithOptions(t *testing.T) {
 	}
 }
 
-func TestClient_TimeoutGetSet(t *testing.T) {
-	c := &Client{
-		timeout: 30 * time.Second,
-		config:  &rest.Config{},
-	}
-
+func TestClient_GetTimeout(t *testing.T) {
+	c := &Client{timeout: 30 * time.Second}
 	if c.GetTimeout() != 30 {
 		t.Errorf("GetTimeout() = %d, want 30", c.GetTimeout())
-	}
-
-	c.SetTimeout(60)
-	if c.GetTimeout() != 60 {
-		t.Errorf("GetTimeout() = %d, want 60", c.GetTimeout())
-	}
-	if c.config.Timeout != 60*time.Second {
-		t.Errorf("config.Timeout = %v, want 60s", c.config.Timeout)
-	}
-
-	// Non-positive timeout should not overwrite
-	c.SetTimeout(-5)
-	if c.GetTimeout() != 60 {
-		t.Errorf("GetTimeout() after negative = %d, want 60", c.GetTimeout())
 	}
 }
 

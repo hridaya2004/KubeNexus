@@ -124,16 +124,6 @@ func NewFromPath(filePath string) (*Client, error) {
 	return newClientFromConfig(config, defaultTimeout)
 }
 
-// SetTimeout updates the client timeout duration in seconds.
-func (c *Client) SetTimeout(timeoutSeconds int64) {
-	if timeoutSeconds > 0 {
-		c.timeout = time.Duration(timeoutSeconds) * time.Second
-		if c.config != nil {
-			c.config.Timeout = c.timeout
-		}
-	}
-}
-
 // GetTimeout returns the current client timeout in seconds.
 func (c *Client) GetTimeout() int64 {
 	return int64(c.timeout.Seconds())
