@@ -8,7 +8,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NDK_VERSION: 30.0.16248370
   BUNDLETOOL_VERSION: 1.18.3
   BUNDLETOOL_SHA256: a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29
 
@@ -27,10 +26,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Export NDK paths
-        run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
-          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      - name: Read pinned versions
+        id: versions
+        run: make -s versions >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -39,70 +37,42 @@ jobs:
           java-version: '21'
 
       - name: Set up Go
-        id: setup-go
         uses: actions/setup-go@v7
         with:
-          go-version: '1.26'
+          go-version-file: k8s-engine/go.mod
           cache-dependency-path: k8s-engine/go.sum
 
       - name: Set up Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: ${{ steps.versions.outputs.zig }}
 
       - name: Cache Android NDK
-        id: cache-ndk
         uses: actions/cache@v5
         with:
-          path: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
-          key: ndk-${{ env.NDK_VERSION }}-${{ runner.os }}
+          path: ${{ env.ANDROID_HOME }}/ndk/${{ steps.versions.outputs.ndk }}
+          key: ndk-${{ steps.versions.outputs.ndk }}-${{ runner.os }}
 
       - name: Install Android NDK
-        if: steps.cache-ndk.outputs.cache-hit != 'true'
-        run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+        run: make ndk
 
-      - name: Cache Gomobile tool
-        id: cache-gomobile
+      - name: Cache native libraries
         uses: actions/cache@v5
         with:
           path: |
-            ~/go/bin/gomobile
-            ~/go/bin/gobind
-          key: gomobile-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-
-      - name: Install gomobile
-        if: steps.cache-gomobile.outputs.cache-hit != 'true'
-        run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
-          gomobile init
-
-      - name: Cache JNI native libraries
-        id: cache-jni
-        uses: actions/cache@v5
-        with:
-          path: |
-            android/data/libs/kubenexus.aar
-            android/data/libs/kubenexus-sources.jar
+            build/native
+            android/data/libs
             android/app/src/main/jniLibs
             terminal-native/.zig-cache
-          key: jni-${{ runner.os }}-${{ hashFiles('k8s-engine/**', 'terminal-native/**') }}
+          key: jni-${{ runner.os }}-${{ hashFiles('Makefile', 'android/gradle/libs.versions.toml', 'k8s-engine/**', 'terminal-native/**') }}
           restore-keys: |
             jni-${{ runner.os }}-
 
-      - name: Build JNI native libraries
-        run: make jni
-
-      # The jniLibs cache is keyed on source hashes only, so a cache restored from a partial
-      # build can leave an ABI missing while make still considers the set satisfied. This is the
-      # last point where that is still cheap to catch.
-      - name: Verify native libraries for all ABIs
+      - name: Build and verify native libraries
         run: make verify-jni
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-
-      - name: Make Gradlew executable
-        run: chmod +x ./android/gradlew
 
       - name: Set up bundletool
         run: |
@@ -112,12 +82,11 @@ jobs:
           echo "BUNDLETOOL_JAR=$RUNNER_TEMP/bundletool.jar" >> "$GITHUB_ENV"
 
       - name: Build Release AAB
-        run: make build
-
-      # An AAB cannot be side-loaded, so also emit installable APKs from it.
-      # They are signed with the same debug key Gradle signs the AAR/AAB with,
-      # so they install and update over each other.
+        run: make bundle
       - name: Generate installable APKs from the AAB
+        env:
+          ABIS: ${{ steps.versions.outputs.abis }}
+          MIN_SDK: ${{ steps.versions.outputs.min_sdk }}
         run: |
           set -euo pipefail
 
@@ -133,10 +102,6 @@ jobs:
             --ks-pass=pass:android
             --key-pass=pass:android
           )
-
-          # bundletool only warns when output is unsigned; treat that as fatal
-          # so an un-signable keystore fails the build instead of shipping
-          # APKs that cannot be installed.
           build_apks() {
             local log
             if ! log=$(java -jar "$BUNDLETOOL_JAR" build-apks "$@" 2>&1); then
@@ -149,8 +114,6 @@ jobs:
               return 1
             fi
           }
-
-          # One universal APK, installable on any supported device.
           build_apks \
             --bundle="$AAB" \
             --output="$RUNNER_TEMP/universal.apks" \
@@ -159,13 +122,10 @@ jobs:
             "${SIGN_ARGS[@]}"
           unzip -o -q "$RUNNER_TEMP/universal.apks" -d "$RUNNER_TEMP/universal"
           cp "$RUNNER_TEMP/universal/universal.apk" "$DIST/kubenexus-universal.apk"
-
-          # Per-ABI sets, each a master split plus that ABI's native split.
-          # bundletool has no per-ABI standalone mode, so zip each pair.
-          for abi in arm64-v8a armeabi-v7a x86_64 x86; do
+          for abi in $ABIS; do
             spec="$RUNNER_TEMP/spec-$abi.json"
-            printf '{"supportedAbis":["%s"],"screenDensity":480,"sdkVersion":35,"supportedLocales":["en"]}\n' \
-              "$abi" > "$spec"
+            printf '{"supportedAbis":["%s"],"screenDensity":480,"sdkVersion":%s,"supportedLocales":["en"]}\n' \
+              "$abi" "$MIN_SDK" > "$spec"
 
             build_apks \
               --bundle="$AAB" \
@@ -234,6 +194,7 @@ jobs:
           AAB_URL: ${{ steps.get-artifact-urls.outputs.kubenexus-release-aab_url }}
           UNIVERSAL_URL: ${{ steps.get-artifact-urls.outputs.kubenexus-universal-apk_url }}
           PER_ABI_URL: ${{ steps.get-artifact-urls.outputs.kubenexus-per-abi-apks_url }}
+          ABIS: ${{ steps.versions.outputs.abis }}
         run: |
           if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
             echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not set. Skipping Telegram notification."
@@ -248,7 +209,7 @@ jobs:
           TEXT="<b>KubeNexus Build Completed</b>"$'\n\n'
           TEXT+="<b>Artifacts:</b>"$'\n'
           TEXT+="- <a href=\"${UNIVERSAL_URL:-$RUN_URL}\">kubenexus-universal-apk</a> <i>(install on any device)</i>"$'\n'
-          TEXT+="- <a href=\"${PER_ABI_URL:-$RUN_URL}\">kubenexus-per-abi-apks</a> <i>(arm64-v8a / armeabi-v7a / x86_64 / x86)</i>"$'\n'
+          TEXT+="- <a href=\"${PER_ABI_URL:-$RUN_URL}\">kubenexus-per-abi-apks</a> <i>(${ABIS// / \/ })</i>"$'\n'
           TEXT+="- <a href=\"${AAB_URL:-$RUN_URL}\">kubenexus-release-aab</a> <i>(for Play)</i>"$'\n\n'
           TEXT+="<b>Build Details:</b>"$'\n'
           TEXT+="- <b>Branch:</b> <code>${{ github.ref_name }}</code>"$'\n'

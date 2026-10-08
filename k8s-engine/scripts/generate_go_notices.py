@@ -23,7 +23,6 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ENGINE = REPO / "k8s-engine"
 CONFIG = REPO / "android" / "config"
-WORKFLOW = REPO / ".github" / "workflows" / "build-bundle.yaml"
 
 LICENSE_FILE = re.compile(r"(?i)^(licen[cs]e|copying)")
 NOTICE_FILE = re.compile(r"(?i)^notice")
@@ -58,10 +57,7 @@ def linked_modules() -> list[tuple[str, str]]:
 
 
 def gomobile_version() -> str:
-    match = re.search(r"GOMOBILE_VERSION:\s*(\S+)", WORKFLOW.read_text())
-    if not match:
-        sys.exit(f"GOMOBILE_VERSION not found in {WORKFLOW}")
-    return match.group(1)
+    return run("go", "list", "-m", "-f", "{{.Version}}", "golang.org/x/mobile").strip()
 
 
 def write_json(path: pathlib.Path, data: dict) -> None:

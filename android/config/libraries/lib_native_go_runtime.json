@@ -1,7 +1,7 @@
 {
   "uniqueId": "dev.hridaya.kubenexus:native-go-runtime",
   "name": "Go runtime, standard library and gomobile bindings",
-  "artifactVersion": "v0.0.0-20260908204917-8b95e45f8d3e",
+  "artifactVersion": "v0.0.0-20260813181013-1960c775504c",
   "description": "The Go runtime and standard library, and gomobile's Java/Go binding glue (golang.org/x/mobile), compiled into the Kubernetes engine.",
   "website": "https://go.dev",
   "licenses": [

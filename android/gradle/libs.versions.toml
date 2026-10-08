@@ -1,4 +1,9 @@
 [versions]
+compileSdk = "37"
+targetSdk = "37"
+minSdk = "35"
+ndk = "30.0.16248370"
+
 agp = "9.4.1"
 coreKtx = "1.19.0"
 junit = "4.13.2"

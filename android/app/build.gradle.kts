@@ -9,12 +9,10 @@ plugins {
 android {
     namespace = "dev.hridaya.kubenexus"
     compileSdk {
-        version = release(37)
+        version = release(libs.versions.compileSdk.get().toInt())
     }
 
-    // Must match ANDROID_NDK_HOME in the Makefile. If it names an NDK that is not installed, AGP
-    // ships the native libs unstripped and emits no debug symbols. `make verify-ndk` checks it.
-    ndkVersion = "30.0.16248370"
+    ndkVersion = libs.versions.ndk.get()
 
     val repoDir = project.rootDir.parentFile ?: project.rootDir
 
@@ -70,8 +68,8 @@ android {
 
     defaultConfig {
         applicationId = "dev.hridaya.kubenexus"
-        minSdk = 35
-        targetSdk = 37
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 101
         versionName = "1.0.1"
 

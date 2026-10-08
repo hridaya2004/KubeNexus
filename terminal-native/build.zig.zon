@@ -1,6 +1,7 @@
 .{
     .name = .kubenexus_terminal,
     .version = "1.0.0",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .ghostty = .{
             .url = "git+https://github.com/ghostty-org/ghostty#683d8db643b95cf229bfb5fe9fab9ae677920343",
