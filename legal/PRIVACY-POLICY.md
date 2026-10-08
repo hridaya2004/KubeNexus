@@ -1,6 +1,6 @@
 # Privacy Policy — KubeNexus
 
-**Last updated: 29 September 2026**
+**Last updated: 9 October 2026**
 
 ---
 
@@ -76,6 +76,15 @@ When you use the app, your device connects **directly to the Kubernetes API
 server named in your kubeconfig**. We are not in that path. The app makes no
 other network connections, except the optional log upload described in
 section 6.
+
+- **App updates.** When you open the app, it asks the Google Play Store app on
+  your device whether a newer version of KubeNexus is available, using Google's
+  Play In-App Updates library. To answer, Google Play uses your device's
+  metadata, the installed app version and the list of installed app modules.
+  Google states that this data is encrypted, is not shared with third parties
+  and is deleted after a fixed retention period. If you agree to update, Google
+  Play downloads and installs it. None of this reaches us. If the app was not
+  installed from Google Play, no check happens.
 
 - **Encryption.** The app's Kubernetes client only connects to API servers over
   HTTPS (TLS) and refuses plain `http://` server addresses. The server's

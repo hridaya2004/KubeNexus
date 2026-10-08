@@ -29,6 +29,7 @@ hiltNavigationCompose = "1.4.0"
 datastore = "1.2.1"
 javaxInject = "1"
 aboutLibraries = "15.2.0"
+playAppUpdate = "2.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -69,6 +70,8 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
 aboutlibraries-core = { group = "com.mikepenz", name = "aboutlibraries-core", version.ref = "aboutLibraries" }
 aboutlibraries-compose-m3 = { group = "com.mikepenz", name = "aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+play-app-update = { group = "com.google.android.play", name = "app-update", version.ref = "playAppUpdate" }
+play-app-update-ktx = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "playAppUpdate" }
 
 
 

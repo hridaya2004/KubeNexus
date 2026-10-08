@@ -224,6 +224,8 @@ aboutLibraries {
             "go-module-notices",
             "wuffs-mit",
             "zig-mit",
+            "ASDKL",
+            "PCSDKToS",
         )
 
         // Native components reference these by SPDX id and AboutLibraries pulls the canonical
@@ -287,6 +289,9 @@ dependencies {
 
     implementation(libs.aboutlibraries.core)
     implementation(libs.aboutlibraries.compose.m3)
+
+    implementation(libs.play.app.update)
+    implementation(libs.play.app.update.ktx)
 
     // Hilt (app still needs @HiltAndroidApp processor)
     implementation(libs.hilt.android)

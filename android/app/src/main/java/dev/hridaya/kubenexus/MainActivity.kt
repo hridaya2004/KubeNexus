@@ -17,6 +17,7 @@ import dev.hridaya.kubenexus.domain.model.ThemeMode
 import dev.hridaya.kubenexus.domain.repository.ThemePreferencesRepository
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.main.MainScreen
+import dev.hridaya.kubenexus.presentation.update.InAppUpdate
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import dev.hridaya.kubenexus.ui.theme.LocalAmoledDark
 import dev.hridaya.kubenexus.ui.theme.LocalOnAmoledDarkChange
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
                     amoledDark = amoledDark,
                 ) {
                     MainScreen(homeViewModel = viewModel)
+                    InAppUpdate()
                 }
             }
         }

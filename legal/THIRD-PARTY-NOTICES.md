@@ -216,6 +216,15 @@ Window Size Class), Kotlin stdlib/coroutines/serialization, Hilt (Apache-2.0), s
 (Apache-2.0, kubeconfig parsing), AboutLibraries (Apache-2.0), LeakCanary (Apache-2.0,
 **debug-only**), `org.json` (tests only), `javax.inject`.
 
+One exception is not open source: **Google Play In-App Updates** (`com.google.android.play:app-update`
+and `app-update-ktx`, with `core-common`), under the Play Core Software Development Kit Terms of
+Service, and the `play-services-basement` and `play-services-tasks` libraries it pulls in, under the
+Android Software Development Kit License. Both licences are allowed in `app/build.gradle.kts`
+(`PCSDKToS`, `ASDKL`) for this library only. It asks the Play Store app on the device whether an
+update exists. Google lists the data that check uses (device metadata, app version, installed
+modules) in the Data safety section of its In-App Updates guide; account for it in the Data
+safety answers below.
+
 **No advertising, analytics, or crash-reporting SDKs are present.** This is worth keeping true:
 it is what keeps the submitted Data safety answers narrow — a single declared type, App activity
 → Other user-generated content, for pod logs the user chooses to upload to dpaste.org. Adding
