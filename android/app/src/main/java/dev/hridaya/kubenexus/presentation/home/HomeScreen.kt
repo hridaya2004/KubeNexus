@@ -1,9 +1,11 @@
 package dev.hridaya.kubenexus.presentation.home
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -11,15 +13,15 @@ import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,12 +33,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.presentation.common.components.LoadingContent
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.home.components.AddClusterBottomSheet
 import dev.hridaya.kubenexus.presentation.home.components.ClusterPill
 import dev.hridaya.kubenexus.presentation.home.components.ClusterSwitcherDrawer
+import dev.hridaya.kubenexus.presentation.home.components.CreateFabMenu
 import dev.hridaya.kubenexus.presentation.home.components.EmptyClustersView
 import dev.hridaya.kubenexus.presentation.home.components.ErrorDialog
-import dev.hridaya.kubenexus.presentation.home.components.FabActionBottomSheet
 import dev.hridaya.kubenexus.presentation.home.components.HomeWorkloadsList
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 
@@ -137,19 +140,18 @@ fun HomeScreen(
         },
 
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onAction(HomeUiAction.OpenFabActionSheet) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Quick Actions",
-                )
+            if (uiState.clusters.isEmpty()) {
+                MediumFloatingActionButton(onClick = { onAction(HomeUiAction.OpenAddClusterSheet) }) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add cluster",
+                        modifier = Modifier.size(FloatingActionButtonDefaults.MediumIconSize),
+                    )
+                }
             }
         },
     ) { innerPadding ->
-        PullToRefreshBox(
+        RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(HomeUiAction.RefreshWorkloads) },
             modifier = Modifier
@@ -190,15 +192,24 @@ fun HomeScreen(
             )
         }
 
-        if (uiState.showFabActionSheet) {
-            FabActionBottomSheet(
-                hasClustersConfigured = uiState.clusters.isNotEmpty(),
-                onAddClusterClick = { onAction(HomeUiAction.OpenAddClusterSheet) },
-                onAddPodClick = onNavigateToCreatePod,
-                onAddDeploymentClick = onNavigateToCreateDeployment,
-                onAddServiceClick = onNavigateToCreateService,
-                onDismiss = { onAction(HomeUiAction.DismissFabActionSheet) },
-            )
+        if (uiState.clusters.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = innerPadding.calculateBottomPadding()),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
+                CreateFabMenu(
+                    expanded = uiState.showFabMenu,
+                    onExpandedChange = { expanded ->
+                        onAction(if (expanded) HomeUiAction.OpenFabMenu else HomeUiAction.DismissFabMenu)
+                    },
+                    onAddPodClick = onNavigateToCreatePod,
+                    onAddDeploymentClick = onNavigateToCreateDeployment,
+                    onAddServiceClick = onNavigateToCreateService,
+                    onAddClusterClick = { onAction(HomeUiAction.OpenAddClusterSheet) },
+                )
+            }
         }
 
         if (uiState.showAddClusterSheet) {

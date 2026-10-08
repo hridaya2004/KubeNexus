@@ -32,7 +32,7 @@ data class HomeUiState(
     val showNamespacePicker: Boolean = false,
     val selectedPod: Pod? = null,
     val showClusterDrawer: Boolean = false,
-    val showFabActionSheet: Boolean = false,
+    val showFabMenu: Boolean = false,
     val showAddClusterSheet: Boolean = false,
     val editingCluster: Cluster? = null,
     val clusterToDelete: Cluster? = null,
@@ -51,8 +51,8 @@ sealed interface HomeUiAction {
     data object RefreshWorkloads : HomeUiAction
     data object OpenClusterDrawer : HomeUiAction
     data object DismissClusterDrawer : HomeUiAction
-    data object OpenFabActionSheet : HomeUiAction
-    data object DismissFabActionSheet : HomeUiAction
+    data object OpenFabMenu : HomeUiAction
+    data object DismissFabMenu : HomeUiAction
     data object OpenAddClusterSheet : HomeUiAction
     data object DismissAddClusterSheet : HomeUiAction
     data class KubeconfigInputChanged(val text: String) : HomeUiAction

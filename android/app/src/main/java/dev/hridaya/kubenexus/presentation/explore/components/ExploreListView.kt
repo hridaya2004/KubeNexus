@@ -20,19 +20,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -45,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.core.common.util.TimeFormatter
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.Cluster
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiAction
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiState
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
@@ -104,15 +104,15 @@ fun ExploreListView(
             )
         },
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = false,
+        RefreshableBox(
+            isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(ExploreUiAction.Refresh) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.isLoading || uiState.isRefreshing) {
+                if (uiState.isLoading) {
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -252,11 +252,7 @@ fun ExploreListView(
                                             .padding(vertical = 12.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
+                                        LoadingIndicator()
                                     }
                                 }
                             }

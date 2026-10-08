@@ -6,22 +6,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodStatus
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.home.HomeUiAction
 import dev.hridaya.kubenexus.presentation.home.HomeUiState
 import dev.hridaya.kubenexus.presentation.home.components.PodCard
@@ -96,27 +98,26 @@ fun PodsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            MediumFloatingActionButton(
                 onClick = onNavigateToCreatePod,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Add Pod",
+                    modifier = Modifier.size(FloatingActionButtonDefaults.MediumIconSize),
                 )
             }
         },
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = false,
+        RefreshableBox(
+            isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(HomeUiAction.RefreshWorkloads) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.isRefreshing || uiState.isDeletingNamespace) {
+                if (uiState.isDeletingNamespace) {
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()

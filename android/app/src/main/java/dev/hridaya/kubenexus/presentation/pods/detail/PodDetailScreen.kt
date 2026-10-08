@@ -17,15 +17,11 @@ import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +38,7 @@ import dev.hridaya.kubenexus.domain.model.ContainerDetail
 import dev.hridaya.kubenexus.domain.model.PodConditionDetail
 import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodStatus
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.pods.components.terminal.GhosttyTerminalEngine
 import dev.hridaya.kubenexus.presentation.pods.components.terminal.GhosttyTerminalView
 import dev.hridaya.kubenexus.presentation.pods.detail.components.DeletePodConfirmDialog
@@ -112,10 +109,6 @@ fun PodDetailScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
         ) {
-            if (uiState.isRefreshing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
             PrimaryTabRow(
                 selectedTabIndex = uiState.selectedTab.ordinal,
                 containerColor = Color.Transparent,
@@ -151,20 +144,9 @@ fun PodDetailScreen(
 
             when (uiState.selectedTab) {
                 PodDetailTab.DESCRIBE -> {
-                    val pullToRefreshState = rememberPullToRefreshState()
-                    PullToRefreshBox(
+                    RefreshableBox(
                         isRefreshing = uiState.isRefreshing,
                         onRefresh = { onAction(PodDetailUiAction.RefreshDescribe) },
-                        state = pullToRefreshState,
-                        indicator = {
-                            if (!uiState.isRefreshing) {
-                                PullToRefreshDefaults.Indicator(
-                                    state = pullToRefreshState,
-                                    isRefreshing = false,
-                                    modifier = Modifier.align(Alignment.TopCenter),
-                                )
-                            }
-                        },
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         DescribeTabContent(

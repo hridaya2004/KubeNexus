@@ -185,6 +185,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        optIn.add("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
+    }
+}
+
 // Gradle cannot see the vendored Zig tree or the Go modules, so android/config/ declares those
 // components by hand. Add an entry there when a native dependency changes.
 aboutLibraries {

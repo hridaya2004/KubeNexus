@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -16,9 +17,9 @@ import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 private fun MainScreenNavigationPreview() {
     KubeNexusTheme {
         NavigationSuiteScaffold(
-            navigationSuiteItems = {
+            navigationItems = {
                 Destination.topLevelDestinations.forEach { destination ->
-                    item(
+                    NavigationSuiteItem(
                         selected = destination == Destination.Home,
                         onClick = {},
                         icon = {
@@ -27,9 +28,7 @@ private fun MainScreenNavigationPreview() {
                                 contentDescription = destination.title,
                             )
                         },
-                        label = {
-                            Text(text = destination.title)
-                        },
+                        label = { Text(text = destination.title) },
                     )
                 }
             },

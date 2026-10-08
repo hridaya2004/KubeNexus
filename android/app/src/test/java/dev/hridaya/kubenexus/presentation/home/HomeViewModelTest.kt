@@ -130,12 +130,12 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `OpenFabActionSheet and DismissFabActionSheet update state`() {
-        viewModel.onAction(HomeUiAction.OpenFabActionSheet)
-        assertTrue(viewModel.uiState.value.showFabActionSheet)
+    fun `OpenFabMenu and DismissFabMenu update state`() {
+        viewModel.onAction(HomeUiAction.OpenFabMenu)
+        assertTrue(viewModel.uiState.value.showFabMenu)
 
-        viewModel.onAction(HomeUiAction.DismissFabActionSheet)
-        assertFalse(viewModel.uiState.value.showFabActionSheet)
+        viewModel.onAction(HomeUiAction.DismissFabMenu)
+        assertFalse(viewModel.uiState.value.showFabMenu)
     }
 
     @Test

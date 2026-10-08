@@ -15,19 +15,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
 import dev.hridaya.kubenexus.domain.model.ServiceSummary
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.services.components.ServiceCard
 import dev.hridaya.kubenexus.presentation.services.components.ServicesEmptyState
 import dev.hridaya.kubenexus.presentation.services.components.ServicesNamespaceFilterBar
@@ -118,19 +119,18 @@ fun ServicesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            MediumFloatingActionButton(
                 onClick = onNavigateToCreateService,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Add Service",
+                    modifier = Modifier.size(FloatingActionButtonDefaults.MediumIconSize),
                 )
             }
         },
     ) { innerPadding ->
-        PullToRefreshBox(
+        RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(ServicesUiAction.Refresh) },
             modifier = Modifier
@@ -138,7 +138,7 @@ fun ServicesScreen(
                 .padding(innerPadding),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.isLoading || uiState.isRefreshing) {
+                if (uiState.isLoading) {
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -166,10 +166,7 @@ fun ServicesScreen(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 3.dp,
-                            )
+                            LoadingIndicator()
                         }
                     }
 

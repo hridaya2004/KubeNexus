@@ -17,11 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +30,7 @@ import dev.hridaya.kubenexus.core.common.util.TimeFormatter
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.ResourceExplain
 import dev.hridaya.kubenexus.domain.model.ResourceField
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiAction
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiState
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
@@ -55,8 +54,8 @@ fun ExploreExplainDetailView(
             )
         },
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = false,
+        RefreshableBox(
+            isRefreshing = uiState.isLoadingExplain,
             onRefresh = { onAction(ExploreUiAction.RetryExplain(resource)) },
             modifier = Modifier
                 .fillMaxSize()
@@ -65,14 +64,6 @@ fun ExploreExplainDetailView(
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (uiState.isLoadingExplain) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 2.dp),
-                    )
-                }
-
                 when {
                     uiState.isLoadingExplain && uiState.explainDetails == null -> {
                         ExploreExplainLoadingState(

@@ -17,12 +17,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -31,9 +31,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.domain.model.Pod
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.deployments.detail.components.DeleteDeploymentDialog
 import dev.hridaya.kubenexus.presentation.deployments.detail.components.DeploymentDetailsSection
 import dev.hridaya.kubenexus.presentation.deployments.detail.components.DeploymentImagesCard
@@ -132,10 +130,7 @@ fun DeploymentDetailScreen(
                         .padding(32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        strokeWidth = 3.dp,
-                    )
+                    LoadingIndicator()
                 }
             }
 
@@ -173,20 +168,9 @@ fun DeploymentDetailScreen(
             }
 
             else -> uiState.deployment?.let { deployment ->
-                val pullToRefreshState = rememberPullToRefreshState()
-                PullToRefreshBox(
+                RefreshableBox(
                     isRefreshing = uiState.isRefreshing,
                     onRefresh = { onAction(DeploymentDetailUiAction.Refresh) },
-                    state = pullToRefreshState,
-                    indicator = {
-                        if (!uiState.isRefreshing) {
-                            PullToRefreshDefaults.Indicator(
-                                state = pullToRefreshState,
-                                isRefreshing = false,
-                                modifier = Modifier.align(Alignment.TopCenter),
-                            )
-                        }
-                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
@@ -200,7 +184,7 @@ fun DeploymentDetailScreen(
                             .padding(bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        if (uiState.isMutating || uiState.isRefreshing) {
+                        if (uiState.isMutating) {
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
 

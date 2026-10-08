@@ -16,20 +16,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.K8sEventSummary
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.common.rememberNotificationPermissionRequest
 import dev.hridaya.kubenexus.presentation.portforward.ActivePortForwardChipsRow
 import dev.hridaya.kubenexus.presentation.portforward.PortForwardUiState
@@ -129,20 +126,9 @@ fun ServiceDetailScreen(
             )
         },
     ) { innerPadding ->
-        val pullToRefreshState = rememberPullToRefreshState()
-        PullToRefreshBox(
+        RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(ServiceDetailUiAction.Refresh) },
-            state = pullToRefreshState,
-            indicator = {
-                if (!uiState.isRefreshing) {
-                    PullToRefreshDefaults.Indicator(
-                        state = pullToRefreshState,
-                        isRefreshing = false,
-                        modifier = Modifier.align(Alignment.TopCenter),
-                    )
-                }
-            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -150,10 +136,6 @@ fun ServiceDetailScreen(
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                if (uiState.isRefreshing) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-
                 if (portForwardUiState.activeForwards.isNotEmpty()) {
                     ActivePortForwardChipsRow(
                         forwards = portForwardUiState.activeForwards,
@@ -170,10 +152,7 @@ fun ServiceDetailScreen(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 3.dp,
-                            )
+                            LoadingIndicator()
                         }
                     }
 

@@ -13,18 +13,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.DeploymentSummary
+import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 
 @Composable
@@ -114,19 +115,18 @@ fun DeploymentsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            MediumFloatingActionButton(
                 onClick = onNavigateToCreateDeployment,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Add Deployment",
+                    modifier = Modifier.size(FloatingActionButtonDefaults.MediumIconSize),
                 )
             }
         },
     ) { innerPadding ->
-        PullToRefreshBox(
+        RefreshableBox(
             isRefreshing = uiState.isSyncing,
             onRefresh = { onAction(DeploymentsUiAction.Refresh) },
             modifier = Modifier
@@ -134,7 +134,7 @@ fun DeploymentsScreen(
                 .padding(innerPadding),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.isLoading || uiState.isSyncing) {
+                if (uiState.isLoading) {
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -162,10 +162,7 @@ fun DeploymentsScreen(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 3.dp,
-                            )
+                            LoadingIndicator()
                         }
                     }
 

@@ -245,19 +245,19 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(showClusterDrawer = false) }
             }
 
-            is HomeUiAction.OpenFabActionSheet -> {
-                _uiState.update { it.copy(showFabActionSheet = true) }
+            is HomeUiAction.OpenFabMenu -> {
+                _uiState.update { it.copy(showFabMenu = true) }
             }
 
-            is HomeUiAction.DismissFabActionSheet -> {
-                _uiState.update { it.copy(showFabActionSheet = false) }
+            is HomeUiAction.DismissFabMenu -> {
+                _uiState.update { it.copy(showFabMenu = false) }
             }
 
             is HomeUiAction.OpenAddClusterSheet -> {
                 _uiState.update {
                     it.copy(
                         showAddClusterSheet = true,
-                        showFabActionSheet = false,
+                        showFabMenu = false,
                         showClusterDrawer = false,
                         kubeconfigInput = "",
                         customClusterName = "",

@@ -3,9 +3,9 @@ package dev.hridaya.kubenexus.presentation.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -37,30 +37,20 @@ internal fun MainTopLevelScaffold(
     modifier: Modifier = Modifier,
 ) {
     NavigationSuiteScaffold(
-        navigationSuiteItems = {
+        navigationItems = {
             Destination.topLevelDestinations.forEach { destination ->
-                item(
-                    selected = currentDestination == destination,
+                val selected = currentDestination == destination
+                NavigationSuiteItem(
+                    selected = selected,
                     onClick = { onSelectDestination(destination) },
                     icon = {
-                        BadgedBox(
-                            badge = {
-                                destination.badgeCount?.let { count ->
-                                    Badge {
-                                        Text(text = "$count")
-                                    }
-                                }
-                            },
-                        ) {
-                            Icon(
-                                imageVector = if (currentDestination == destination) destination.selectedIcon else destination.unselectedIcon,
-                                contentDescription = destination.title,
-                            )
-                        }
+                        Icon(
+                            imageVector = if (selected) destination.selectedIcon else destination.unselectedIcon,
+                            contentDescription = destination.title,
+                        )
                     },
-                    label = {
-                        Text(text = destination.title)
-                    },
+                    label = { Text(text = destination.title) },
+                    badge = destination.badgeCount?.let { count -> { Badge { Text(text = "$count") } } },
                 )
             }
         },
