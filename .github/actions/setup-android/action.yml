@@ -6,6 +6,8 @@ outputs:
     value: ${{ steps.versions.outputs.min_sdk }}
   zig:
     value: ${{ steps.versions.outputs.zig }}
+  java:
+    value: ${{ steps.versions.outputs.java }}
   abis:
     value: ${{ steps.versions.outputs.abis }}
 

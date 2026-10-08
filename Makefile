@@ -3,6 +3,7 @@ version      = $(shell sed -n 's/^$(1) *= *"\(.*\)"/\1/p' $(VERSIONS))
 NDK_VERSION := $(call version,ndk)
 MIN_SDK     := $(call version,minSdk)
 ZIG_VERSION := $(shell sed -n 's/.*minimum_zig_version = "\(.*\)".*/\1/p' terminal-native/build.zig.zon)
+JAVA_VERSION := $(shell sed -n 's/^toolchainVersion=//p' android/gradle/gradle-daemon-jvm.properties)
 
 export ANDROID_HOME ?= $(HOME)/Android/Sdk
 export ANDROID_NDK_HOME := $(ANDROID_HOME)/ndk/$(NDK_VERSION)
@@ -31,11 +32,12 @@ LICENSES_TXT := $(LICENSES_OUT)/kubenexus-licenses.txt
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
 
-versions: ## Print the pinned NDK, minSdk, Zig version and the ABIs
+versions: ## Print the pinned NDK, minSdk, Java and Zig versions and the ABIs
 	@echo ndk=$(NDK_VERSION)
 	@echo ndk_home=$(ANDROID_NDK_HOME)
 	@echo min_sdk=$(MIN_SDK)
 	@echo zig=$(ZIG_VERSION)
+	@echo java=$(JAVA_VERSION)
 	@echo abis=$(ABIS)
 
 ndk: $(ANDROID_NDK_HOME)/source.properties ## Install the pinned NDK if it is missing
