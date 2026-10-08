@@ -206,7 +206,7 @@ control.
 ### 4.4 Kotlin stdlib
 
 AboutLibraries 15.2.0 is published against kotlin-stdlib 2.4.10. The project builds with Kotlin
-2.4.10, so the stdlib resolves to that version and no `resolutionStrategy.force` is needed.
+2.4.21, so the stdlib resolves to that newer version and no `resolutionStrategy.force` is needed.
 
 ### 4.5 Kotlin / Android dependencies (first-party, no third-party SDKs)
 
