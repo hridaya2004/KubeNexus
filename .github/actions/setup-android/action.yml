@@ -1,0 +1,28 @@
+name: Set up Android NDK
+description: Reads the pinned versions and installs the pinned NDK, cached across runs.
+
+outputs:
+  min_sdk:
+    value: ${{ steps.versions.outputs.min_sdk }}
+  zig:
+    value: ${{ steps.versions.outputs.zig }}
+  abis:
+    value: ${{ steps.versions.outputs.abis }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read pinned versions
+      id: versions
+      shell: bash
+      run: make -s versions >> "$GITHUB_OUTPUT"
+
+    - name: Cache Android NDK
+      uses: actions/cache@v5
+      with:
+        path: ${{ steps.versions.outputs.ndk_home }}
+        key: ndk-${{ steps.versions.outputs.ndk }}-${{ runner.os }}
+
+    - name: Install Android NDK
+      shell: bash
+      run: make ndk

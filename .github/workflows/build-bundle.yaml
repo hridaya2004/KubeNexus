@@ -7,18 +7,30 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   BUNDLETOOL_VERSION: 1.18.3
   BUNDLETOOL_SHA256: a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29
 
 jobs:
-  build:
-    name: Build Release AAB
-    runs-on: ubuntu-latest
+  native:
+    name: Native libraries
+    uses: ./.github/workflows/native-libs.yaml
 
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  bundle:
+    name: Build release AAB
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    outputs:
+      aab_url: ${{ steps.upload.outputs.artifact-url }}
+      abis: ${{ steps.android.outputs.abis }}
+      min_sdk: ${{ steps.android.outputs.min_sdk }}
+      commit_sha: ${{ steps.commit.outputs.sha }}
+      commit_subject: ${{ steps.commit.outputs.subject }}
 
     steps:
       - name: Checkout repository
@@ -26,131 +38,137 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read pinned versions
-        id: versions
-        run: make -s versions >> "$GITHUB_OUTPUT"
+      - name: Read commit
+        id: commit
+        run: |
+          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "subject=$(git log -1 --format=%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Android NDK
+        id: android
+        uses: ./.github/actions/setup-android
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: k8s-engine/go.mod
-          cache-dependency-path: k8s-engine/go.sum
-
-      - name: Set up Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: ${{ steps.versions.outputs.zig }}
-
-      - name: Cache Android NDK
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.ANDROID_HOME }}/ndk/${{ steps.versions.outputs.ndk }}
-          key: ndk-${{ steps.versions.outputs.ndk }}-${{ runner.os }}
-
-      - name: Install Android NDK
-        run: make ndk
-
-      - name: Cache native libraries
-        uses: actions/cache@v5
-        with:
-          path: |
-            build/native
-            android/data/libs
-            android/app/src/main/jniLibs
-            terminal-native/.zig-cache
-          key: jni-${{ runner.os }}-${{ hashFiles('Makefile', 'android/gradle/libs.versions.toml', 'k8s-engine/**', 'terminal-native/**') }}
-          restore-keys: |
-            jni-${{ runner.os }}-
-
-      - name: Build and verify native libraries
-        run: make verify-jni
-
-      - name: Setup Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Set up bundletool
-        run: |
-          curl -sSL --retry 3 -o "$RUNNER_TEMP/bundletool.jar" \
-            "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
-          echo "${BUNDLETOOL_SHA256}  $RUNNER_TEMP/bundletool.jar" | sha256sum --check
-          echo "BUNDLETOOL_JAR=$RUNNER_TEMP/bundletool.jar" >> "$GITHUB_ENV"
+      - name: Download Go library
+        uses: actions/download-artifact@v7
+        with:
+          name: native-go
+          path: android/data/libs
 
-      - name: Build Release AAB
-        run: make bundle
-      - name: Generate installable APKs from the AAB
+      - name: Download Zig library
+        uses: actions/download-artifact@v7
+        with:
+          name: native-zig
+          path: android/app/src/main/jniLibs
+
+      - name: Verify native libraries
+        run: make verify-jni
+
+      - name: Build release AAB
+        run: android/gradlew -p android bundleRelease
+
+      - name: Upload release AAB
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: kubenexus-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 1
+          if-no-files-found: error
+
+  apks:
+    name: Build installable APKs
+    needs: bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    outputs:
+      universal_url: ${{ steps.upload-universal.outputs.artifact-url }}
+      per_abi_url: ${{ steps.upload-per-abi.outputs.artifact-url }}
+
+    steps:
+      - name: Checkout signing key
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: android/app/debug.keystore
+          sparse-checkout-cone-mode: false
+
+      - name: Download release AAB
+        uses: actions/download-artifact@v7
+        with:
+          name: kubenexus-release-aab
+          path: aab
+
+      - name: Cache bundletool
+        id: cache-bundletool
+        uses: actions/cache@v5
+        with:
+          path: ~/bundletool.jar
+          key: bundletool-${{ env.BUNDLETOOL_VERSION }}
+
+      - name: Download bundletool
+        if: steps.cache-bundletool.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL --retry 3 -o ~/bundletool.jar \
+            "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+
+      - name: Check bundletool
+        run: echo "${BUNDLETOOL_SHA256}  $HOME/bundletool.jar" | sha256sum --check
+
+      - name: Generate APKs
         env:
-          ABIS: ${{ steps.versions.outputs.abis }}
-          MIN_SDK: ${{ steps.versions.outputs.min_sdk }}
+          ABIS: ${{ needs.bundle.outputs.abis }}
+          MIN_SDK: ${{ needs.bundle.outputs.min_sdk }}
         run: |
           set -euo pipefail
 
-          AAB="android/app/build/outputs/bundle/release/app-release.aab"
-          DIST="dist"
-          KEYSTORE="android/app/debug.keystore"
+          AAB=aab/app-release.aab
+          OUT="$RUNNER_TEMP/apks"
+          mkdir -p dist "$OUT"
 
-          rm -rf "$DIST" && mkdir -p "$DIST"
-
-          SIGN_ARGS=(
-            --ks="$KEYSTORE"
-            --ks-key-alias=androiddebugkey
-            --ks-pass=pass:android
-            --key-pass=pass:android
-          )
           build_apks() {
-            local log
-            if ! log=$(java -jar "$BUNDLETOOL_JAR" build-apks "$@" 2>&1); then
+            local name=$1 log
+            shift
+            if ! log=$(java -jar ~/bundletool.jar build-apks --bundle="$AAB" --output="$OUT/$name.apks" \
+                --overwrite --ks=android/app/debug.keystore --ks-key-alias=androiddebugkey \
+                --ks-pass=pass:android --key-pass=pass:android "$@" 2>&1); then
               echo "$log"
               return 1
             fi
             if grep -q "won't be signed" <<<"$log"; then
               echo "$log"
-              echo "::error::bundletool produced unsigned APKs"
+              echo "::error::bundletool produced unsigned APKs for $name"
               return 1
             fi
           }
-          build_apks \
-            --bundle="$AAB" \
-            --output="$RUNNER_TEMP/universal.apks" \
-            --mode=universal \
-            --overwrite \
-            "${SIGN_ARGS[@]}"
-          unzip -o -q "$RUNNER_TEMP/universal.apks" -d "$RUNNER_TEMP/universal"
-          cp "$RUNNER_TEMP/universal/universal.apk" "$DIST/kubenexus-universal.apk"
+
+          pids=()
+          build_apks universal --mode=universal & pids+=($!)
           for abi in $ABIS; do
-            spec="$RUNNER_TEMP/spec-$abi.json"
             printf '{"supportedAbis":["%s"],"screenDensity":480,"sdkVersion":%s,"supportedLocales":["en"]}\n' \
-              "$abi" "$MIN_SDK" > "$spec"
+              "$abi" "$MIN_SDK" > "$OUT/$abi.json"
+            build_apks "$abi" --device-spec="$OUT/$abi.json" --optimize-for=abi & pids+=($!)
+          done
+          for pid in "${pids[@]}"; do wait "$pid"; done
 
-            build_apks \
-              --bundle="$AAB" \
-              --output="$RUNNER_TEMP/$abi.apks" \
-              --device-spec="$spec" \
-              --optimize-for=abi \
-              --overwrite \
-              "${SIGN_ARGS[@]}"
-
-            unzip -o -q "$RUNNER_TEMP/$abi.apks" -d "$RUNNER_TEMP/$abi"
-            (cd "$RUNNER_TEMP/$abi/splits" && zip -q -r "$GITHUB_WORKSPACE/$DIST/kubenexus-$abi-apks.zip" .)
+          unzip -q -p "$OUT/universal.apks" universal.apk > dist/kubenexus-universal.apk
+          for abi in $ABIS; do
+            unzip -q "$OUT/$abi.apks" 'splits/*' -d "$OUT/$abi"
+            (cd "$OUT/$abi/splits" && zip -q -r "$GITHUB_WORKSPACE/dist/kubenexus-$abi-apks.zip" .)
           done
 
-          ls -la "$DIST"
+          ls -la dist
 
-      - name: Upload Release AAB
-        id: upload-release-aab
-        uses: actions/upload-artifact@v7
-        with:
-          name: kubenexus-release-aab
-          path: android/app/build/outputs/bundle/release/*.aab
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload Universal APK
+      - name: Upload universal APK
+        id: upload-universal
         uses: actions/upload-artifact@v7
         with:
           name: kubenexus-universal-apk
@@ -159,6 +177,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload per-ABI APKs
+        id: upload-per-abi
         uses: actions/upload-artifact@v7
         with:
           name: kubenexus-per-abi-apks
@@ -166,45 +185,34 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-      - name: Get Artifact URLs
-        id: get-artifact-urls
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          REPO="${{ github.repository }}"
-          RUN_ID="${{ github.run_id }}"
+  notify:
+    name: Send links to Telegram
+    needs: [bundle, apks]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
-          ARTIFACTS_JSON=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/artifacts")
-          BASE_URL="${{ github.server_url }}/${REPO}/actions/runs/${RUN_ID}/artifacts"
-
-          for name in kubenexus-release-aab kubenexus-universal-apk kubenexus-per-abi-apks; do
-            id=$(echo "$ARTIFACTS_JSON" | jq -r --arg n "$name" '.artifacts[] | select(.name==$n) | .id' | head -1)
-            if [ -z "$id" ] || [ "$id" = "null" ]; then
-              echo "::warning::Artifact $name not found in run $RUN_ID"
-              continue
-            fi
-            echo "${name}_url=${BASE_URL}/${id}" >> "$GITHUB_OUTPUT"
-          done
-
-      - name: Send Artifact Links to Telegram
+    steps:
+      - name: Send artifact links to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
-          AAB_URL: ${{ steps.get-artifact-urls.outputs.kubenexus-release-aab_url }}
-          UNIVERSAL_URL: ${{ steps.get-artifact-urls.outputs.kubenexus-universal-apk_url }}
-          PER_ABI_URL: ${{ steps.get-artifact-urls.outputs.kubenexus-per-abi-apks_url }}
-          ABIS: ${{ steps.versions.outputs.abis }}
+          AAB_URL: ${{ needs.bundle.outputs.aab_url }}
+          UNIVERSAL_URL: ${{ needs.apks.outputs.universal_url }}
+          PER_ABI_URL: ${{ needs.apks.outputs.per_abi_url }}
+          ABIS: ${{ needs.bundle.outputs.abis }}
+          COMMIT_SHA: ${{ needs.bundle.outputs.commit_sha }}
+          COMMIT_SUBJECT: ${{ needs.bundle.outputs.commit_subject }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
             echo "::warning::TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not set. Skipping Telegram notification."
             exit 0
           fi
 
-          COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
-          COMMIT_MSG_ESCAPED=$(echo "$COMMIT_MSG" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          escape() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' <<<"$1"; }
 
           TEXT="<b>KubeNexus Build Completed</b>"$'\n\n'
           TEXT+="<b>Artifacts:</b>"$'\n'
@@ -212,13 +220,11 @@ jobs:
           TEXT+="- <a href=\"${PER_ABI_URL:-$RUN_URL}\">kubenexus-per-abi-apks</a> <i>(${ABIS// / \/ })</i>"$'\n'
           TEXT+="- <a href=\"${AAB_URL:-$RUN_URL}\">kubenexus-release-aab</a> <i>(for Play)</i>"$'\n\n'
           TEXT+="<b>Build Details:</b>"$'\n'
-          TEXT+="- <b>Branch:</b> <code>${{ github.ref_name }}</code>"$'\n'
-          TEXT+="- <b>Commit:</b> <code>${COMMIT_SHA}</code> - ${COMMIT_MSG_ESCAPED}"$'\n'
-          TEXT+="- <b>Workflow Run:</b> <a href=\"${RUN_URL}\">#${{ github.run_number }}</a>"
+          TEXT+="- <b>Branch:</b> <code>$(escape "$BRANCH")</code>"$'\n'
+          TEXT+="- <b>Commit:</b> <code>${COMMIT_SHA}</code> - $(escape "$COMMIT_SUBJECT")"$'\n'
+          TEXT+="- <b>Workflow Run:</b> <a href=\"${RUN_URL}\">#${RUN_NUMBER}</a>"
 
-          echo "Sending artifact links to Telegram..."
-
-          CURL_MSG_ARGS=(
+          ARGS=(
             -s -S -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
             --retry 3
             -F "chat_id=${TELEGRAM_CHAT_ID}"
@@ -227,8 +233,7 @@ jobs:
             -F "disable_web_page_preview=true"
           )
           if [ -n "$TELEGRAM_TOPIC_ID" ]; then
-            CURL_MSG_ARGS+=(-F "message_thread_id=${TELEGRAM_TOPIC_ID}")
+            ARGS+=(-F "message_thread_id=${TELEGRAM_TOPIC_ID}")
           fi
 
-          RESPONSE=$(curl "${CURL_MSG_ARGS[@]}")
-          echo "Telegram response: $RESPONSE"
+          echo "Telegram response: $(curl "${ARGS[@]}")"

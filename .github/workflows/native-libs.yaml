@@ -1,0 +1,72 @@
+name: Native libraries
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.lib }} library
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        include:
+          - lib: go
+            sources: k8s-engine/**
+            output: android/data/libs
+          - lib: zig
+            sources: terminal-native/**
+            output: android/app/src/main/jniLibs
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Android NDK
+        id: android
+        uses: ./.github/actions/setup-android
+
+      - name: Set up Go
+        if: matrix.lib == 'go'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: k8s-engine/go.mod
+          cache-dependency-path: k8s-engine/go.sum
+
+      - name: Set up Zig
+        if: matrix.lib == 'zig'
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ steps.android.outputs.zig }}
+
+      - name: Cache Zig packages
+        if: matrix.lib == 'zig'
+        uses: actions/cache@v5
+        with:
+          path: terminal-native/zig-pkg
+          key: zig-pkg-${{ hashFiles('terminal-native/build.zig.zon') }}
+
+      - name: Cache ${{ matrix.lib }} library
+        uses: actions/cache@v5
+        with:
+          path: |
+            build/native/${{ matrix.lib }}
+            ${{ matrix.output }}
+          key: native-${{ matrix.lib }}-${{ runner.os }}-${{ hashFiles('Makefile', 'android/gradle/libs.versions.toml', matrix.sources) }}
+          restore-keys: |
+            native-${{ matrix.lib }}-${{ runner.os }}-
+
+      - name: Build ${{ matrix.lib }} library
+        run: make jni-${{ matrix.lib }}
+
+      - name: Upload ${{ matrix.lib }} library
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.lib }}
+          path: ${{ matrix.output }}
+          retention-days: 1
+          if-no-files-found: error

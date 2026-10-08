@@ -25,7 +25,7 @@ LICENSES_OUT := $(abspath $(LICENSES_DIR))
 LICENSES_TXT := $(LICENSES_OUT)/kubenexus-licenses.txt
 
 .DEFAULT_GOAL := help
-.PHONY: help versions ndk jni verify-jni debug release bundle install test lint fmt \
+.PHONY: help versions ndk jni jni-go jni-zig verify-jni debug release bundle install test lint fmt \
         licenses licenses-clean go-notices generate-kube-openapi-spec clean
 
 help: ## List the targets
@@ -33,6 +33,7 @@ help: ## List the targets
 
 versions: ## Print the pinned NDK, minSdk, Zig version and the ABIs
 	@echo ndk=$(NDK_VERSION)
+	@echo ndk_home=$(ANDROID_NDK_HOME)
 	@echo min_sdk=$(MIN_SDK)
 	@echo zig=$(ZIG_VERSION)
 	@echo abis=$(ABIS)
@@ -42,7 +43,11 @@ ndk: $(ANDROID_NDK_HOME)/source.properties ## Install the pinned NDK if it is mi
 $(ANDROID_NDK_HOME)/source.properties:
 	yes | $(SDKMANAGER) --install "ndk;$(NDK_VERSION)" >/dev/null
 
-jni: $(GO_AAR) $(ZIG_SO) ## Build the native libraries that are missing or out of date
+jni: jni-go jni-zig ## Build the native libraries that are missing or out of date
+
+jni-go: $(GO_AAR) ## Build only the Go engine library
+
+jni-zig: $(ZIG_SO) ## Build only the Ghostty terminal library
 
 $(GO_STAMP) $(ZIG_STAMP):
 	@rm -rf $(@D) && mkdir -p $(@D) && touch $@
@@ -58,7 +63,7 @@ $(ZIG_SO) &: $(ZIG_STAMP) | ndk
 		-Dsysroot="$$(echo $(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/*/sysroot)" --prefix $(CURDIR)/$(JNI_LIBS)
 	touch $(ZIG_SO)
 
-verify-jni: jni ## Check every ABI has both libraries, 16 KB aligned and free of afl++
+verify-jni: ## Check every ABI has both libraries, 16 KB aligned and free of afl++
 	@readelf=$$(echo $(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/*/bin/llvm-readelf); \
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	unzip -q $(GO_AAR) 'jni/*' -d "$$tmp"; \
