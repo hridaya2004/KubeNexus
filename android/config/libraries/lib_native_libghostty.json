@@ -1,7 +1,7 @@
 {
   "uniqueId": "dev.hridaya.kubenexus:native-libghostty",
   "name": "Ghostty (libghostty)",
-  "artifactVersion": "1.3.2",
+  "artifactVersion": "1.3.2-dev+683d8db",
   "licenses": [
     "mit-with-copyrights"
   ],

@@ -63,6 +63,15 @@ jobs:
       - name: Build ${{ matrix.lib }} library
         run: make jni-${{ matrix.lib }}
 
+      - name: Check in-app licences are current
+        if: matrix.lib == 'go'
+        run: |
+          make notices
+          if ! git diff --exit-code -- android/config; then
+            echo "::error::The in-app licences are out of date. Run 'make notices' and commit android/config."
+            exit 1
+          fi
+
       - name: Upload ${{ matrix.lib }} library
         uses: actions/upload-artifact@v7
         with:

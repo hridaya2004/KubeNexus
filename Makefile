@@ -26,7 +26,7 @@ LICENSES_TXT := $(LICENSES_OUT)/kubenexus-licenses.txt
 
 .DEFAULT_GOAL := help
 .PHONY: help versions ndk jni jni-go jni-zig verify-jni debug release bundle install test lint fmt \
-        licenses licenses-clean go-notices generate-kube-openapi-spec clean
+        notices licenses licenses-clean generate-kube-openapi-spec clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
@@ -80,16 +80,16 @@ verify-jni: ## Check every ABI has both libraries, 16 KB aligned and free of afl
 	done; \
 	[ $$fail = 0 ] && echo "OK: $(ABIS)"
 
-debug: jni ## Build the debug APK
+debug: jni notices ## Build the debug APK
 	$(GRADLE) assembleDebug
 
-release: jni ## Build the release APK
+release: jni notices ## Build the release APK
 	$(GRADLE) assembleRelease
 
-bundle: jni ## Build the release App Bundle for Play
+bundle: jni notices ## Build the release App Bundle for Play
 	$(GRADLE) bundleRelease
 
-install: jni ## Install the debug APK on a connected device
+install: jni notices ## Install the debug APK on a connected device
 	$(GRADLE) installDebug
 
 test: jni ## Run the Go and Android unit tests
@@ -122,8 +122,8 @@ licenses: ## Write the licence compliance report to LICENSES_DIR (default legal/
 licenses-clean: ## Remove the licence compliance report
 	rm -rf $(LICENSES_DIR)
 
-go-notices: ## Regenerate the in-app licences for the Go engine
-	python3 k8s-engine/scripts/generate_go_notices.py
+notices: ## Update the in-app licences for the native libraries
+	@python3 scripts/generate_notices.py
 
 generate-kube-openapi-spec: ## Re-record the k8s-engine test payloads from a live cluster
 	k8s-engine/scripts/record-testdata.sh

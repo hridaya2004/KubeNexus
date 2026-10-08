@@ -2,11 +2,16 @@
   "uniqueId": "dev.hridaya.kubenexus:native-kubernetes-go-client",
   "name": "Kubernetes Go client libraries",
   "artifactVersion": "0.36.3",
-  "licenses": ["Apache-2.0"],
-  "description": "k8s.io/api, k8s.io/apimachinery, k8s.io/client-go, k8s.io/streaming, k8s.io/klog/v2, k8s.io/kube-openapi, k8s.io/utils, sigs.k8s.io/yaml, sigs.k8s.io/json, sigs.k8s.io/randfill, sigs.k8s.io/structured-merge-diff. Used unmodified from upstream.",
+  "licenses": [
+    "Apache-2.0"
+  ],
+  "description": "k8s.io/api, k8s.io/apimachinery, k8s.io/client-go, k8s.io/klog/v2, k8s.io/kube-openapi, k8s.io/streaming, k8s.io/utils, sigs.k8s.io/json, sigs.k8s.io/randfill, sigs.k8s.io/structured-merge-diff/v6, sigs.k8s.io/yaml. Used unmodified from upstream.",
   "website": "https://github.com/kubernetes/client-go",
   "developers": [
-    { "name": "The Kubernetes Authors", "organisationUrl": "https://github.com/kubernetes" }
+    {
+      "name": "The Kubernetes Authors",
+      "organisationUrl": "https://github.com/kubernetes"
+    }
   ],
   "tag": "native"
 }

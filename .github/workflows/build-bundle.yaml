@@ -75,6 +75,17 @@ jobs:
       - name: Build release AAB
         run: android/gradlew -p android bundleRelease
 
+      - name: Export licence report
+        run: make licenses
+
+      - name: Upload licence report
+        uses: actions/upload-artifact@v7
+        with:
+          name: kubenexus-licenses
+          path: legal/compliance
+          retention-days: 90
+          if-no-files-found: error
+
       - name: Upload release AAB
         id: upload
         uses: actions/upload-artifact@v7

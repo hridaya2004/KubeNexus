@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
-"""Regenerates the in-app attribution for the Go code linked into libkubenexus_client.so.
+"""Writes the in-app attribution for the native libraries into android/config.
 
-The Go engine statically links the Go runtime and standard library, gomobile's binding glue
-(golang.org/x/mobile) and every module its client package imports. Their MIT, BSD and ISC
-licences require the copyright notice and licence text to travel with binary copies, and
-Apache-2.0 requires their NOTICE files, so this writes them into the AboutLibraries metadata
-under android/config that the "Open source licenses" screen renders.
-
-Run from anywhere after changing k8s-engine dependencies or the pinned gomobile version:
-
-    python3 k8s-engine/scripts/generate_go_notices.py
-
-The texts are read from the modules themselves (go mod download), never typed by hand.
+Covers the Go engine (every linked module's licence and NOTICE text, read from the modules
+themselves), the Kubernetes client libraries, and the pinned Ghostty and Zig versions. Every APK
+build runs it through the Makefile, and CI fails if the committed files are out of date.
 """
 
 import json
@@ -20,12 +12,14 @@ import re
 import subprocess
 import sys
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
+REPO = pathlib.Path(__file__).resolve().parents[1]
 ENGINE = REPO / "k8s-engine"
 CONFIG = REPO / "android" / "config"
+ZIG_ZON = REPO / "terminal-native" / "build.zig.zon"
 
 LICENSE_FILE = re.compile(r"(?i)^(licen[cs]e|copying)")
 NOTICE_FILE = re.compile(r"(?i)^notice")
+KUBERNETES = ("k8s.io/", "sigs.k8s.io/")
 
 
 def run(*args: str) -> str:
@@ -61,13 +55,28 @@ def gomobile_version() -> str:
 
 
 def write_json(path: pathlib.Path, data: dict) -> None:
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    print(f"wrote {path.relative_to(REPO)}")
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if not path.exists() or path.read_text() != text:
+        path.write_text(text)
+        print(f"updated {path.relative_to(REPO)}")
+
+
+def update_json(path: pathlib.Path, **fields) -> None:
+    write_json(path, {**json.loads(path.read_text()), **fields})
+
+
+def zig_pins() -> tuple[str, str]:
+    zon = ZIG_ZON.read_text()
+    zig = re.search(r'minimum_zig_version = "([^"]+)"', zon).group(1)
+    commit = re.search(r"ghostty-org/ghostty#([0-9a-f]+)", zon).group(1)
+    version = re.search(r'"ghostty-(\d[^"]*?)-[A-Za-z0-9_-]{44}"', zon).group(1)
+    return zig, f"{version}+{commit[:7]}"
 
 
 def main() -> None:
+    modules = linked_modules()
     apache_only, sections = [], []
-    for path, version in linked_modules():
+    for path, version in modules:
         directory = module_dir(path, version)
         files = sorted(p.name for p in directory.iterdir() if p.is_file())
         licenses = [f for f in files if LICENSE_FILE.match(f)]
@@ -101,7 +110,7 @@ def main() -> None:
         "uniqueId": "dev.hridaya.kubenexus:native-go-modules",
         "name": "Go modules in the Kubernetes engine",
         "description": "Third-party Go modules compiled into the Go engine alongside client-go: "
-        + ", ".join(p for p, _ in linked_modules() if not p.startswith(("k8s.io/", "sigs.k8s.io/")))
+        + ", ".join(p for p, _ in modules if not p.startswith(KUBERNETES))
         + ".",
         "website": "https://pkg.go.dev",
         "licenses": ["Apache-2.0", "go-module-notices"],
@@ -129,6 +138,18 @@ def main() -> None:
         "developers": [{"name": "The Go Authors", "organisationUrl": "https://go.dev"}],
         "tag": "native",
     })
+
+    client_go = run("go", "list", "-m", "-f", "{{.Version}}", "k8s.io/client-go").strip()
+    update_json(
+        CONFIG / "libraries" / "lib_native_kubernetes_go_client.json",
+        artifactVersion=client_go.removeprefix("v"),
+        description=", ".join(p for p, _ in modules if p.startswith(KUBERNETES))
+        + ". Used unmodified from upstream.",
+    )
+
+    zig, ghostty = zig_pins()
+    update_json(CONFIG / "libraries" / "lib_native_libghostty.json", artifactVersion=ghostty)
+    update_json(CONFIG / "libraries" / "lib_native_zig_std.json", artifactVersion=zig)
 
 
 if __name__ == "__main__":
