@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Schedule
@@ -25,12 +26,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +48,7 @@ import dev.hridaya.kubenexus.core.common.util.TimeFormatter
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
+import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiAction
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiState
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
@@ -72,41 +76,30 @@ fun ExploreListView(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "API Resources",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        val clusterText =
-                            uiState.activeCluster?.let { "Cluster: ${it.name}" } ?: "Offline Schema"
-                        Text(
-                            text = clusterText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+            LargeFlexibleTopAppBar(
+                title = { Text(text = "API Resources") },
+                subtitle = { Text(text = uiState.activeCluster?.name ?: "Offline schema") },
                 actions = {
-                    IconButton(onClick = { onAction(ExploreUiAction.OpenSearch) }) {
+                    IconButton(onClick = { onAction(ExploreUiAction.OpenSearch) }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = "Search Resources",
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
         RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(ExploreUiAction.Refresh) },
+            appBarScrollConnection = scrollBehavior.nestedScrollConnection,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -232,13 +225,15 @@ fun ExploreListView(
                                 top = 8.dp,
                                 bottom = 16.dp,
                             ),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            items(
+                            itemsIndexed(
                                 uiState.pagedResources,
-                                key = { "${it.groupVersion}/${it.name}" }) { resource ->
+                                key = { _, it -> "${it.groupVersion}/${it.name}" },
+                            ) { index, resource ->
                                 APIResourceCard(
+                                    shape = segmentedShape(index, uiState.pagedResources.size),
                                     resource = resource,
                                     onClick = { onAction(ExploreUiAction.SelectResource(resource)) },
                                 )

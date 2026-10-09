@@ -15,9 +15,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Widgets
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -176,11 +178,11 @@ private fun RowControl(
     onAction: (PortForwardSessionsUiAction) -> Unit,
 ) {
     if (session.isStopped) {
-        TextButton(onClick = { onAction(PortForwardSessionsUiAction.DismissStopped(session.handleId)) }) {
+        TextButton(onClick = { onAction(PortForwardSessionsUiAction.DismissStopped(session.handleId)) }, shapes = ButtonDefaults.shapes()) {
             Text(text = "Dismiss", style = MaterialTheme.typography.labelMedium)
         }
     } else {
-        IconButton(onClick = { onAction(PortForwardSessionsUiAction.Stop(session.handleId)) }) {
+        IconButton(onClick = { onAction(PortForwardSessionsUiAction.Stop(session.handleId)) }, shapes = IconButtonDefaults.shapes()) {
             Icon(
                 imageVector = Icons.Outlined.Stop,
                 contentDescription = "Stop forwarding ${session.title}",

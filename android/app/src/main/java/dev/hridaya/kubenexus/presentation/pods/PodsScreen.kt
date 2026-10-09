@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -16,12 +16,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +38,7 @@ import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodStatus
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
+import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.presentation.home.HomeUiAction
 import dev.hridaya.kubenexus.presentation.home.HomeUiState
 import dev.hridaya.kubenexus.presentation.home.components.PodCard
@@ -75,26 +77,26 @@ fun PodsScreen(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
+            MediumFlexibleTopAppBar(
                 title = {
                     Text(
                         text = "Pods",
-                        style = MaterialTheme.typography.titleLarge,
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                scrollBehavior = scrollBehavior,
             )
         },
         floatingActionButton = {
@@ -112,6 +114,7 @@ fun PodsScreen(
         RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(HomeUiAction.RefreshWorkloads) },
+            appBarScrollConnection = scrollBehavior.nestedScrollConnection,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -165,11 +168,12 @@ fun PodsScreen(
                                 top = 8.dp,
                                 bottom = 32.dp,
                             ),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            items(filteredPods, key = { it.id }) { pod ->
+                            itemsIndexed(filteredPods, key = { _, pod -> pod.id }) { index, pod ->
                                 PodCard(
+                                    shape = segmentedShape(index, filteredPods.size),
                                     pod = pod,
                                     showNamespace = isAllNamespaces,
                                     onClick = { onNavigateToPodDetail(pod) },

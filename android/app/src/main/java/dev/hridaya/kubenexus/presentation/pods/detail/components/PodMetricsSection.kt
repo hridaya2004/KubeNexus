@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -123,6 +124,7 @@ private fun IntervalDropdown(
                 horizontal = 10.dp,
                 vertical = 4.dp,
             ),
+            shapes = ButtonDefaults.shapes(),
         ) {
             Text(
                 text = selected.label,

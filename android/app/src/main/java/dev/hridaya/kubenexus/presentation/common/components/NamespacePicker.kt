@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -148,8 +149,8 @@ fun CreateNamespaceDialog(
             Button(
                 onClick = onConfirm,
                 enabled = !isCreating && namespaceName.isNotBlank(),
-                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.height(48.dp),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 if (isCreating) {
                     CircularProgressIndicator(
@@ -173,6 +174,7 @@ fun CreateNamespaceDialog(
             TextButton(
                 onClick = onDismiss,
                 enabled = !isCreating,
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text(text = "Cancel")
             }

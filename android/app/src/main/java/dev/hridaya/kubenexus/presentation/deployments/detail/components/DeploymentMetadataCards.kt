@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -75,7 +76,7 @@ private fun DeploymentKeyValueCard(
                 MetadataKeyValueRow(key = entryKey, value = entryValue)
             }
             if (entries.size > MAX_VISIBLE_ENTRIES) {
-                TextButton(onClick = { showAllEntries = !showAllEntries }) {
+                TextButton(onClick = { showAllEntries = !showAllEntries }, shapes = ButtonDefaults.shapes()) {
                     Text(
                         text = if (showAllEntries) "Show less" else "Show all ${entries.size}",
                         style = MaterialTheme.typography.labelLarge,

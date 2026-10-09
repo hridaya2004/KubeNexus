@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.presentation.home.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.core.common.util.TimeFormatter
+import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 
 @Composable
@@ -90,41 +93,38 @@ fun HomeWorkloadsList(
         }
 
         item {
-            ResourcePreferenceCard(
-                title = "Pods",
-                subtitle = "Container instances and workload state",
-                icon = Icons.Outlined.Layers,
-                onClick = onNavigateToPods,
-            )
-        }
-
-        item {
-            ResourcePreferenceCard(
-                title = "Deployments",
-                subtitle = "Declarative updates for Pods and ReplicaSets",
-                icon = Icons.Outlined.Apps,
-                onClick = onNavigateToDeployments,
-            )
-        }
-
-        item {
-            ResourcePreferenceCard(
-                title = "Services",
-                subtitle = "Stable network endpoints for Pods",
-                icon = Icons.Outlined.Dns,
-                onClick = onNavigateToServices,
-            )
-        }
-
-        item {
-            ResourcePreferenceCard(
-                title = "ReplicaSets",
-                subtitle = "Maintain stable set of replica Pods",
-                icon = Icons.Outlined.Widgets,
-                onClick = {
-                    onNoopAction("ReplicaSet management coming soon")
-                },
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                ResourcePreferenceCard(
+                    title = "Pods",
+                    subtitle = "Container instances and workload state",
+                    icon = Icons.Outlined.Layers,
+                    onClick = onNavigateToPods,
+                    shape = segmentedShape(0, 4),
+                )
+                ResourcePreferenceCard(
+                    title = "Deployments",
+                    subtitle = "Declarative updates for Pods and ReplicaSets",
+                    icon = Icons.Outlined.Apps,
+                    onClick = onNavigateToDeployments,
+                    shape = segmentedShape(1, 4),
+                )
+                ResourcePreferenceCard(
+                    title = "Services",
+                    subtitle = "Stable network endpoints for Pods",
+                    icon = Icons.Outlined.Dns,
+                    onClick = onNavigateToServices,
+                    shape = segmentedShape(2, 4),
+                )
+                ResourcePreferenceCard(
+                    title = "ReplicaSets",
+                    subtitle = "Maintain stable set of replica Pods",
+                    icon = Icons.Outlined.Widgets,
+                    onClick = {
+                        onNoopAction("ReplicaSet management coming soon")
+                    },
+                    shape = segmentedShape(3, 4),
+                )
+            }
         }
     }
 }

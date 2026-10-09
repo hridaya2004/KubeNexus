@@ -113,6 +113,7 @@ fun ErrorDialog(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -126,7 +127,7 @@ fun ErrorDialog(
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Close")
             }
         },

@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -79,6 +77,7 @@ internal fun ScaleDeploymentDialog(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                             contentColor = MaterialTheme.colorScheme.onSurface,
                         ),
+                        shapes = IconButtonDefaults.shapes(),
                     ) {
                         Icon(imageVector = Icons.Default.Remove, contentDescription = "Decrease replicas")
                     }
@@ -112,6 +111,7 @@ internal fun ScaleDeploymentDialog(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                             contentColor = MaterialTheme.colorScheme.onSurface,
                         ),
+                        shapes = IconButtonDefaults.shapes(),
                     ) {
                         Icon(imageVector = Icons.Default.Add, contentDescription = "Increase replicas")
                     }
@@ -128,12 +128,12 @@ internal fun ScaleDeploymentDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
+            Button(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
                 Text("Scale")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Cancel")
             }
         },
@@ -167,12 +167,12 @@ internal fun RestartDeploymentDialog(
             )
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
+            Button(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
                 Text("Restart")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Cancel")
             }
         },
@@ -213,12 +213,13 @@ internal fun DeleteDeploymentDialog(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
                 ),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text("Delete")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Cancel")
             }
         },

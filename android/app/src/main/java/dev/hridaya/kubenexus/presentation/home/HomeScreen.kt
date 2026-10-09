@@ -1,12 +1,9 @@
 package dev.hridaya.kubenexus.presentation.home
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.SettingsEthernet
@@ -16,11 +13,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
@@ -93,31 +89,24 @@ fun HomeScreen(
     activePortForwardCount: Int = 0,
     onOpenPortForwardSessions: () -> Unit = {},
 ) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "KubeNexus",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        ClusterPill(
-                            activeCluster = uiState.activeCluster,
-                            totalClusters = uiState.clusters.size,
-                            connectionStatus = uiState.clusterConnectionStatus,
-                            onClick = { onAction(HomeUiAction.OpenClusterDrawer) },
-                        )
-                    }
+            LargeFlexibleTopAppBar(
+                title = { Text(text = "KubeNexus") },
+                subtitle = {
+                    ClusterPill(
+                        activeCluster = uiState.activeCluster,
+                        totalClusters = uiState.clusters.size,
+                        connectionStatus = uiState.clusterConnectionStatus,
+                        onClick = { onAction(HomeUiAction.OpenClusterDrawer) },
+                    )
                 },
                 actions = {
                     if (activePortForwardCount > 0) {
-                        IconButton(onClick = onOpenPortForwardSessions) {
+                        IconButton(onClick = onOpenPortForwardSessions, shapes = IconButtonDefaults.shapes()) {
                             BadgedBox(
                                 badge = {
                                     Badge {
@@ -133,9 +122,7 @@ fun HomeScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                ),
+                scrollBehavior = scrollBehavior,
             )
         },
 
@@ -154,9 +141,11 @@ fun HomeScreen(
         RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(HomeUiAction.RefreshWorkloads) },
+            appBarScrollConnection = scrollBehavior.nestedScrollConnection,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
+            showIndicatorWhileRefreshing = false,
         ) {
             when {
                 uiState.isLoading -> {

@@ -50,12 +50,13 @@ fun DeleteNamespaceDialog(
             TextButton(
                 onClick = { onConfirmDelete(namespace) },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text("Delete")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Cancel")
             }
         },

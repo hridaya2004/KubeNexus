@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -52,10 +53,10 @@ internal fun DeploymentsErrorState(
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
                 onClick = onRetry,
-                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier
                     .height(48.dp)
                     .padding(horizontal = 16.dp),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text(
                     text = "Retry",
@@ -148,7 +149,7 @@ internal fun DeploymentsNoMatchState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(onClick = onClearSearch) {
+            OutlinedButton(onClick = onClearSearch, shapes = ButtonDefaults.shapes()) {
                 Icon(
                     imageVector = Icons.Outlined.Clear,
                     contentDescription = null,

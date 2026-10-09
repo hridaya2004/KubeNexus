@@ -15,8 +15,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -113,6 +115,7 @@ private fun PortForwardSessionRow(
                         isCopied = true
                     },
                     modifier = Modifier.size(28.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = if (isCopied) Icons.Outlined.Check else Icons.Outlined.ContentCopy,
@@ -137,7 +140,7 @@ private fun PortForwardSessionRow(
             )
         }
 
-        TextButton(onClick = onStopClick) {
+        TextButton(onClick = onStopClick, shapes = ButtonDefaults.shapes()) {
             Text("Stop", style = MaterialTheme.typography.labelMedium)
         }
     }

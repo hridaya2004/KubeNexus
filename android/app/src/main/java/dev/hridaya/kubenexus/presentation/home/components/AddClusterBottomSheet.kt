@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -125,7 +126,7 @@ fun AddClusterBottomSheet(
                 onClick = { filePickerLauncher.launch("*/*") },
                 enabled = !isConnecting,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.FileUpload,
@@ -196,7 +197,7 @@ fun AddClusterBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                shape = MaterialTheme.shapes.medium,
+                shapes = ButtonDefaults.shapes(),
             ) {
                 if (isConnecting) {
                     CircularProgressIndicator(
@@ -301,6 +302,7 @@ private fun AddClusterBottomSheetPreview() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text("Connect & Save")
                 }

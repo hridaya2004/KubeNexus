@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -137,10 +138,10 @@ internal fun CreateServiceFormFields(
         Button(
             onClick = { onAction(CreateServiceUiAction.PreviewSubmitted) },
             enabled = uiState.fieldErrors.isEmpty(),
-            shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
+            shapes = ButtonDefaults.shapes(),
         ) {
             Text(
                 text = "Preview manifest",

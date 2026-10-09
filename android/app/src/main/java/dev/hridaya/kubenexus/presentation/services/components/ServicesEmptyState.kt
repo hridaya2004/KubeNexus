@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -107,7 +108,7 @@ fun ServicesNoMatchState(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(onClick = onClearSearch) {
+            OutlinedButton(onClick = onClearSearch, shapes = ButtonDefaults.shapes()) {
                 Icon(
                     imageVector = Icons.Outlined.Clear,
                     contentDescription = null,

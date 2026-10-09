@@ -3,6 +3,7 @@ package dev.hridaya.kubenexus.presentation.pods.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,8 +39,8 @@ fun LogUploadConfirmDialog(
                     "workload. Only upload logs you are allowed to share.",
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Upload") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) { Text("Upload") } },
+        dismissButton = { TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Cancel") } },
         modifier = modifier,
     )
 }

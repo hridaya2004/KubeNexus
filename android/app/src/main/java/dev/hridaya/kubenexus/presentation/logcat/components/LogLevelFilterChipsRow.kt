@@ -96,7 +96,7 @@ fun LogLevelFilterChipsRow(
                     Box(
                         modifier = Modifier
                             .size(8.dp)
-                            .background(MaterialTheme.logColors.forLevel(level), CircleShape),
+                            .background(logColors.forLevel(level), CircleShape),
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(

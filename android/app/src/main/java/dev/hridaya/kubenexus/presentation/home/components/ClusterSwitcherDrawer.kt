@@ -1,11 +1,9 @@
 package dev.hridaya.kubenexus.presentation.home.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,34 +12,33 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.CloudQueue
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
+import dev.hridaya.kubenexus.presentation.common.components.segmentedListItemColors
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import dev.hridaya.kubenexus.ui.theme.LocalStatusColors
 
@@ -116,97 +113,63 @@ fun ClusterSwitcherDrawer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                 ) {
-                    items(clusters, key = { it.id }) { cluster ->
+                    itemsIndexed(clusters, key = { _, cluster -> cluster.id }) { index, cluster ->
                         val isSelected = cluster.isActive
-                        val cardBg = if (isSelected) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                        } else {
-                            MaterialTheme.colorScheme.surface
+                        val statusColors = LocalStatusColors.current
+                        val dotColor = when {
+                            cluster.isActive && cluster.status == ClusterStatus.CONNECTED -> statusColors.connected
+                            cluster.status == ClusterStatus.ERROR -> MaterialTheme.colorScheme.error
+                            cluster.isActive -> statusColors.connecting
+                            else -> MaterialTheme.colorScheme.outline
                         }
 
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.medium)
-                                .clickable {
-                                    if (!isSelected) {
-                                        onSelectCluster(cluster.id)
-                                    }
-                                    onDismiss()
-                                },
-                            shape = MaterialTheme.shapes.medium,
-                            colors = CardDefaults.cardColors(containerColor = cardBg),
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                val statusColors = LocalStatusColors.current
-                                val dotColor = when {
-                                    cluster.isActive && cluster.status == ClusterStatus.CONNECTED -> statusColors.connected
-                                    cluster.status == ClusterStatus.ERROR -> MaterialTheme.colorScheme.error
-                                    cluster.isActive -> statusColors.connecting
-                                    else -> MaterialTheme.colorScheme.outline
+                        ListItem(
+                            selected = isSelected,
+                            onClick = {
+                                if (!isSelected) {
+                                    onSelectCluster(cluster.id)
                                 }
-
+                                onDismiss()
+                            },
+                            shapes = ListItemDefaults.segmentedShapes(index = index, count = clusters.size),
+                            colors = segmentedListItemColors(),
+                            leadingContent = {
                                 Box(
                                     modifier = Modifier
                                         .size(10.dp)
                                         .background(dotColor, CircleShape),
                                 )
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = cluster.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        if (isSelected) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.primary,
-                                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                                                shape = CircleShape,
-                                            ) {
-                                                Text(
-                                                    text = "ACTIVE",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    modifier = Modifier.padding(
-                                                        horizontal = 6.dp,
-                                                        vertical = 2.dp,
-                                                    ),
-                                                )
-                                            }
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = cluster.serverUrl,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-
-                                if (isSelected) {
+                            },
+                            supportingContent = {
+                                Text(
+                                    text = cluster.serverUrl,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            trailingContent = if (isSelected) {
+                                {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Active Cluster",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp),
+                                        contentDescription = "Active cluster",
                                     )
                                 }
-                            }
+                            } else {
+                                null
+                            },
+                        ) {
+                            Text(
+                                text = cluster.name,
+                                style = if (isSelected) {
+                                    MaterialTheme.typography.titleMediumEmphasized
+                                } else {
+                                    MaterialTheme.typography.titleMedium
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
@@ -222,7 +185,7 @@ fun ClusterSwitcherDrawer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Tune,

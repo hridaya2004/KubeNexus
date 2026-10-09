@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CloudQueue
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -78,6 +79,7 @@ fun EmptyClustersView(modifier: Modifier = Modifier, onAddClusterClick: (() -> U
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = onAddClusterClick,
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Add,

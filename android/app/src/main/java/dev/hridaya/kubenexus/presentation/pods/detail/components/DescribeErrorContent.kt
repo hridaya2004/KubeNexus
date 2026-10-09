@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -62,7 +63,7 @@ internal fun DescribeErrorContent(
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry) {
+            Button(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
                     contentDescription = null,

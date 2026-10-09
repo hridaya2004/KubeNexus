@@ -22,6 +22,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,28 +90,38 @@ internal fun LogViewerHeaderBar(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onToggleSearch,
+            IconToggleButton(
+                checked = showSearch,
+                onCheckedChange = { onToggleSearch() },
+                shapes = IconButtonDefaults.toggleableShapes(),
                 modifier = Modifier.size(28.dp),
+                colors = IconButtonDefaults.iconToggleButtonColors(
+                    contentColor = TerminalText,
+                    checkedContentColor = TerminalCyan,
+                ),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
                     contentDescription = "Search",
-                    tint = if (showSearch) TerminalCyan else TerminalText,
                     modifier = Modifier.size(16.dp),
                 )
             }
 
             Spacer(modifier = Modifier.width(2.dp))
 
-            IconButton(
-                onClick = onToggleWrap,
+            IconToggleButton(
+                checked = wrapLines,
+                onCheckedChange = { onToggleWrap() },
+                shapes = IconButtonDefaults.toggleableShapes(),
                 modifier = Modifier.size(28.dp),
+                colors = IconButtonDefaults.iconToggleButtonColors(
+                    contentColor = TerminalGutter,
+                    checkedContentColor = TerminalGreen,
+                ),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.WrapText,
                     contentDescription = "Wrap lines",
-                    tint = if (wrapLines) TerminalGreen else TerminalGutter,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -119,6 +131,7 @@ internal fun LogViewerHeaderBar(
             IconButton(
                 onClick = onCopyAll,
                 modifier = Modifier.size(28.dp),
+                shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.ContentCopy,
@@ -134,6 +147,7 @@ internal fun LogViewerHeaderBar(
                 IconButton(
                     onClick = { showExportMenu = true },
                     modifier = Modifier.size(28.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.FileUpload,
@@ -183,6 +197,7 @@ internal fun LogViewerHeaderBar(
             IconButton(
                 onClick = onClearLogs,
                 modifier = Modifier.size(28.dp),
+                shapes = IconButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Clear,

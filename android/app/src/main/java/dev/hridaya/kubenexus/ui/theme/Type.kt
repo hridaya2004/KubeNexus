@@ -147,8 +147,6 @@ val LabelSmallFamily = createDeviceFontFamily(
     "google-sans",
 )
 
-val GoogleSansFlex = TitleLargeEmphasized
-
 val AppTypography = Typography().let { base ->
     Typography(
         displayLarge = base.displayLarge.copy(fontFamily = DisplayLargeFamily),

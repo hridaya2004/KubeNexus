@@ -169,6 +169,7 @@ fun LogsTabContent(
                 },
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = if (uiState.isStreamingLogs) Icons.Outlined.Stop else Icons.Outlined.PlayArrow,

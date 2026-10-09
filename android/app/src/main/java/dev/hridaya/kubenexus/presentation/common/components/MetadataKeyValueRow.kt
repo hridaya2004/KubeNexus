@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -124,6 +125,7 @@ private fun CollapsibleJsonMetadataRow(
     var isExpanded by rememberSaveable(key) { mutableStateOf(initialExpanded) }
     val chevronRotation by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "jsonChevronRotation",
     )
     val context = LocalContext.current
@@ -194,8 +196,10 @@ private fun CollapsibleJsonMetadataRow(
 
         AnimatedVisibility(
             visible = isExpanded,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut(),
+            enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
         ) {
             Surface(
                 shape = MaterialTheme.shapes.small,
@@ -223,6 +227,7 @@ private fun CollapsibleJsonMetadataRow(
                                 ).show()
                             },
                             modifier = Modifier.size(28.dp),
+                            shapes = IconButtonDefaults.shapes(),
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.ContentCopy,

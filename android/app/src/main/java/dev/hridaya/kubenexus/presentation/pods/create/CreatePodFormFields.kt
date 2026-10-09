@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -96,10 +97,10 @@ internal fun CreatePodFormFields(
         Button(
             onClick = { onAction(CreatePodUiAction.PreviewSubmitted) },
             enabled = uiState.fieldErrors.isEmpty(),
-            shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
+            shapes = ButtonDefaults.shapes(),
         ) {
             Text(
                 text = "Preview manifest",

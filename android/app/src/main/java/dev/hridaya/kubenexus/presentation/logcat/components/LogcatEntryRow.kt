@@ -40,7 +40,7 @@ fun LogcatEntryRow(
     modifier: Modifier = Modifier,
     wrapLines: Boolean = true,
 ) {
-    val levelColor = MaterialTheme.logColors.forLevel(entry.level)
+    val levelColor = logColors.forLevel(entry.level)
     val highlightBg = MaterialTheme.colorScheme.primaryContainer
     val highlightColor = MaterialTheme.colorScheme.onPrimaryContainer
 

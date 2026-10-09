@@ -259,8 +259,10 @@ private fun BoxScope.ScrollToBottomFab(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut(),
+        enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
+        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
         modifier = modifier
             .align(Alignment.BottomEnd)
             .padding(12.dp),

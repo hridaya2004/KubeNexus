@@ -38,12 +38,13 @@ fun DeleteClusterDialog(
             TextButton(
                 onClick = { onConfirmDelete(cluster.id) },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text("Remove")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Cancel")
             }
         },

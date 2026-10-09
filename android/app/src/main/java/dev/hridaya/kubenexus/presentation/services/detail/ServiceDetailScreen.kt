@@ -16,9 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -30,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -102,6 +103,7 @@ fun ServiceDetailScreen(
     onPortForwardStop: (handleId: String) -> Unit = {},
     onPortForwardDismissError: () -> Unit = {},
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -114,21 +116,23 @@ fun ServiceDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
+                subtitle = { Text(text = uiState.namespace) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
         RefreshableBox(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { onAction(ServiceDetailUiAction.Refresh) },
+            appBarScrollConnection = scrollBehavior.nestedScrollConnection,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -177,10 +181,10 @@ fun ServiceDetailScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
                                 OutlinedButton(
                                     onClick = { onAction(ServiceDetailUiAction.Refresh) },
-                                    shape = MaterialTheme.shapes.medium,
                                     modifier = Modifier
                                         .height(48.dp)
                                         .padding(horizontal = 16.dp),
+                                    shapes = ButtonDefaults.shapes(),
                                 ) {
                                     Text(text = "Retry", style = MaterialTheme.typography.labelLarge)
                                 }
@@ -242,7 +246,7 @@ private fun ServiceDetailContent(
         Button(
             onClick = onPortForwardClick,
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
+            shapes = ButtonDefaults.shapes(),
         ) {
             Icon(
                 imageVector = Icons.Outlined.SwapHoriz,

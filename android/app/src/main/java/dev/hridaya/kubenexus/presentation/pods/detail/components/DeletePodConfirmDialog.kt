@@ -47,6 +47,7 @@ fun DeletePodConfirmDialog(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
                 ),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text(if (isDeletingPod) "Deleting" else "Delete")
             }
@@ -55,6 +56,7 @@ fun DeletePodConfirmDialog(
             TextButton(
                 onClick = onDismiss,
                 enabled = !isDeletingPod,
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text("Cancel")
             }

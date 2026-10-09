@@ -1,6 +1,5 @@
 package dev.hridaya.kubenexus.ui.theme
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -83,7 +82,7 @@ val DarkStatusColors = StatusColors(
 
 val LocalStatusColors = staticCompositionLocalOf { LightStatusColors }
 
-val MaterialTheme.statusColors: StatusColors
+val statusColors: StatusColors
     @Composable
     @ReadOnlyComposable
     get() = LocalStatusColors.current
@@ -131,7 +130,7 @@ val DarkLogLevelColors = LogLevelColors(
 
 val LocalLogLevelColors = staticCompositionLocalOf { LightLogLevelColors }
 
-val MaterialTheme.logColors: LogLevelColors
+val logColors: LogLevelColors
     @Composable
     @ReadOnlyComposable
     get() = LocalLogLevelColors.current

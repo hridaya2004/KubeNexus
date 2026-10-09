@@ -15,6 +15,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -54,7 +56,7 @@ fun LogcatTopBar(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
+                IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Back",
@@ -63,34 +65,51 @@ fun LogcatTopBar(
                 }
             },
             actions = {
-                IconButton(onClick = { onAction(LogcatUiAction.ToggleSearch) }) {
+                IconToggleButton(
+                    checked = uiState.isSearchExpanded,
+                    onCheckedChange = { onAction(LogcatUiAction.ToggleSearch) },
+                    shapes = IconButtonDefaults.toggleableShapes(),
+                    colors = IconButtonDefaults.iconToggleButtonColors(),
+                ) {
                     Icon(
                         imageVector = if (uiState.isSearchExpanded) Icons.Outlined.Close else Icons.Outlined.Search,
                         contentDescription = "Search",
-                        tint = if (uiState.isSearchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                IconButton(onClick = onToggleWrapLines) {
+                IconToggleButton(
+                    checked = wrapLines,
+                    onCheckedChange = { onToggleWrapLines() },
+                    shapes = IconButtonDefaults.toggleableShapes(),
+                    colors = IconButtonDefaults.iconToggleButtonColors(),
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.WrapText,
                         contentDescription = "Wrap lines",
-                        tint = if (wrapLines) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onAction(LogcatUiAction.TogglePause)
-                }) {
+                IconToggleButton(
+                    checked = uiState.isPaused,
+                    onCheckedChange = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onAction(LogcatUiAction.TogglePause)
+                    },
+                    shapes = IconButtonDefaults.toggleableShapes(),
+                    colors = IconButtonDefaults.iconToggleButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        checkedContentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
                     Icon(
                         imageVector = if (uiState.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
                         contentDescription = if (uiState.isPaused) "Resume" else "Pause",
-                        tint = if (uiState.isPaused) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     )
                 }
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onAction(LogcatUiAction.ClearLogs)
-                }) {
+                },
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.DeleteOutline,
                         contentDescription = "Clear Logs",

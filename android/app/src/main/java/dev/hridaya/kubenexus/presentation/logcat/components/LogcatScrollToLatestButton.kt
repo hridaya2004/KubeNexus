@@ -24,8 +24,10 @@ fun LogcatScrollToLatestButton(
 ) {
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut(),
+        enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
+        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
         modifier = modifier,
     ) {
         FloatingActionButton(

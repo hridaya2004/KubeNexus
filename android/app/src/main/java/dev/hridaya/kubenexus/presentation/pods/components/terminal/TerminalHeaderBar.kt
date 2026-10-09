@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -111,6 +112,7 @@ internal fun TerminalHeaderBar(
                 IconButton(
                     onClick = onToggleKeyboard,
                     modifier = Modifier.size(24.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Keyboard,
@@ -124,6 +126,7 @@ internal fun TerminalHeaderBar(
                 IconButton(
                     onClick = onSelectAll,
                     modifier = Modifier.size(24.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.SelectAll,
@@ -137,6 +140,7 @@ internal fun TerminalHeaderBar(
                 IconButton(
                     onClick = onCopy,
                     modifier = Modifier.size(24.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ContentCopy,
@@ -150,6 +154,7 @@ internal fun TerminalHeaderBar(
                 IconButton(
                     onClick = onPaste,
                     modifier = Modifier.size(24.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ContentPaste,
@@ -163,6 +168,7 @@ internal fun TerminalHeaderBar(
                 IconButton(
                     onClick = onClear,
                     modifier = Modifier.size(24.dp),
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Clear,

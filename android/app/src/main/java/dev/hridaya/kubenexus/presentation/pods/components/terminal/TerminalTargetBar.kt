@@ -93,6 +93,7 @@ internal fun TerminalTargetBar(
                 ),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier.height(34.dp),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Stop,
@@ -108,6 +109,7 @@ internal fun TerminalTargetBar(
                 enabled = uiState.isContainerAttachable,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier.height(34.dp),
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.PlayArrow,

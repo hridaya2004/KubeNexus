@@ -19,10 +19,12 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -205,7 +207,7 @@ fun ClusterCard(
                     OutlinedButton(
                         onClick = onSelect,
                         enabled = !isConnecting,
-                        shape = MaterialTheme.shapes.small,
+                        shapes = ButtonDefaults.shapes(),
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.PowerSettingsNew,
@@ -221,6 +223,7 @@ fun ClusterCard(
                 IconButton(
                     onClick = onTestConnection,
                     enabled = !isConnecting,
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Refresh,
@@ -232,6 +235,7 @@ fun ClusterCard(
                 IconButton(
                     onClick = onDelete,
                     enabled = !isConnecting,
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.DeleteOutline,

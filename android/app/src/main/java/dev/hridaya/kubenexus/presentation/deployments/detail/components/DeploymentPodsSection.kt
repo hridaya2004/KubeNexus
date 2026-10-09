@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.domain.model.Pod
+import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.presentation.home.components.PodCard
 
 @Composable
@@ -95,11 +97,12 @@ internal fun DeploymentPodsSection(
 
             else -> {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    pods.forEach { pod ->
+                    pods.forEachIndexed { index, pod ->
                         PodCard(
+                            shape = segmentedShape(index, pods.size),
                             pod = pod,
                             showNamespace = false,
                             onClick = { onPodClick(pod) },

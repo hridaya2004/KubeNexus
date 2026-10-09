@@ -32,10 +32,10 @@ internal fun DeletePodButton(
             1.dp,
             MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
         ),
-        shape = MaterialTheme.shapes.medium,
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp),
+        shapes = ButtonDefaults.shapes(),
     ) {
         Icon(
             imageVector = Icons.Outlined.DeleteOutline,

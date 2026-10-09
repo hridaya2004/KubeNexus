@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.presentation.pods.detail.components
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +14,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -105,39 +110,75 @@ fun ContainerCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ButtonGroup(
+                overflowIndicator = {},
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                OutlinedButton(
-                    onClick = onViewLogsClick,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Description,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Logs", style = MaterialTheme.typography.labelMedium)
-                }
-
-                Button(
-                    onClick = onOpenTerminalClick,
-                    enabled = isAttachable,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Terminal,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        if (isAttachable) "Terminal" else "Detached",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
+                customItem(
+                    buttonGroupContent = {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        OutlinedButton(
+                            onClick = onViewLogsClick,
+                            interactionSource = interactionSource,
+                            modifier = Modifier
+                                .weight(1f)
+                                .animateWidth(interactionSource),
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Logs", style = MaterialTheme.typography.labelMedium)
+                        }
+                    },
+                    menuContent = { state ->
+                        DropdownMenuItem(
+                            text = { Text("Logs") },
+                            onClick = {
+                                state.dismiss()
+                                onViewLogsClick()
+                            },
+                        )
+                    },
+                )
+                customItem(
+                    buttonGroupContent = {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        Button(
+                            onClick = onOpenTerminalClick,
+                            enabled = isAttachable,
+                            interactionSource = interactionSource,
+                            modifier = Modifier
+                                .weight(1f)
+                                .animateWidth(interactionSource),
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Terminal,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                if (isAttachable) "Terminal" else "Detached",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    },
+                    menuContent = { state ->
+                        DropdownMenuItem(
+                            text = { Text("Terminal") },
+                            enabled = isAttachable,
+                            onClick = {
+                                state.dismiss()
+                                onOpenTerminalClick()
+                            },
+                        )
+                    },
+                )
             }
         }
     }

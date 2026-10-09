@@ -10,6 +10,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,18 +46,25 @@ class MainActivity : ComponentActivity() {
         val themeRepo = themePreferencesRepository
 
         setContent {
-            val themeMode by themeRepo.getThemeModeStream()
+            val storedThemeMode by themeRepo.getThemeModeStream()
                 .collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
-            val amoledDark by themeRepo.getAmoledDarkStream()
+            val storedAmoledDark by themeRepo.getAmoledDarkStream()
                 .collectAsStateWithLifecycle(initialValue = false)
+
+            // A new choice applies straight away and is saved in the background, rather than
+            // waiting for the preferences write to finish before the screen changes.
+            var themeMode by rememberSaveable(storedThemeMode) { mutableStateOf(storedThemeMode) }
+            var amoledDark by rememberSaveable(storedAmoledDark) { mutableStateOf(storedAmoledDark) }
 
             CompositionLocalProvider(
                 LocalThemeMode provides themeMode,
                 LocalOnThemeModeChange provides { newMode ->
+                    themeMode = newMode
                     lifecycleScope.launch { themeRepo.setThemeMode(newMode) }
                 },
                 LocalAmoledDark provides amoledDark,
                 LocalOnAmoledDarkChange provides { newAmoled ->
+                    amoledDark = newAmoled
                     lifecycleScope.launch { themeRepo.setAmoledDark(newAmoled) }
                 },
             ) {

@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,11 +31,12 @@ import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 internal fun DeploymentCard(
     deployment: DeploymentSummary,
     modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.medium,
     showNamespace: Boolean = true,
     onClick: () -> Unit = {},
 ) {
     Card(
-        shape = MaterialTheme.shapes.medium,
+        shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ),

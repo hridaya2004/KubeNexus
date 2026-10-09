@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +27,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -47,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.core.common.util.TimeFormatter
 import dev.hridaya.kubenexus.domain.model.APIResource
+import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiAction
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiState
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
@@ -85,7 +89,7 @@ fun ExploreSearchScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = { onAction(ExploreUiAction.CloseSearch) }) {
+                    IconButton(onClick = { onAction(ExploreUiAction.CloseSearch) }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Close search",
@@ -117,7 +121,7 @@ fun ExploreSearchScreen(
                 },
                 actions = {
                     if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onAction(ExploreUiAction.UpdateSearchQuery("")) }) {
+                        IconButton(onClick = { onAction(ExploreUiAction.UpdateSearchQuery("")) }, shapes = IconButtonDefaults.shapes()) {
                             Icon(
                                 imageVector = Icons.Outlined.Clear,
                                 contentDescription = "Clear query",
@@ -235,13 +239,15 @@ fun ExploreSearchScreen(
                             top = 8.dp,
                             bottom = 16.dp,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                         modifier = Modifier.fillMaxSize(),
                     ) {
-                        items(
+                        itemsIndexed(
                             uiState.pagedResources,
-                            key = { "${it.groupVersion}/${it.name}" }) { resource ->
+                            key = { _, it -> "${it.groupVersion}/${it.name}" },
+                        ) { index, resource ->
                             APIResourceCard(
+                                shape = segmentedShape(index, uiState.pagedResources.size),
                                 resource = resource,
                                 onClick = { onAction(ExploreUiAction.SelectResource(resource)) },
                             )

@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -142,6 +143,7 @@ fun ServicePortForwardDialog(
                     onStart(local, port)
                 },
                 enabled = selectedPort != null && localPortError == null && !uiState.isStarting,
+                shapes = ButtonDefaults.shapes(),
             ) {
                 if (uiState.isStarting) {
                     CircularProgressIndicator(
@@ -154,7 +156,7 @@ fun ServicePortForwardDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text("Close")
             }
         },

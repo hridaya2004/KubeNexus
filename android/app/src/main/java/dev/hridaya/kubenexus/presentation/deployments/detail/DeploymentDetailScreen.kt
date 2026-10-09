@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.presentation.deployments.detail
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,10 +18,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +42,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -96,6 +100,7 @@ fun DeploymentDetailScreen(
     onPodClick: (Pod) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -109,15 +114,16 @@ fun DeploymentDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
+                subtitle = { Text(text = uiState.namespace) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
@@ -156,10 +162,10 @@ fun DeploymentDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedButton(
                             onClick = { onAction(DeploymentDetailUiAction.Refresh) },
-                            shape = MaterialTheme.shapes.medium,
                             modifier = Modifier
                                 .height(48.dp)
                                 .padding(horizontal = 16.dp),
+                            shapes = ButtonDefaults.shapes(),
                         ) {
                             Text(text = "Retry", style = MaterialTheme.typography.labelLarge)
                         }
@@ -171,6 +177,7 @@ fun DeploymentDetailScreen(
                 RefreshableBox(
                     isRefreshing = uiState.isRefreshing,
                     onRefresh = { onAction(DeploymentDetailUiAction.Refresh) },
+                    appBarScrollConnection = scrollBehavior.nestedScrollConnection,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
@@ -195,37 +202,72 @@ fun DeploymentDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
 
-                    Row(
+                    ButtonGroup(
+                        overflowIndicator = {},
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        FilledTonalButton(
-                            onClick = { onAction(DeploymentDetailUiAction.OpenScaleDialog) },
-                            enabled = !uiState.isMutating,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Tune,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.size(6.dp))
-                            Text("Scale")
-                        }
-
-                        FilledTonalButton(
-                            onClick = { onAction(DeploymentDetailUiAction.OpenRestartDialog) },
-                            enabled = !uiState.isMutating,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.RestartAlt,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.size(6.dp))
-                            Text("Restart")
-                        }
+                        customItem(
+                            buttonGroupContent = {
+                                val interactionSource = remember { MutableInteractionSource() }
+                                FilledTonalButton(
+                                    onClick = { onAction(DeploymentDetailUiAction.OpenScaleDialog) },
+                                    enabled = !uiState.isMutating,
+                                    interactionSource = interactionSource,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .animateWidth(interactionSource),
+                                    shapes = ButtonDefaults.shapes(),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Tune,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.size(6.dp))
+                                    Text("Scale")
+                                }
+                            },
+                            menuContent = { state ->
+                                DropdownMenuItem(
+                                    text = { Text("Scale") },
+                                    onClick = {
+                                        state.dismiss()
+                                        onAction(DeploymentDetailUiAction.OpenScaleDialog)
+                                    },
+                                )
+                            },
+                        )
+                        customItem(
+                            buttonGroupContent = {
+                                val interactionSource = remember { MutableInteractionSource() }
+                                FilledTonalButton(
+                                    onClick = { onAction(DeploymentDetailUiAction.OpenRestartDialog) },
+                                    enabled = !uiState.isMutating,
+                                    interactionSource = interactionSource,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .animateWidth(interactionSource),
+                                    shapes = ButtonDefaults.shapes(),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.RestartAlt,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.size(6.dp))
+                                    Text("Restart")
+                                }
+                            },
+                            menuContent = { state ->
+                                DropdownMenuItem(
+                                    text = { Text("Restart") },
+                                    onClick = {
+                                        state.dismiss()
+                                        onAction(DeploymentDetailUiAction.OpenRestartDialog)
+                                    },
+                                )
+                            },
+                        )
                     }
 
                     DeploymentImagesCard(
