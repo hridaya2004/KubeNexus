@@ -2,6 +2,7 @@ package dev.hridaya.kubenexus.data.source.local
 
 import android.os.Process as AndroidProcess
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.domain.model.LogLevel
 import dev.hridaya.kubenexus.domain.model.LogcatEntry
 import kotlinx.coroutines.channels.Channel
@@ -21,6 +22,18 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.Pattern
 import javax.inject.Inject
 
+/**
+ * Whether a line from this app's process was written by KubeNexus itself: its own Kotlin and
+ * native code (tags starting with [APP_LOG_TAG_PREFIX]), the Go engine (gomobile logs as `GoLog`)
+ * and the app's crashes (`AndroidRuntime`). Everything else the framework logs from inside the
+ * process, such as view, rendering and input chatter, is left out.
+ */
+internal fun isKubeNexusLog(tag: String): Boolean =
+    tag.startsWith(APP_LOG_TAG_PREFIX) || tag == GO_ENGINE_LOG_TAG || tag == CRASH_LOG_TAG
+
+private const val GO_ENGINE_LOG_TAG = "GoLog"
+private const val CRASH_LOG_TAG = "AndroidRuntime"
+
 interface LogcatLocalDataSource {
     fun streamLogs(maxBufferSize: Int): Flow<List<LogcatEntry>>
     suspend fun dumpLogs(maxLines: Int): List<LogcatEntry>
@@ -36,7 +49,8 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
     )
 
     /**
-     * Streams this app's own logcat as rolling snapshots of the newest [maxBufferSize] entries.
+     * Streams KubeNexus's own logs (see [isKubeNexusLog]) as rolling snapshots of the newest
+     * [maxBufferSize] entries.
      *
      * Snapshots are conflated, since only the latest matters, and sent at most every
      * [EMIT_INTERVAL_MS]; a timer flushes the last lines of a burst even when nothing follows.
@@ -71,13 +85,7 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
                     while (isActive) {
                         val line = input.readLine() ?: break
                         val entry = parseLogLine(line)
-                        if (entry.pid.isNotEmpty() && entry.pid != pid) continue
-                        if (entry.level == LogLevel.UNKNOWN &&
-                            entry.tag == "System" &&
-                            !entry.message.contains(pid)
-                        ) {
-                            continue
-                        }
+                        if (entry.pid != pid || !isKubeNexusLog(entry.tag)) continue
                         synchronized(lock) {
                             if (buffer.size >= maxBufferSize) buffer.removeFirst()
                             buffer.addLast(entry)
@@ -127,7 +135,7 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
                 while (reader.readLine().also { line = it } != null) {
                     line?.let {
                         val entry = parseLogLine(it)
-                        if (entry.pid.isEmpty() || entry.pid == pid) {
+                        if (entry.pid == pid && isKubeNexusLog(entry.tag)) {
                             entries.add(entry)
                         }
                     }
@@ -149,7 +157,7 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
                     while (reader.readLine().also { line = it } != null) {
                         line?.let {
                             val entry = parseLogLine(it)
-                            if (entry.pid == pid) {
+                            if (entry.pid == pid && isKubeNexusLog(entry.tag)) {
                                 entries.add(entry)
                             }
                         }

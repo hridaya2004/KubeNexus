@@ -10,6 +10,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,6 @@ class PortForwardService : Service() {
     }
 
     private companion object {
-        const val TAG = "PortForwardService"
+        const val TAG = "$APP_LOG_TAG_PREFIX/PortForwardService"
     }
 }

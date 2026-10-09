@@ -2,6 +2,7 @@ package dev.hridaya.kubenexus.data.repository
 
 import android.util.Log
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
@@ -32,7 +33,7 @@ class DeploymentRepositoryImpl @Inject constructor(
 ) : DeploymentRepository {
 
     companion object {
-        private const val TAG = "DeploymentRepositoryImpl"
+        private const val TAG = "$APP_LOG_TAG_PREFIX/DeploymentRepositoryImpl"
     }
 
     override suspend fun createFromManifest(

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.LogSanitizer
@@ -663,6 +664,6 @@ class HomeViewModel @Inject constructor(
     }
 
     private companion object {
-        const val TAG = "HomeViewModel"
+        const val TAG = "$APP_LOG_TAG_PREFIX/HomeViewModel"
     }
 }

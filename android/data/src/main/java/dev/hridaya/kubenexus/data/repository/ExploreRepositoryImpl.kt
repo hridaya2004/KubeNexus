@@ -3,6 +3,7 @@ package dev.hridaya.kubenexus.data.repository
 import android.database.sqlite.SQLiteException
 import android.util.Log
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
@@ -49,7 +50,7 @@ class ExploreRepositoryImpl @Inject constructor(
         /** Leaves headroom under Android's 2 MB CursorWindow for the rest of the row. */
         private const val MAX_STORED_SCHEMA_BYTES = 1_800_000
 
-        private const val TAG = "ExploreRepositoryImpl"
+        private const val TAG = "$APP_LOG_TAG_PREFIX/ExploreRepositoryImpl"
         private const val OFFLINE_CLUSTER_ID = "offline"
     }
 

@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.di.ApplicationScope
 import dev.hridaya.kubenexus.core.security.LogSanitizer
@@ -259,6 +260,6 @@ class PortForwardSessionManager @Inject constructor(
     }
 
     private companion object {
-        const val TAG = "PortForwardSessionManager"
+        const val TAG = "$APP_LOG_TAG_PREFIX/PortForwardSessionManager"
     }
 }

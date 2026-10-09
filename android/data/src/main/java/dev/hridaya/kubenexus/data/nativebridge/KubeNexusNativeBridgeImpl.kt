@@ -12,6 +12,7 @@ import client.ListOptions
 import client.LogCallback
 import client.PortForwardCallback
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.common.util.K8sNames
@@ -68,7 +69,7 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
 ) : KubeNexusNativeBridge {
 
     companion object {
-        private const val TAG = "KubeNexusNativeBridge"
+        private const val TAG = "$APP_LOG_TAG_PREFIX/KubeNexusNativeBridge"
 
         /**
          * Number of Go clients kept alive. Each holds a parsed kubeconfig, a TLS

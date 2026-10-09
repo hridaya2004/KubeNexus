@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.presentation.pods.components.terminal
 
 import android.util.Log
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import dev.hridaya.kubenexus.core.terminal.GhosttyBridge
 import dev.hridaya.kubenexus.core.terminal.GhosttyKeyAction
@@ -249,7 +250,7 @@ class GhosttyTerminalEngine(
     }
 
     private companion object {
-        const val TAG = "GhosttyTerminalEngine"
+        const val TAG = "$APP_LOG_TAG_PREFIX/GhosttyTerminalEngine"
         val EMPTY = ByteArray(0)
     }
 }

@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.data.kubeconfig
 
 import android.util.Log
+import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.LogSanitizer
@@ -12,7 +13,7 @@ open class ClusterConnectionTester @Inject constructor(
     private val nativeBridge: KubeNexusNativeBridge,
 ) {
     companion object {
-        private const val TAG = "ClusterConnTester"
+        private const val TAG = "$APP_LOG_TAG_PREFIX/ClusterConnTester"
     }
 
     /**
