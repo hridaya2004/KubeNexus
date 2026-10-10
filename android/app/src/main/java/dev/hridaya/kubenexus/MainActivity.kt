@@ -1,17 +1,14 @@
 package dev.hridaya.kubenexus
 
-import android.graphics.Color
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,7 +26,8 @@ import dev.hridaya.kubenexus.ui.theme.LocalAmoledDark
 import dev.hridaya.kubenexus.ui.theme.LocalOnAmoledDarkChange
 import dev.hridaya.kubenexus.ui.theme.LocalOnThemeModeChange
 import dev.hridaya.kubenexus.ui.theme.LocalThemeMode
-import dev.hridaya.kubenexus.ui.theme.isDark
+import dev.hridaya.kubenexus.ui.theme.applyToSystem
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,9 +41,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        window.isNavigationBarContrastEnforced = false
         keepSystemSplashWhileLoading()
 
         val themeRepo = themePreferencesRepository
+        // Android remembers the app's theme once told, but a choice saved before it was ever
+        // told still has to be handed over.
+        lifecycleScope.launch { themeRepo.getThemeModeStream().first().applyToSystem(this@MainActivity) }
 
         setContent {
             val storedThemeMode by themeRepo.getThemeModeStream()
@@ -58,23 +61,11 @@ class MainActivity : ComponentActivity() {
             var themeMode by rememberSaveable(storedThemeMode) { mutableStateOf(storedThemeMode) }
             var amoledDark by rememberSaveable(storedAmoledDark) { mutableStateOf(storedAmoledDark) }
 
-            // The system bars stay transparent; only their icons follow the app's own light or
-            // dark choice, which can differ from the system's.
-            val isDark = themeMode.isDark()
-            DisposableEffect(isDark) {
-                val barStyle = if (isDark) {
-                    SystemBarStyle.dark(Color.TRANSPARENT)
-                } else {
-                    SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
-                }
-                enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
-                onDispose {}
-            }
-
             CompositionLocalProvider(
                 LocalThemeMode provides themeMode,
                 LocalOnThemeModeChange provides { newMode ->
                     themeMode = newMode
+                    newMode.applyToSystem(this@MainActivity)
                     lifecycleScope.launch { themeRepo.setThemeMode(newMode) }
                 },
                 LocalAmoledDark provides amoledDark,

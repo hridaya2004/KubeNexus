@@ -1,5 +1,7 @@
 package dev.hridaya.kubenexus.ui.theme
 
+import android.app.UiModeManager
+import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -86,4 +88,15 @@ fun KubeNexusTheme(
             )
         }
     }
+}
+
+/** Hands the choice to the system so the splash screen and window background match it. */
+fun ThemeMode.applyToSystem(context: Context) {
+    context.getSystemService(UiModeManager::class.java).setApplicationNightMode(
+        when (this) {
+            ThemeMode.SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
+            ThemeMode.DARK -> UiModeManager.MODE_NIGHT_YES
+            ThemeMode.LIGHT -> UiModeManager.MODE_NIGHT_NO
+        },
+    )
 }

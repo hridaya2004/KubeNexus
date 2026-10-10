@@ -19,6 +19,7 @@
         android:theme="@style/Theme.KubeNexus">
         <activity
             android:name=".MainActivity"
+            android:configChanges="uiMode"
             android:exported="true"
             android:theme="@style/Theme.KubeNexus"
             android:windowSoftInputMode="adjustResize">
