@@ -133,8 +133,8 @@ fun SettingsScreen(
                     )
                     PreferenceSwitchItem(
                         icon = Icons.Outlined.Contrast,
-                        title = "Pure black dark mode (AMOLED)",
-                        subtitle = "Pitch-black background for dark theme on OLED screens",
+                        title = "Pure black",
+                        subtitle = "Use true black in dark theme to save battery on OLED screens",
                         checked = amoledDark && isDark,
                         enabled = isDark,
                         onCheckedChange = onAmoledDarkChange,
