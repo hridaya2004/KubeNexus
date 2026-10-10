@@ -70,8 +70,8 @@ android {
         applicationId = "dev.hridaya.kubenexus"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 104
-        versionName = "1.0.4"
+        versionCode = 105
+        versionName = "1.0.5"
 
         buildConfigField("String", "APP_COMMIT_SHA", "\"$appCommitSha\"")
         buildConfigField("String", "LIBGHOSTTY_COMMIT_SHA", "\"$libghosttyCommitSha\"")
