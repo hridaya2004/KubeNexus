@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -31,7 +32,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,6 +104,10 @@ fun ServicesScreen(
     }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val listState = rememberLazyListState()
+    val fabVisible by remember {
+        derivedStateOf { listState.firstVisibleItemIndex == 0 || !listState.canScrollForward }
+    }
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -124,6 +131,10 @@ fun ServicesScreen(
         floatingActionButton = {
             MediumFloatingActionButton(
                 onClick = onNavigateToCreateService,
+                modifier = Modifier.animateFloatingActionButton(
+                    visible = fabVisible,
+                    alignment = Alignment.BottomEnd,
+                ),
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -202,6 +213,7 @@ fun ServicesScreen(
                                 uiState.selectedNamespace.isBlank()
                         }
                         LazyColumn(
+                            state = listState,
                             contentPadding = PaddingValues(
                                 start = 16.dp,
                                 end = 16.dp,

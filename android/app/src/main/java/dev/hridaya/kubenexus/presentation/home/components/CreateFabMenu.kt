@@ -14,7 +14,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -25,6 +27,7 @@ import androidx.compose.ui.semantics.traversalIndex
 @Composable
 fun CreateFabMenu(
     expanded: Boolean,
+    visible: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onAddPodClick: () -> Unit,
     onAddDeploymentClick: () -> Unit,
@@ -48,11 +51,16 @@ fun CreateFabMenu(
             ToggleFloatingActionButton(
                 checked = expanded,
                 onCheckedChange = onExpandedChange,
-                modifier = Modifier.semantics {
-                    traversalIndex = -1f
-                    contentDescription = "Toggle menu"
-                    stateDescription = if (expanded) "Expanded" else "Collapsed"
-                },
+                modifier = Modifier
+                    .semantics {
+                        traversalIndex = -1f
+                        contentDescription = "Toggle menu"
+                        stateDescription = if (expanded) "Expanded" else "Collapsed"
+                    }
+                    .animateFloatingActionButton(
+                        visible = visible || expanded,
+                        alignment = Alignment.BottomEnd,
+                    ),
             ) {
                 Icon(
                     imageVector = if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add,

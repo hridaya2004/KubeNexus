@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.SettingsEthernet
@@ -20,7 +21,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -90,6 +93,10 @@ fun HomeScreen(
     onOpenPortForwardSessions: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val listState = rememberLazyListState()
+    val fabVisible by remember {
+        derivedStateOf { listState.firstVisibleItemIndex == 0 || !listState.canScrollForward }
+    }
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color.Transparent,
@@ -166,6 +173,7 @@ fun HomeScreen(
                         onNavigateToDeployments = onNavigateToDeployments,
                         onNavigateToServices = onNavigateToServices,
                         onNoopAction = { onAction(HomeUiAction.TriggerNoopAction(it)) },
+                        listState = listState,
                     )
                 }
             }
@@ -190,6 +198,7 @@ fun HomeScreen(
             ) {
                 CreateFabMenu(
                     expanded = uiState.showFabMenu,
+                    visible = fabVisible,
                     onExpandedChange = { expanded ->
                         onAction(if (expanded) HomeUiAction.OpenFabMenu else HomeUiAction.DismissFabMenu)
                     },
