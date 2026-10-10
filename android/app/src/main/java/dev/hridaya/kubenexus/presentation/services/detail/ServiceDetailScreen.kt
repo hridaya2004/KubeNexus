@@ -111,7 +111,6 @@ fun ServiceDetailScreen(
                 title = {
                     Text(
                         text = uiState.serviceName,
-                        style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

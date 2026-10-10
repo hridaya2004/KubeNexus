@@ -109,7 +109,6 @@ fun DeploymentDetailScreen(
                 title = {
                     Text(
                         text = uiState.deploymentName,
-                        style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

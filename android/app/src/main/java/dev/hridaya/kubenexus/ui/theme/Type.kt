@@ -94,6 +94,12 @@ val HeadlineSmallFamily = createDeviceFontFamily(
     "sans-serif",
 )
 
+val TitleLargeFamily = createDeviceFontFamily(
+    "variable-title-large",
+    "google-sans",
+    "roboto",
+    "sans-serif",
+)
 val TitleMediumFamily = createDeviceFontFamily(
     "variable-title-medium",
     "google-sans-text",
@@ -155,7 +161,7 @@ val AppTypography = Typography().let { base ->
         headlineLarge = base.headlineLarge.copy(fontFamily = HeadlineLargeFamily),
         headlineMedium = base.headlineMedium.copy(fontFamily = HeadlineMediumFamily),
         headlineSmall = base.headlineSmall.copy(fontFamily = HeadlineSmallFamily),
-        titleLarge = base.titleLarge.copy(fontFamily = TitleLargeEmphasized),
+        titleLarge = base.titleLarge.copy(fontFamily = TitleLargeFamily),
         titleMedium = base.titleMedium.copy(fontFamily = TitleMediumFamily),
         titleSmall = base.titleSmall.copy(fontFamily = TitleSmallFamily),
         bodyLarge = base.bodyLarge.copy(fontFamily = BodyLargeFamily),

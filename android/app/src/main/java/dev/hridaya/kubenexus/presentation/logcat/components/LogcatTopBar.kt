@@ -49,12 +49,7 @@ fun LogcatTopBar(
             .background(MaterialTheme.colorScheme.surface),
     ) {
         TopAppBar(
-            title = {
-                Text(
-                    text = "Logcat",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            },
+            title = { Text(text = "Logcat") },
             navigationIcon = {
                 IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
                     Icon(
