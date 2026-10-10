@@ -9,10 +9,14 @@ data class ContainerDetail(
     val ports: List<String> = emptyList(),
 )
 
+/**
+ * One entry of a Pod's status.conditions. [lastTransitionMillis] is epoch millis rather than the
+ * RFC 3339 string the API server sends, so screens can show it in the user's own terms.
+ */
 data class PodConditionDetail(
     val type: String,
     val status: String,
-    val lastTransitionTime: String? = null,
+    val lastTransitionMillis: Long? = null,
     val reason: String? = null,
     val message: String? = null,
 )

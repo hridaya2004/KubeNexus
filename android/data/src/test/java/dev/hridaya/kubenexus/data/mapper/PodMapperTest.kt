@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 /**
  * Exercises the mapper against real Kubernetes API payloads.
@@ -144,7 +145,10 @@ class PodMapperTest {
         assertEquals(3, conditions.size)
         val ready = conditions.first { it.type == "Ready" }
         assertEquals("True", ready.status)
-        assertEquals("2026-08-21T09:15:20Z", ready.lastTransitionTime)
+        assertEquals(
+            Instant.parse("2026-08-21T09:15:20Z").toEpochMilli(),
+            ready.lastTransitionMillis,
+        )
         // Blank reason and message collapse to null.
         assertNull(ready.reason)
     }

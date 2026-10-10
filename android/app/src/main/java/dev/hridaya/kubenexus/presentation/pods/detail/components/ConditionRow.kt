@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.presentation.pods.detail.components
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,10 +50,9 @@ fun ConditionRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            val lastTransitionTime = condition.lastTransitionTime
-            if (!lastTransitionTime.isNullOrBlank()) {
+            condition.lastTransitionMillis?.let { lastTransitionMillis ->
                 Text(
-                    text = lastTransitionTime,
+                    text = DateUtils.getRelativeTimeSpanString(lastTransitionMillis).toString(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

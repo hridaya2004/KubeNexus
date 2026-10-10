@@ -153,7 +153,7 @@ private fun formatContainerState(state: ContainerStateDto?): String = when {
 fun PodConditionDto.toDomain(): PodConditionDetail = PodConditionDetail(
     type = type,
     status = status,
-    lastTransitionTime = lastTransitionTime,
+    lastTransitionMillis = K8sTime.parseTimestampMillis(lastTransitionTime),
     reason = reason?.ifBlank { null },
     message = message?.ifBlank { null },
 )
