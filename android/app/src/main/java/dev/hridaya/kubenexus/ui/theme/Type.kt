@@ -45,16 +45,19 @@ private fun TextStyle.withDeviceFont(slot: String): TextStyle =
 private fun TextStyle.withEmphasizedDeviceFont(slot: String): TextStyle =
     copy(fontFamily = deviceFontFamily("variable-$slot-emphasized", "variable-$slot"))
 
-/** Material's type scale, its sizes and weights unchanged, set in the device's own fonts. */
+/**
+ * Material's type scale set in the device's own fonts. Display small, headline medium and title
+ * large are their emphasized versions, so the app bar titles set in them are emphasized.
+ */
 val AppTypography = Typography().let { base ->
     Typography(
         displayLarge = base.displayLarge.withDeviceFont("display-large"),
         displayMedium = base.displayMedium.withDeviceFont("display-medium"),
-        displaySmall = base.displaySmall.withDeviceFont("display-small"),
+        displaySmall = base.displaySmallEmphasized.withEmphasizedDeviceFont("display-small"),
         headlineLarge = base.headlineLarge.withDeviceFont("headline-large"),
-        headlineMedium = base.headlineMedium.withDeviceFont("headline-medium"),
+        headlineMedium = base.headlineMediumEmphasized.withEmphasizedDeviceFont("headline-medium"),
         headlineSmall = base.headlineSmall.withDeviceFont("headline-small"),
-        titleLarge = base.titleLarge.withDeviceFont("title-large"),
+        titleLarge = base.titleLargeEmphasized.withEmphasizedDeviceFont("title-large"),
         titleMedium = base.titleMedium.withDeviceFont("title-medium"),
         titleSmall = base.titleSmall.withDeviceFont("title-small"),
         bodyLarge = base.bodyLarge.withDeviceFont("body-large"),
