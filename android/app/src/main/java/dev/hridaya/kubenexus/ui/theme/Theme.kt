@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -34,6 +36,19 @@ fun ThemeMode.isDark(): Boolean {
         ThemeMode.SYSTEM -> systemInDark
     }
 }
+
+/**
+ * Material's top app bar colours, except that in pure black dark mode a scrolled bar stays on the
+ * black page instead of lifting to the grey container colour.
+ */
+@Composable
+fun appBarColors(): TopAppBarColors = TopAppBarDefaults.topAppBarColors(
+    scrolledContainerColor = if (LocalThemeMode.current.isDark() && LocalAmoledDark.current) {
+        MaterialTheme.colorScheme.surface
+    } else {
+        Color.Unspecified
+    },
+)
 
 @Composable
 fun KubeNexusTheme(

@@ -58,6 +58,7 @@ import dev.hridaya.kubenexus.ui.theme.LocalAmoledDark
 import dev.hridaya.kubenexus.ui.theme.LocalOnAmoledDarkChange
 import dev.hridaya.kubenexus.ui.theme.LocalOnThemeModeChange
 import dev.hridaya.kubenexus.ui.theme.LocalThemeMode
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 import dev.hridaya.kubenexus.ui.theme.isDark
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,6 +114,7 @@ fun SettingsScreen(
                         text = "Settings",
                     )
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

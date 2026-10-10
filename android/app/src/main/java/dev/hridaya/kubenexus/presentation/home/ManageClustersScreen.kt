@@ -41,6 +41,7 @@ import dev.hridaya.kubenexus.presentation.home.components.EmptyClustersView
 import dev.hridaya.kubenexus.presentation.home.components.ErrorDialog
 import dev.hridaya.kubenexus.presentation.home.components.ManageClusterCard
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +74,7 @@ fun ManageClustersScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

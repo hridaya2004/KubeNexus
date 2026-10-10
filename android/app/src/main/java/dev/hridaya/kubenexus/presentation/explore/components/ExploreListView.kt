@@ -52,6 +52,7 @@ import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiAction
 import dev.hridaya.kubenexus.presentation.explore.ExploreUiState
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +93,7 @@ fun ExploreListView(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

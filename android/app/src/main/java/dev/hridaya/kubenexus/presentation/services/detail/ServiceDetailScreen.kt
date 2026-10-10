@@ -53,6 +53,7 @@ import dev.hridaya.kubenexus.presentation.services.detail.components.ServicePort
 import dev.hridaya.kubenexus.presentation.services.detail.components.ServicePortsCard
 import dev.hridaya.kubenexus.presentation.services.detail.components.ServiceSelectorCard
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
 fun ServiceDetailRoute(
@@ -124,6 +125,7 @@ fun ServiceDetailScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.presentation.common.components.CreateNamespaceDialog
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
 fun CreateDeploymentRoute(
@@ -74,6 +75,7 @@ fun CreateDeploymentScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

@@ -60,6 +60,7 @@ import com.mikepenz.aboutlibraries.ui.compose.variant.LibrariesVariant
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryActionMode
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import dev.hridaya.kubenexus.R
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 private const val SOURCE_URL = "https://github.com/hridaya2004/kubenexus"
 
@@ -98,6 +99,7 @@ fun OpenSourceLicensesScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

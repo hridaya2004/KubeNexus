@@ -41,6 +41,7 @@ import dev.hridaya.kubenexus.presentation.home.components.EmptyClustersView
 import dev.hridaya.kubenexus.presentation.home.components.ErrorDialog
 import dev.hridaya.kubenexus.presentation.home.components.HomeWorkloadsList
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
 fun HomeRoute(
@@ -129,6 +130,7 @@ fun HomeScreen(
                         }
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

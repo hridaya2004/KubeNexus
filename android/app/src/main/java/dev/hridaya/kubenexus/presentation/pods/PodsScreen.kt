@@ -52,6 +52,7 @@ import dev.hridaya.kubenexus.presentation.pods.components.PodsNamespaceFilterBar
 import dev.hridaya.kubenexus.presentation.pods.components.PodsNoMatchState
 import dev.hridaya.kubenexus.presentation.pods.components.PodsSearchBar
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 import kotlin.time.Duration.Companion.days
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,6 +105,7 @@ fun PodsScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

@@ -56,6 +56,7 @@ import dev.hridaya.kubenexus.presentation.services.components.ServicesNamespaceF
 import dev.hridaya.kubenexus.presentation.services.components.ServicesNoMatchState
 import dev.hridaya.kubenexus.presentation.services.components.ServicesSearchBar
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
 fun ServicesRoute(
@@ -125,6 +126,7 @@ fun ServicesScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

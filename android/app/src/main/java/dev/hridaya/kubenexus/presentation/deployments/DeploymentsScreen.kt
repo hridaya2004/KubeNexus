@@ -44,6 +44,7 @@ import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
 import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
 fun DeploymentsRoute(
@@ -119,6 +120,7 @@ fun DeploymentsScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },

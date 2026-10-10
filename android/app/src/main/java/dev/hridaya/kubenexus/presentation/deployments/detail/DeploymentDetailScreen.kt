@@ -58,6 +58,7 @@ import dev.hridaya.kubenexus.presentation.deployments.detail.components.Deployme
 import dev.hridaya.kubenexus.presentation.deployments.detail.components.RestartDeploymentDialog
 import dev.hridaya.kubenexus.presentation.deployments.detail.components.ScaleDeploymentDialog
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
 fun DeploymentDetailRoute(
@@ -122,6 +123,7 @@ fun DeploymentDetailScreen(
                         )
                     }
                 },
+                colors = appBarColors(),
                 scrollBehavior = scrollBehavior,
             )
         },
