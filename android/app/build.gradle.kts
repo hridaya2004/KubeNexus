@@ -191,6 +191,10 @@ kotlin {
     }
 }
 
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("config/compose_stability.conf"))
+}
+
 // Gradle cannot see the vendored Zig tree or the Go modules, so android/config/ declares those
 // components by hand. Add an entry there when a native dependency changes.
 aboutLibraries {

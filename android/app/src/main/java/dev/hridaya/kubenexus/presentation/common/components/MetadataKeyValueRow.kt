@@ -37,7 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -123,7 +123,7 @@ private fun CollapsibleJsonMetadataRow(
     modifier: Modifier = Modifier,
 ) {
     var isExpanded by rememberSaveable(key) { mutableStateOf(initialExpanded) }
-    val chevronRotation by animateFloatAsState(
+    val chevronRotation = animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "jsonChevronRotation",
@@ -175,7 +175,7 @@ private fun CollapsibleJsonMetadataRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(18.dp)
-                    .rotate(chevronRotation),
+                    .graphicsLayer { rotationZ = chevronRotation.value },
             )
         }
 

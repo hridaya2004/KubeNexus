@@ -24,8 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,17 +47,6 @@ fun ClusterPill(
         ClusterConnectionStatus.OFFLINE
     },
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "connecting_pulse")
-    val alphaAnim by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulse_alpha",
-    )
-
     Surface(
         onClick = onClick,
         shape = CircleShape,
@@ -72,14 +62,9 @@ fun ClusterPill(
             val statusColors = LocalStatusColors.current
             val dotColor = statusColors.forConnectionStatus(connectionStatus)
 
-            val dotAlpha =
-                if (connectionStatus == ClusterConnectionStatus.CONNECTING) alphaAnim else 1f
-
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .alpha(dotAlpha)
-                    .background(color = dotColor, shape = CircleShape),
+            StatusDot(
+                color = dotColor,
+                pulsing = connectionStatus == ClusterConnectionStatus.CONNECTING,
             )
 
             Spacer(modifier = Modifier.width(6.dp))
@@ -107,6 +92,30 @@ fun ClusterPill(
             )
         }
     }
+}
+
+@Composable
+private fun StatusDot(color: Color, pulsing: Boolean) {
+    val pulseModifier = if (pulsing) {
+        val pulseAlpha = rememberInfiniteTransition(label = "connecting_pulse").animateFloat(
+            initialValue = 0.4f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(500, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse_alpha",
+        )
+        Modifier.graphicsLayer { alpha = pulseAlpha.value }
+    } else {
+        Modifier
+    }
+    Box(
+        modifier = Modifier
+            .size(8.dp)
+            .then(pulseModifier)
+            .background(color = color, shape = CircleShape),
+    )
 }
 
 @Preview(showBackground = true)

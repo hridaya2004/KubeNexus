@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +44,7 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.common.util.LogExportHelper
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -88,10 +90,10 @@ fun GhosttyTerminalLogViewer(
 
     // Decided when a scroll ends: scrolled away from the bottom pauses following, scrolled
     // back to it resumes. Checking when a scroll starts pulled the user back on the next line.
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            autoScrollEnabled = isAtBottom
-        }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .filter { inProgress -> !inProgress }
+            .collect { autoScrollEnabled = isAtBottom }
     }
 
     // Re-enable auto-scroll and jump to latest when streaming starts or logs are freshly fetched

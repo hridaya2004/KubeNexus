@@ -75,7 +75,7 @@ fun DescribeTabContent(
             val isConnected =
                 uiState.isOnline && uiState.clusterConnectionStatus == ClusterConnectionStatus.CONNECTED
 
-            items(details.initContainers) { container ->
+            items(details.initContainers, key = { "init/${it.name}" }) { container ->
                 ContainerCard(
                     container = container,
                     isInitContainer = true,
@@ -93,7 +93,7 @@ fun DescribeTabContent(
         val isConnected =
             uiState.isOnline && uiState.clusterConnectionStatus == ClusterConnectionStatus.CONNECTED
 
-        items(details.containers) { container ->
+        items(details.containers, key = { "container/${it.name}" }) { container ->
             ContainerCard(
                 container = container,
                 isInitContainer = false,

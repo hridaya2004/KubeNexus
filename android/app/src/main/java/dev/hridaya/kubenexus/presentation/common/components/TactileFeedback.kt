@@ -9,20 +9,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 
 fun Modifier.scaleOnPress(targetScale: Float = 0.96f, onClick: (() -> Unit)? = null): Modifier =
     composed {
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
-        val scale by animateFloatAsState(
+        val scale = animateFloatAsState(
             targetValue = if (isPressed) targetScale else 1f,
             animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
             label = "scale_on_press",
         )
 
         this
-            .scale(scale)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
             .then(
                 if (onClick != null) {
                     Modifier.clickable(

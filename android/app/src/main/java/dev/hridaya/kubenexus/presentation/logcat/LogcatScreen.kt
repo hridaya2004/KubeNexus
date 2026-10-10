@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -35,6 +36,7 @@ import dev.hridaya.kubenexus.presentation.logcat.components.LogcatLogList
 import dev.hridaya.kubenexus.presentation.logcat.components.LogcatScrollToLatestButton
 import dev.hridaya.kubenexus.presentation.logcat.components.LogcatTopBar
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -104,10 +106,10 @@ fun LogcatScreen(
 
     // Decided when a scroll ends: scrolled away from the bottom pauses following, scrolled
     // back to it resumes. Checking when a scroll starts pulled the user back on the next line.
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            autoScrollEnabled = isAtBottom
-        }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .filter { inProgress -> !inProgress }
+            .collect { autoScrollEnabled = isAtBottom }
     }
 
     // Keyed on the newest entry rather than the count: once the rolling buffer is full the
