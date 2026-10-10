@@ -15,9 +15,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun segmentedListItemColors(): ListItemColors = ListItemDefaults.colors(
+fun segmentedListItemColors(): ListItemColors = ListItemDefaults.segmentedColors(
     containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    contentColor = MaterialTheme.colorScheme.onSurface,
 )
 
 @Composable

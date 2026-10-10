@@ -4,35 +4,26 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.presentation.common.components.SegmentedListSection
 import dev.hridaya.kubenexus.presentation.common.components.segmentedListItemColors
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
@@ -47,26 +38,18 @@ fun PreferenceNavigationItem(
     painter: Painter? = icon?.let { rememberVectorPainter(it) },
     subtitle: String? = null,
 ) {
-    ListItem(
+    SegmentedListItem(
         onClick = onClick,
         modifier = modifier,
         shapes = shapes,
         colors = segmentedListItemColors(),
-        leadingContent = painter?.let {
-            {
-                Icon(
-                    painter = it,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        },
+        verticalAlignment = Alignment.CenterVertically,
+        leadingContent = painter?.let { { Icon(painter = it, contentDescription = null) } },
         supportingContent = subtitle?.let { { Text(text = it) } },
         trailingContent = {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
             )
         },
     ) {
@@ -85,20 +68,15 @@ fun PreferenceSwitchItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    ListItem(
+    SegmentedListItem(
         checked = checked,
         onCheckedChange = onCheckedChange,
         modifier = modifier,
         enabled = enabled,
         shapes = shapes,
         colors = segmentedListItemColors(),
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
+        verticalAlignment = Alignment.CenterVertically,
+        leadingContent = { Icon(imageVector = icon, contentDescription = null) },
         supportingContent = { Text(text = subtitle) },
         trailingContent = {
             Switch(checked = checked, onCheckedChange = null, enabled = enabled)
@@ -114,24 +92,18 @@ fun AboutItem(
     shapes: ListItemShapes,
     modifier: Modifier = Modifier,
 ) {
-    ListItem(
+    SegmentedListItem(
         modifier = modifier,
         shapes = shapes,
         colors = segmentedListItemColors(),
-        leadingContent = {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
+        leadingContent = { Icon(imageVector = Icons.Outlined.Info, contentDescription = null) },
         supportingContent = {
             // Registered mark of LF Projects, LLC: adjectival use only, never in the product
             // name. See legal/TRADEMARK-NOTICE.md.
             Text(text = "Client for Kubernetes® clusters · v$versionName")
         },
     ) {
-        Text(text = "KubeNexus", style = MaterialTheme.typography.titleMediumEmphasized)
+        Text(text = "KubeNexus")
     }
 }
 
@@ -149,42 +121,14 @@ fun ModuleItem(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    ListItem(
+    SegmentedListItem(
         onClick = { context.copyVersion(module) },
         modifier = modifier,
         shapes = shapes,
         colors = segmentedListItemColors(),
-        leadingContent = {
-            Icon(
-                imageVector = module.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
+        leadingContent = { Icon(imageVector = module.icon, contentDescription = null) },
         supportingContent = { Text(text = module.subtitle) },
-        trailingContent = {
-            Row(
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = module.version,
-                    style = MaterialTheme.typography.labelMediumEmphasized.copy(
-                        fontFamily = FontFamily.Monospace,
-                    ),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Icon(
-                    imageVector = Icons.Outlined.ContentCopy,
-                    contentDescription = null,
-                    modifier = Modifier.size(12.dp),
-                )
-            }
-        },
+        trailingContent = { Text(text = module.version, fontFamily = FontFamily.Monospace) },
     ) {
         Text(text = module.title)
     }

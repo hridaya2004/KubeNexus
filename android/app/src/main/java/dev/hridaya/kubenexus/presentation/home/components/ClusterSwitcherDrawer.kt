@@ -22,9 +22,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetValue
@@ -125,7 +125,7 @@ fun ClusterSwitcherDrawer(
                             else -> MaterialTheme.colorScheme.outline
                         }
 
-                        ListItem(
+                        SegmentedListItem(
                             selected = isSelected,
                             onClick = {
                                 if (!isSelected) {
@@ -162,11 +162,6 @@ fun ClusterSwitcherDrawer(
                         ) {
                             Text(
                                 text = cluster.name,
-                                style = if (isSelected) {
-                                    MaterialTheme.typography.titleMediumEmphasized
-                                } else {
-                                    MaterialTheme.typography.titleMedium
-                                },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )

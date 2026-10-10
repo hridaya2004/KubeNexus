@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.core.common.util.TimeFormatter
-import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 
 @Composable
@@ -99,21 +98,21 @@ fun HomeWorkloadsList(
                     subtitle = "Container instances and workload state",
                     icon = Icons.Outlined.Layers,
                     onClick = onNavigateToPods,
-                    shape = segmentedShape(0, 4),
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 4),
                 )
                 ResourcePreferenceCard(
                     title = "Deployments",
                     subtitle = "Declarative updates for Pods and ReplicaSets",
                     icon = Icons.Outlined.Apps,
                     onClick = onNavigateToDeployments,
-                    shape = segmentedShape(1, 4),
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4),
                 )
                 ResourcePreferenceCard(
                     title = "Services",
                     subtitle = "Stable network endpoints for Pods",
                     icon = Icons.Outlined.Dns,
                     onClick = onNavigateToServices,
-                    shape = segmentedShape(2, 4),
+                    shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4),
                 )
                 ResourcePreferenceCard(
                     title = "ReplicaSets",
@@ -122,7 +121,7 @@ fun HomeWorkloadsList(
                     onClick = {
                         onNoopAction("ReplicaSet management coming soon")
                     },
-                    shape = segmentedShape(3, 4),
+                    shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4),
                 )
             }
         }
