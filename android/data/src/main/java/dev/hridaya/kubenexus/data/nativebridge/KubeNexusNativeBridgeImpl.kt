@@ -17,37 +17,21 @@ import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.common.util.K8sNames
 import dev.hridaya.kubenexus.core.security.LogSanitizer
-import dev.hridaya.kubenexus.data.mapper.toDeploymentDetails
-import dev.hridaya.kubenexus.data.mapper.toDetails
 import dev.hridaya.kubenexus.data.mapper.toDomain
-import dev.hridaya.kubenexus.data.mapper.toServiceDetails
-import dev.hridaya.kubenexus.data.mapper.toServiceSummary
-import dev.hridaya.kubenexus.data.source.remote.dto.DeploymentDto
-import dev.hridaya.kubenexus.data.source.remote.dto.DeploymentListDto
-import dev.hridaya.kubenexus.data.source.remote.dto.EventListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.K8sJson
 import dev.hridaya.kubenexus.data.source.remote.dto.NamespaceListDto
-import dev.hridaya.kubenexus.data.source.remote.dto.PodDto
-import dev.hridaya.kubenexus.data.source.remote.dto.PodListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.PodMetricsDto
 import dev.hridaya.kubenexus.data.source.remote.dto.PodMetricsListDto
-import dev.hridaya.kubenexus.data.source.remote.dto.ServiceDto
-import dev.hridaya.kubenexus.data.source.remote.dto.ServiceListDto
-import dev.hridaya.kubenexus.data.source.remote.dto.toDomain
 import dev.hridaya.kubenexus.data.source.remote.dto.toSample
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
-import dev.hridaya.kubenexus.domain.model.DeploymentDetails
-import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.domain.model.Namespace
-import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.PortForwardListener
-import dev.hridaya.kubenexus.domain.model.ServiceDetails
-import dev.hridaya.kubenexus.domain.model.ServiceSummary
+import dev.hridaya.kubenexus.domain.model.resource.ResourceType
 import go.Seq
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -113,22 +97,15 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
             size > CLIENT_CACHE_SIZE
     }
 
-    // Gomobile factory calls allocate a Go-side proxy each time, so the
-    // identifiers for the resources this app touches are created once.
-    private val podsResource: GroupVersionResource by lazy { Client.podsResource() }
+    // Gomobile factory calls allocate a Go-side proxy each time, so each
+    // resource identifier is created once and reused.
     private val namespacesResource: GroupVersionResource by lazy { Client.namespacesResource() }
+    private val resourceIdentifiers = ConcurrentHashMap<ResourceType, GroupVersionResource>()
 
-    // No dedicated Go factory exists for deployments, so the identifier is
-    // built through the bound NewGroupVersionResource constructor.
-    private val deploymentsResource: GroupVersionResource by lazy {
-        Client.newGroupVersionResource("apps", "v1", "deployments")
-    }
-
-    // Services are core v1 with no dedicated Go factory either; an empty group
-    // is valid there and means the core API group.
-    private val servicesResource: GroupVersionResource by lazy {
-        Client.newGroupVersionResource("", "v1", "services")
-    }
+    private fun identifierOf(type: ResourceType): GroupVersionResource =
+        resourceIdentifiers.getOrPut(type) {
+            Client.newGroupVersionResource(type.group, type.version, type.plural)
+        }
 
     override fun initialize() {
         try {
@@ -187,25 +164,59 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString(separator = "") { byte -> "%02x".format(byte) }
 
-    private fun listOptions(labelSelector: String, limit: Long): ListOptions =
+    private fun listOptions(labelSelector: String): ListOptions =
         ListOptions().apply {
             if (labelSelector.isNotBlank()) this.labelSelector = labelSelector
-            if (limit > 0L) this.limit = limit
         }
 
-    override fun listPods(
+    override fun listResources(
         rawKubeconfig: String,
-        namespace: String?,
+        type: ResourceType,
+        namespace: String,
         labelSelector: String,
-        limit: Long,
-    ): Result<List<Pod>> =
-        nativeCatching("Failed to list pods from native client") {
-            val json = clientFor(rawKubeconfig).listJSON(
-                podsResource,
-                normalizeNamespace(namespace),
-                listOptions(labelSelector, limit),
-            )
-            K8sJson.decodeFromString<PodListDto>(json).items.map { it.toDomain() }
+    ): Result<String> =
+        nativeCatching("Failed to list ${type.plural} from native client") {
+            clientFor(rawKubeconfig).listJSON(identifierOf(type), namespace.trim(), listOptions(labelSelector))
+        }
+
+    override fun getResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String,
+    ): Result<String> =
+        nativeCatching("Failed to get ${type.kind} '$name' from native client") {
+            clientFor(rawKubeconfig).getJSON(identifierOf(type), namespace, name)
+        }
+
+    override fun createResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        manifest: String,
+    ): Result<String> =
+        nativeCatching("Failed to create ${type.kind} from native client") {
+            // An empty namespace tells the Go core to keep the manifest's own.
+            clientFor(rawKubeconfig).createResource(identifierOf(type), "", manifest)
+        }
+
+    override fun deleteResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String,
+    ): Result<Unit> =
+        nativeCatching("Failed to delete ${type.kind} '$name' from native client") {
+            clientFor(rawKubeconfig).deleteResource(identifierOf(type), namespace, name, null)
+        }
+
+    override fun listEvents(
+        rawKubeconfig: String,
+        namespace: String,
+        involvedKind: String,
+        involvedName: String,
+    ): Result<String> =
+        nativeCatching("Failed to list events for $involvedKind '$involvedName' from native client") {
+            clientFor(rawKubeconfig).eventsForJSON(namespace, involvedKind, involvedName)
         }
 
     override fun listNamespaces(rawKubeconfig: String): Result<List<Namespace>> =
@@ -270,130 +281,6 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
             clientFor(rawKubeconfig).openAPISchemaJSON()
         }
 
-    override fun describePod(
-        rawKubeconfig: String,
-        namespace: String,
-        podName: String,
-    ): Result<PodDetails> =
-        nativeCatching("Failed to describePod '$podName' from native client") {
-            val nativeClient = clientFor(rawKubeconfig)
-            val podJson = nativeClient.getJSON(podsResource, namespace, podName)
-            val pod = K8sJson.decodeFromString<PodDto>(podJson)
-
-            // Events are a separate collection with a field selector. A failure
-            // here must not lose the pod itself, which is the primary payload.
-            val events = try {
-                val eventsJson = nativeClient.eventsForJSON(namespace, "Pod", podName)
-                K8sJson.decodeFromString<EventListDto>(eventsJson).items
-            } catch (t: Throwable) {
-                Log.w(
-                    TAG,
-                    "Failed to load events for pod '$podName': ${LogSanitizer.sanitize(t.message)}",
-                )
-                emptyList()
-            }
-
-            pod.toDetails(events = events, rawJson = podJson)
-        }
-
-    override fun deletePod(
-        rawKubeconfig: String,
-        namespace: String,
-        podName: String,
-    ): Result<Unit> =
-        nativeCatching("Failed to deletePod '$podName' from native client") {
-            clientFor(rawKubeconfig).deleteResource(podsResource, namespace, podName, null)
-        }
-
-    override fun listDeployments(
-        rawKubeconfig: String,
-        namespace: String?,
-    ): Result<List<DeploymentSummary>> =
-        nativeCatching("Failed to list deployments from native client") {
-            val json = clientFor(rawKubeconfig).listJSON(
-                deploymentsResource,
-                normalizeNamespace(namespace),
-                null,
-            )
-            K8sJson.decodeFromString<DeploymentListDto>(json).items.map { it.toDomain() }
-        }
-
-    override fun describeDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<DeploymentDetails> =
-        nativeCatching("Failed to describeDeployment '$name' from native client") {
-            val nativeClient = clientFor(rawKubeconfig)
-            val deploymentJson = nativeClient.getJSON(deploymentsResource, namespace, name)
-            val deployment = K8sJson.decodeFromString<DeploymentDto>(deploymentJson)
-
-            // Events are a separate collection with a field selector. A failure
-            // here must not lose the Deployment itself, which is the primary
-            // payload — identical trade-off to describePod.
-            val events = try {
-                val eventsJson = nativeClient.eventsForJSON(namespace, "Deployment", name)
-                K8sJson.decodeFromString<EventListDto>(eventsJson).items
-            } catch (t: Throwable) {
-                Log.w(
-                    TAG,
-                    "Failed to load events for deployment '$name': ${LogSanitizer.sanitize(t.message)}",
-                )
-                emptyList()
-            }
-
-            deployment.toDeploymentDetails(events = events)
-        }
-
-    override fun listServices(
-        rawKubeconfig: String,
-        namespace: String?,
-    ): Result<List<ServiceSummary>> =
-        nativeCatching("Failed to list services from native client") {
-            val json = clientFor(rawKubeconfig).listJSON(
-                servicesResource,
-                normalizeNamespace(namespace),
-                null,
-            )
-            K8sJson.decodeFromString<ServiceListDto>(json).items.map { it.toServiceSummary() }
-        }
-
-    override fun describeService(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<ServiceDetails> =
-        nativeCatching("Failed to describeService '$name' from native client") {
-            val nativeClient = clientFor(rawKubeconfig)
-            val serviceJson = nativeClient.getJSON(servicesResource, namespace, name)
-            val service = K8sJson.decodeFromString<ServiceDto>(serviceJson)
-
-            // Events are a separate collection with a field selector. A failure
-            // here must not lose the Service itself, which is the primary
-            // payload — identical trade-off to describePod.
-            val events = try {
-                val eventsJson = nativeClient.eventsForJSON(namespace, "Service", name)
-                K8sJson.decodeFromString<EventListDto>(eventsJson).items
-            } catch (t: Throwable) {
-                Log.w(
-                    TAG,
-                    "Failed to load events for service '$name': ${LogSanitizer.sanitize(t.message)}",
-                )
-                emptyList()
-            }
-
-            service.toServiceDetails(events = events)
-        }
-
-    override fun createDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String> =
-        nativeCatching("Failed to create deployment from native client") {
-            clientFor(rawKubeconfig).createResource(deploymentsResource, namespace, manifestYaml)
-        }
-
     override fun scaleDeployment(
         rawKubeconfig: String,
         namespace: String,
@@ -411,33 +298,6 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
     ): Result<Unit> =
         nativeCatching("Failed to restart deployment '$name'") {
             clientFor(rawKubeconfig).restartDeployment(namespace, name)
-        }
-
-    override fun deleteDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<Unit> =
-        nativeCatching("Failed to delete deployment '$name'") {
-            clientFor(rawKubeconfig).deleteDeployment(namespace, name)
-        }
-
-    override fun createPod(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String> =
-        nativeCatching("Failed to create pod from native client") {
-            clientFor(rawKubeconfig).createResource(podsResource, namespace, manifestYaml)
-        }
-
-    override fun createService(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String> =
-        nativeCatching("Failed to create service from native client") {
-            clientFor(rawKubeconfig).createResource(servicesResource, namespace, manifestYaml)
         }
 
     override fun getPodLogs(

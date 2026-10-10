@@ -15,18 +15,10 @@ const val NAMED_PORT_UNRESOLVED = -1
 data class ServiceDto(
     val apiVersion: String? = null,
     val kind: String? = null,
-    val metadata: ObjectMetaDto = ObjectMetaDto(),
+    override val metadata: ObjectMetaDto = ObjectMetaDto(),
     val spec: ServiceSpecDto = ServiceSpecDto(),
     val status: ServiceStatusDto = ServiceStatusDto(),
-)
-
-@Serializable
-data class ServiceListDto(
-    val apiVersion: String? = null,
-    val kind: String? = null,
-    val metadata: ListMetaDto = ListMetaDto(),
-    val items: List<ServiceDto> = emptyList(),
-)
+) : KubeObjectDto
 
 @Serializable
 data class ServiceSpecDto(

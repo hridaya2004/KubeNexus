@@ -4,24 +4,14 @@ import androidx.lifecycle.viewModelScope
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.domain.model.CommandExecResult
-import dev.hridaya.kubenexus.domain.model.DeploymentDetails
-import dev.hridaya.kubenexus.domain.model.DeploymentSummary
-import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodDetails
-import dev.hridaya.kubenexus.domain.model.PodMetricSample
-import dev.hridaya.kubenexus.domain.model.TerminalSession
-import dev.hridaya.kubenexus.domain.repository.DeploymentRepository
-import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.usecase.CreateDeploymentUseCase
 import dev.hridaya.kubenexus.domain.usecase.CreateNamespaceUseCase
+import dev.hridaya.kubenexus.presentation.testing.FakeNamespaceRepository
+import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -50,14 +40,13 @@ class CreateDeploymentViewModelTest {
         override val unconfined: CoroutineDispatcher = testDispatcher
     }
 
-    private lateinit var fakeDeploymentRepository: FakeDeploymentRepository
-    private lateinit var fakePodRepository: FakePodRepository
+
+    private val resources = FakeResourceRepository()
+    private val namespaces = FakeNamespaceRepository()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        fakeDeploymentRepository = FakeDeploymentRepository()
-        fakePodRepository = FakePodRepository()
     }
 
     @After
@@ -71,8 +60,8 @@ class CreateDeploymentViewModelTest {
                 clusterId = "c-1",
                 initialNamespace = "team-a",
                 initialAvailableNamespaces = listOf("default", "team-a"),
-                createDeploymentUseCase = CreateDeploymentUseCase(fakeDeploymentRepository),
-                createNamespaceUseCase = CreateNamespaceUseCase(fakePodRepository),
+                createDeploymentUseCase = CreateDeploymentUseCase(resources),
+                createNamespaceUseCase = CreateNamespaceUseCase(namespaces),
                 dispatcherProvider = testDispatcherProvider,
             )
             try {
@@ -171,8 +160,8 @@ class CreateDeploymentViewModelTest {
         collector.cancel()
 
         assertEquals(listOf(CreateDeploymentUiEffect.Created("web-app")), effects)
-        assertEquals(1, fakeDeploymentRepository.appliedManifests.size)
-        val (clusterId, manifest) = fakeDeploymentRepository.appliedManifests.single()
+        assertEquals(1, resources.createCalls.size)
+        val (clusterId, manifest) = resources.createCalls.single()
         assertEquals("c-1", clusterId)
         assertEquals(reviewedYaml, manifest)
         assertFalse(viewModel.uiState.value.isSubmitting)
@@ -202,7 +191,7 @@ class CreateDeploymentViewModelTest {
         viewModel.onAction(CreateDeploymentUiAction.ApplySubmitted)
         advanceUntilIdle()
 
-        val (_, manifest) = fakeDeploymentRepository.appliedManifests.single()
+        val (_, manifest) = resources.createCalls.single()
         assertEquals(edited, manifest)
         assertFalse(manifest == original)
     }
@@ -216,14 +205,14 @@ class CreateDeploymentViewModelTest {
         viewModel.onAction(CreateDeploymentUiAction.ApplySubmitted)
         advanceUntilIdle()
 
-        assertTrue(fakeDeploymentRepository.appliedManifests.isEmpty())
+        assertTrue(resources.createCalls.isEmpty())
         assertFalse(viewModel.uiState.value.isSubmitting)
     }
 
     @Test
     fun `apply failure keeps review step edits and shows friendly error`() = vmTest { viewModel ->
-        fakeDeploymentRepository.applyError =
-            AppError.Unknown(message = "forbidden: deployments is forbidden")
+        resources.createResult =
+            Result.Error(AppError.Unknown(message = "forbidden: deployments is forbidden"))
         fillValidForm(viewModel)
         viewModel.onAction(CreateDeploymentUiAction.PreviewSubmitted)
         val edited = viewModel.uiState.value.reviewedYaml + "\n# keep this edit"
@@ -304,13 +293,13 @@ class CreateDeploymentViewModelTest {
         assertEquals(listOf("default", "team-a", "team-b"), state.availableNamespaces)
         assertEquals("team-b", state.namespace)
         assertEquals(listOf(CreateDeploymentUiEffect.NamespaceCreated), effects)
-        assertEquals(listOf("c-1" to "team-b"), fakePodRepository.createdNamespaces)
+        assertEquals(listOf("c-1" to "team-b"), namespaces.created)
     }
 
     @Test
     fun `namespace creation failure keeps dialog input and shows friendly message`() =
         vmTest { viewModel ->
-            fakePodRepository.createError = AppError.Unknown(message = "already exists")
+            namespaces.createResult = Result.Error(AppError.Unknown(message = "already exists"))
             viewModel.onAction(CreateDeploymentUiAction.CreateNamespaceClicked)
             viewModel.onAction(CreateDeploymentUiAction.NewNamespaceNameChanged("team-b"))
 
@@ -327,185 +316,4 @@ class CreateDeploymentViewModelTest {
             )
             assertFalse(state.availableNamespaces.contains("team-b"))
         }
-}
-
-private class FakeDeploymentRepository : DeploymentRepository {
-    var applyError: AppError? = null
-    val appliedManifests = mutableListOf<Pair<String?, String>>()
-
-    override suspend fun createFromManifest(
-        clusterId: String?,
-        manifestYaml: String,
-    ): Result<Unit> {
-        appliedManifests += clusterId to manifestYaml
-        val error = applyError ?: return Result.Success(Unit)
-        return Result.Error(error)
-    }
-
-    override suspend fun getDeployments(
-        clusterId: String?,
-        namespace: String?,
-    ): Result<List<DeploymentSummary>> {
-        return Result.Success(emptyList())
-    }
-
-    override fun getDeploymentsStream(
-        clusterId: String?,
-        namespace: String?,
-    ): Flow<List<DeploymentSummary>> {
-        return flowOf(emptyList())
-    }
-
-    override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> {
-        return flowOf(null)
-    }
-
-    override suspend fun syncDeployments(
-        clusterId: String?,
-        namespace: String?,
-    ): Result<Unit> {
-        return Result.Success(Unit)
-    }
-
-    override suspend fun getDeploymentDetails(
-        clusterId: String?,
-        namespace: String,
-        name: String,
-    ): Result<DeploymentDetails> {
-        return Result.Error(AppError.NotFound("Not exercised in this test"))
-    }
-
-    override suspend fun scaleDeployment(
-        clusterId: String?,
-        namespace: String,
-        name: String,
-        replicas: Int,
-    ): Result<Unit> = Result.Success(Unit)
-
-    override suspend fun restartDeployment(
-        clusterId: String?,
-        namespace: String,
-        name: String,
-    ): Result<Unit> = Result.Success(Unit)
-
-    override suspend fun deleteDeployment(
-        clusterId: String?,
-        namespace: String,
-        name: String,
-    ): Result<Unit> = Result.Success(Unit)
-}
-
-/** Only [createNamespace] is exercised here; everything else is inert. */
-private class FakePodRepository : PodRepository {
-    var createError: AppError? = null
-    val createdNamespaces = mutableListOf<Pair<String?, String>>()
-
-    override suspend fun createNamespace(clusterId: String?, name: String): Result<Unit> {
-        createdNamespaces += clusterId to name
-        val error = createError ?: return Result.Success(Unit)
-        return Result.Error(error)
-    }
-
-    override suspend fun listPodsBySelector(
-        rawKubeconfig: String,
-        namespace: String?,
-        labelSelector: String,
-    ): Result<List<Pod>> = Result.Success(emptyList())
-
-    override suspend fun getPodsBySelector(
-        clusterId: String?,
-        namespace: String?,
-        labelSelector: String,
-    ): Result<List<Pod>> = Result.Success(emptyList())
-
-    override suspend fun createPodFromManifest(
-        clusterId: String?,
-        manifestYaml: String,
-    ): Result<Unit> = Result.Success(Unit)
-
-    override fun getPodsStream(clusterId: String?, namespace: String?): Flow<List<Pod>> =
-        flowOf(emptyList())
-
-    override fun getNamespacesStream(clusterId: String?): Flow<List<String>> =
-        flowOf(emptyList())
-
-    override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
-
-    override suspend fun refreshWorkloads(clusterId: String?, namespace: String?): Result<Unit> =
-        Result.Success(Unit)
-
-    override suspend fun describePod(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-    ): Result<PodDetails> = Result.Error(AppError.Unknown(message = "not used"))
-
-    override suspend fun getPodMetrics(
-        clusterId: String?,
-        namespace: String?,
-    ): Result<List<PodMetricSample>> = Result.Success(emptyList())
-
-    override suspend fun getSinglePodMetrics(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-    ): Result<PodMetricSample?> = Result.Success(null)
-
-    override suspend fun deletePod(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-    ): Result<Unit> = Result.Success(Unit)
-
-    override suspend fun deleteNamespace(clusterId: String?, namespace: String): Result<Unit> =
-        Result.Success(Unit)
-
-    override suspend fun getPodLogs(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-        containerName: String?,
-        tailLines: Long?,
-    ): Result<String> = Result.Success("")
-
-    override fun streamPodLogs(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-        containerName: String?,
-        tailLines: Long?,
-    ): Flow<String> = emptyFlow()
-
-    override suspend fun execCommand(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-        containerName: String,
-        command: String,
-        stdin: String,
-    ): Result<CommandExecResult> = Result.Error(AppError.Unknown(message = "not used"))
-
-    override suspend fun startTerminalSession(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-        containerName: String,
-        onStdout: (String) -> Unit,
-        onStderr: (String) -> Unit,
-        onError: (String) -> Unit,
-        onDone: () -> Unit,
-    ): Result<TerminalSession> = Result.Error(AppError.Unknown(message = "not used"))
-
-    override suspend fun startExecSession(
-        clusterId: String?,
-        namespace: String,
-        podName: String,
-        containerName: String,
-        command: String,
-        tty: Boolean,
-        onStdout: (String) -> Unit,
-        onStderr: (String) -> Unit,
-        onError: (String) -> Unit,
-        onDone: () -> Unit,
-    ): Result<TerminalSession> = Result.Error(AppError.Unknown(message = "not used"))
 }

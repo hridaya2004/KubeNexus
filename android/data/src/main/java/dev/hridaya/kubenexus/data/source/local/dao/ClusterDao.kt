@@ -33,9 +33,6 @@ abstract class ClusterDao {
     @Query("DELETE FROM clusters WHERE id = :id")
     abstract suspend fun deleteCluster(id: String)
 
-    @Query("DELETE FROM pods WHERE clusterId = :id")
-    abstract suspend fun deletePodsForCluster(id: String)
-
     @Query("DELETE FROM namespaces WHERE clusterId = :id")
     abstract suspend fun deleteNamespacesForCluster(id: String)
 
@@ -51,11 +48,8 @@ abstract class ClusterDao {
     @Query("DELETE FROM sync_metadata WHERE clusterId = :id")
     abstract suspend fun deleteSyncMetadataForCluster(id: String)
 
-    @Query("DELETE FROM deployments WHERE clusterId = :id")
-    abstract suspend fun deleteDeploymentsForCluster(id: String)
-
-    @Query("DELETE FROM services WHERE clusterId = :id")
-    abstract suspend fun deleteServicesForCluster(id: String)
+    @Query("DELETE FROM cached_resources WHERE clusterId = :id")
+    abstract suspend fun deleteCachedResourcesForCluster(id: String)
 
     /**
      * Removes a cluster and everything cached against it.
@@ -71,24 +65,16 @@ abstract class ClusterDao {
         deleteExplainedResourcesForCluster(id)
         deleteAPIResourcesForCluster(id)
         deleteNamespacesForCluster(id)
-        deletePodsForCluster(id)
-        deleteDeploymentsForCluster(id)
-        deleteServicesForCluster(id)
+        deleteCachedResourcesForCluster(id)
         deleteSyncMetadataForCluster(id)
         deleteCluster(id)
     }
 
-    @Query("DELETE FROM pods")
-    abstract suspend fun deleteAllPods()
-
     @Query("DELETE FROM namespaces")
     abstract suspend fun deleteAllNamespaces()
 
-    @Query("DELETE FROM deployments")
-    abstract suspend fun deleteAllDeployments()
-
-    @Query("DELETE FROM services")
-    abstract suspend fun deleteAllServices()
+    @Query("DELETE FROM cached_resources")
+    abstract suspend fun deleteAllCachedResources()
 
     @Query("DELETE FROM api_resources")
     abstract suspend fun deleteAllAPIResources()
@@ -109,10 +95,8 @@ abstract class ClusterDao {
      */
     @Transaction
     open suspend fun clearCachedData() {
-        deleteAllPods()
+        deleteAllCachedResources()
         deleteAllNamespaces()
-        deleteAllDeployments()
-        deleteAllServices()
         deleteAllAPIResources()
         deleteAllExplainedResources()
         deleteAllOpenApiSchemas()

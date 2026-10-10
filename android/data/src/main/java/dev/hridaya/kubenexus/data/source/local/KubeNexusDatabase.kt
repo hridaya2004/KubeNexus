@@ -8,35 +8,29 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dev.hridaya.kubenexus.data.source.local.dao.APIResourceDao
 import dev.hridaya.kubenexus.data.source.local.dao.ClusterDao
-import dev.hridaya.kubenexus.data.source.local.dao.DeploymentDao
 import dev.hridaya.kubenexus.data.source.local.dao.ExplainedResourceDao
 import dev.hridaya.kubenexus.data.source.local.dao.NamespaceDao
 import dev.hridaya.kubenexus.data.source.local.dao.OpenApiSchemaDao
-import dev.hridaya.kubenexus.data.source.local.dao.PodDao
-import dev.hridaya.kubenexus.data.source.local.dao.ServiceDao
+import dev.hridaya.kubenexus.data.source.local.dao.ResourceCacheDao
 import dev.hridaya.kubenexus.data.source.local.entity.APIResourceEntity
+import dev.hridaya.kubenexus.data.source.local.entity.CachedResourceEntity
 import dev.hridaya.kubenexus.data.source.local.entity.ClusterEntity
-import dev.hridaya.kubenexus.data.source.local.entity.DeploymentEntity
 import dev.hridaya.kubenexus.data.source.local.entity.ExplainedResourceEntity
 import dev.hridaya.kubenexus.data.source.local.entity.NamespaceEntity
 import dev.hridaya.kubenexus.data.source.local.entity.OpenApiSchemaEntity
-import dev.hridaya.kubenexus.data.source.local.entity.PodEntity
-import dev.hridaya.kubenexus.data.source.local.entity.ServiceEntity
 import dev.hridaya.kubenexus.data.source.local.entity.SyncMetadataEntity
 
 @Database(
     entities = [
         ClusterEntity::class,
-        PodEntity::class,
         NamespaceEntity::class,
         SyncMetadataEntity::class,
         APIResourceEntity::class,
         ExplainedResourceEntity::class,
         OpenApiSchemaEntity::class,
-        DeploymentEntity::class,
-        ServiceEntity::class,
+        CachedResourceEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     // AutoMigration(5, 6) is not possible: schema JSON was never exported for
     // v5. From here on, exported schemas let future bumps declare auto-migrations.
@@ -45,13 +39,11 @@ import dev.hridaya.kubenexus.data.source.local.entity.SyncMetadataEntity
 abstract class KubeNexusDatabase : RoomDatabase() {
 
     abstract fun clusterDao(): ClusterDao
-    abstract fun podDao(): PodDao
     abstract fun namespaceDao(): NamespaceDao
     abstract fun apiResourceDao(): APIResourceDao
     abstract fun explainedResourceDao(): ExplainedResourceDao
     abstract fun openApiSchemaDao(): OpenApiSchemaDao
-    abstract fun deploymentDao(): DeploymentDao
-    abstract fun serviceDao(): ServiceDao
+    abstract fun resourceCacheDao(): ResourceCacheDao
 
     companion object {
         const val DATABASE_NAME = "kubenexus.db"
@@ -176,8 +168,8 @@ abstract class KubeNexusDatabase : RoomDatabase() {
          * Introduces the offline-first Deployment and Service caches.
          *
          * Both tables are new, so nothing is migrated — only created. The
-         * column lists must match what Room derives from [DeploymentEntity]
-         * and [ServiceEntity] exactly (types, nullability, order), because
+         * column lists must match what Room derived from the version 7
+         * DeploymentEntity and ServiceEntity exactly (types, nullability, order), because
          * Room validates the migrated schema against the exported 7.json.
          * Cached rows start empty and are repopulated by the first sync.
          */
@@ -237,6 +229,42 @@ abstract class KubeNexusDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Replaces the per-kind `pods`, `deployments` and `services` caches with
+         * the single [CachedResourceEntity] table every resource kind shares.
+         *
+         * Cached rows are discarded rather than converted: they are a cache, the
+         * old columns held a different projection, and the first sync of each
+         * list repopulates it. Their sync timestamps go too, so no list claims a
+         * recent refresh while showing nothing.
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `pods`")
+                db.execSQL("DROP TABLE IF EXISTS `deployments`")
+                db.execSQL("DROP TABLE IF EXISTS `services`")
+                db.execSQL("DELETE FROM `sync_metadata` WHERE `resourceType` IN ('pods', 'deployments', 'services')")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `cached_resources` (
+                        `id` TEXT NOT NULL,
+                        `clusterId` TEXT NOT NULL,
+                        `resourceKey` TEXT NOT NULL,
+                        `namespace` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `payload` TEXT NOT NULL,
+                        `lastUpdated` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_cached_resources_clusterId_resourceKey_namespace` " +
+                            "ON `cached_resources` (`clusterId`, `resourceKey`, `namespace`)",
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: KubeNexusDatabase? = null
 
@@ -254,6 +282,7 @@ abstract class KubeNexusDatabase : RoomDatabase() {
                         MIGRATION_4_5,
                         MIGRATION_5_6,
                         MIGRATION_6_7,
+                        MIGRATION_7_8,
                     )
                     .build()
                     .also { INSTANCE = it }

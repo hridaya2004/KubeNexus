@@ -1,7 +1,6 @@
 package dev.hridaya.kubenexus.presentation.main
 
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hridaya.kubenexus.presentation.common.namespaceOrNull
 import dev.hridaya.kubenexus.presentation.home.HomeUiAction
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.services.create.CreateServiceRoute
@@ -27,9 +27,7 @@ internal fun CreateServiceOverlay(
         creationCallback = { factory: CreateServiceViewModel.Factory ->
             factory.create(
                 clusterId = homeUiState.activeCluster?.id,
-                namespace = homeUiState.selectedNamespace
-                    .takeIf { it.isNotBlank() && it != "All Namespaces" }
-                    ?: "default",
+                namespace = namespaceOrNull(homeUiState.selectedNamespace) ?: "default",
                 availableNamespaces = homeUiState.availableNamespaces,
             )
         },
@@ -53,7 +51,6 @@ internal fun CreateServiceOverlay(
             }
         }
     }
-    BackHandler { onDismiss() }
     CreateServiceRoute(
         viewModel = createServiceViewModel,
         onNavigateBack = onDismiss,

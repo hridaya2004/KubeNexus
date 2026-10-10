@@ -11,7 +11,7 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
-import dev.hridaya.kubenexus.domain.model.Pod
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.usecase.AddClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
 import dev.hridaya.kubenexus.domain.usecase.ClearCachedDataUseCase
@@ -19,13 +19,13 @@ import dev.hridaya.kubenexus.domain.usecase.DeleteClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteNamespaceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetClustersUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetLastRefreshedUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetNamespacesUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetPodsUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObserveLastSyncedUseCase
 import dev.hridaya.kubenexus.domain.usecase.RefreshWorkloadsUseCase
 import dev.hridaya.kubenexus.domain.usecase.SetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.TestClusterConnectionUseCase
 import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
+import dev.hridaya.kubenexus.presentation.common.namespaceFilterOptions
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -50,9 +50,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val getClustersUseCase: GetClustersUseCase,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
-    private val getPodsUseCase: GetPodsUseCase,
     private val getNamespacesUseCase: GetNamespacesUseCase,
-    private val getLastRefreshedUseCase: GetLastRefreshedUseCase,
+    private val observeLastSynced: ObserveLastSyncedUseCase,
     private val refreshWorkloadsUseCase: RefreshWorkloadsUseCase,
     private val addClusterUseCase: AddClusterUseCase,
     private val setActiveClusterUseCase: SetActiveClusterUseCase,
@@ -132,14 +131,12 @@ class HomeViewModel @Inject constructor(
             }.flatMapLatest { (clusters, activeCluster, ns) ->
                 val clusterId = activeCluster?.id
                 combine(
-                    getPodsUseCase(clusterId, ns),
                     getNamespacesUseCase(clusterId),
-                    getLastRefreshedUseCase(clusterId),
-                ) { pods, namespaces, lastRefreshed ->
+                    observeLastSynced(clusterId, ResourceKinds.Pods),
+                ) { namespaces, lastRefreshed ->
                     LocalWorkloadData(
                         clusters = clusters,
                         activeCluster = activeCluster,
-                        pods = pods,
                         namespaces = namespaces,
                         selectedNamespace = ns,
                         lastRefreshed = lastRefreshed,
@@ -169,8 +166,11 @@ class HomeViewModel @Inject constructor(
                         isLoading = false,
                         clusters = data.clusters,
                         activeCluster = data.activeCluster,
-                        pods = data.pods,
-                        availableNamespaces = if (data.namespaces.isNotEmpty()) data.namespaces else state.availableNamespaces,
+                        availableNamespaces = if (data.namespaces.isNotEmpty()) {
+                            namespaceFilterOptions(data.namespaces)
+                        } else {
+                            state.availableNamespaces
+                        },
                         selectedNamespace = data.selectedNamespace,
                         lastRefreshedAt = data.lastRefreshed ?: state.lastRefreshedAt,
                         clusterConnectionStatus = status,
@@ -183,7 +183,7 @@ class HomeViewModel @Inject constructor(
                     performRefresh(
                         data.activeCluster.id,
                         data.selectedNamespace,
-                        showLoading = data.pods.isEmpty(),
+                        showLoading = data.lastRefreshed == null,
                     )
                 }
             }
@@ -221,7 +221,6 @@ class HomeViewModel @Inject constructor(
     private data class LocalWorkloadData(
         val clusters: List<Cluster>,
         val activeCluster: Cluster?,
-        val pods: List<Pod>,
         val namespaces: List<String>,
         val selectedNamespace: String,
         val lastRefreshed: Long?,

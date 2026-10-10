@@ -8,15 +8,10 @@ import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
-import dev.hridaya.kubenexus.domain.model.DeploymentDetails
-import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.domain.model.Namespace
-import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.PortForwardListener
-import dev.hridaya.kubenexus.domain.model.ServiceDetails
-import dev.hridaya.kubenexus.domain.model.ServiceSummary
+import dev.hridaya.kubenexus.domain.model.resource.ResourceType
 
 /**
  * Reusable test double for [KubeNexusNativeBridge].
@@ -40,17 +35,39 @@ open class FakeKubeNexusNativeBridge : KubeNexusNativeBridge {
 
     override fun touch(): Boolean = true
 
-    override fun listPods(
+    override fun listResources(
         rawKubeconfig: String,
-        namespace: String?,
+        type: ResourceType,
+        namespace: String,
         labelSelector: String,
-        limit: Long,
-    ): Result<List<Pod>> = Result.Success(emptyList())
+    ): Result<String> = Result.Success(EMPTY_LIST_JSON)
 
-    override fun listDeployments(
+    override fun getResource(
         rawKubeconfig: String,
-        namespace: String?,
-    ): Result<List<DeploymentSummary>> = Result.Success(emptyList())
+        type: ResourceType,
+        namespace: String,
+        name: String,
+    ): Result<String> = Result.Error(AppError.NotFound("${type.kind} '$name' not found"))
+
+    override fun createResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        manifest: String,
+    ): Result<String> = Result.Success(manifest)
+
+    override fun deleteResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String,
+    ): Result<Unit> = Result.Success(Unit)
+
+    override fun listEvents(
+        rawKubeconfig: String,
+        namespace: String,
+        involvedKind: String,
+        involvedName: String,
+    ): Result<String> = Result.Success(EMPTY_LIST_JSON)
 
     override fun createNamespace(rawKubeconfig: String, name: String): Result<Unit> =
         Result.Success(Unit)
@@ -76,41 +93,6 @@ open class FakeKubeNexusNativeBridge : KubeNexusNativeBridge {
     override fun openAPISchemaJSON(rawKubeconfig: String): Result<String> =
         Result.Error(AppError.Unknown("OpenAPI schema not configured"))
 
-    override fun describePod(
-        rawKubeconfig: String,
-        namespace: String,
-        podName: String,
-    ): Result<PodDetails> = Result.Error(AppError.NotFound("Pod '$podName' not found"))
-
-    override fun describeDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<DeploymentDetails> = Result.Error(AppError.NotFound("Deployment '$name' not found"))
-
-    override fun listServices(
-        rawKubeconfig: String,
-        namespace: String?,
-    ): Result<List<ServiceSummary>> = Result.Success(emptyList())
-
-    override fun describeService(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<ServiceDetails> = Result.Error(AppError.NotFound("Service '$name' not found"))
-
-    override fun deletePod(
-        rawKubeconfig: String,
-        namespace: String,
-        podName: String,
-    ): Result<Unit> = Result.Success(Unit)
-
-    override fun createDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String> = Result.Success(manifestYaml)
-
     override fun scaleDeployment(
         rawKubeconfig: String,
         namespace: String,
@@ -123,24 +105,6 @@ open class FakeKubeNexusNativeBridge : KubeNexusNativeBridge {
         namespace: String,
         name: String,
     ): Result<Unit> = Result.Success(Unit)
-
-    override fun deleteDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<Unit> = Result.Success(Unit)
-
-    override fun createPod(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String> = Result.Success(manifestYaml)
-
-    override fun createService(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String> = Result.Success(manifestYaml)
 
     override fun getPodLogs(
         rawKubeconfig: String,
@@ -217,4 +181,8 @@ open class FakeKubeNexusNativeBridge : KubeNexusNativeBridge {
             statusMessage = "Ready",
         ),
     )
+
+    companion object {
+        const val EMPTY_LIST_JSON = """{"items":[]}"""
+    }
 }

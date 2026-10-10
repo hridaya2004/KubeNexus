@@ -8,14 +8,9 @@ import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
-import dev.hridaya.kubenexus.domain.model.CommandExecResult
-import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodDetails
-import dev.hridaya.kubenexus.domain.model.PodMetricSample
-import dev.hridaya.kubenexus.domain.model.PodStatus
-import dev.hridaya.kubenexus.domain.model.TerminalSession
+import dev.hridaya.kubenexus.domain.model.resource.NamespaceScope
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
-import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.usecase.AddClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
 import dev.hridaya.kubenexus.domain.usecase.ClearCachedDataUseCase
@@ -23,20 +18,20 @@ import dev.hridaya.kubenexus.domain.usecase.DeleteClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteNamespaceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetClustersUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetLastRefreshedUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetNamespacesUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetPodsUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObserveLastSyncedUseCase
 import dev.hridaya.kubenexus.domain.usecase.RefreshWorkloadsUseCase
 import dev.hridaya.kubenexus.domain.usecase.SetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.TestClusterConnectionUseCase
 import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
+import dev.hridaya.kubenexus.presentation.testing.FakeNamespaceRepository
+import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -62,7 +57,8 @@ class HomeViewModelTest {
     }
 
     private lateinit var fakeClusterRepository: FakeClusterRepository
-    private lateinit var fakePodRepository: FakePodRepository
+    private val resources = FakeResourceRepository()
+    private val namespaces = FakeNamespaceRepository(names = listOf("default", "kube-system", "monitoring"))
     private val onlineFlow = MutableStateFlow(true)
     private val fakeNetworkMonitor =
         object : NetworkMonitor {
@@ -73,7 +69,11 @@ class HomeViewModelTest {
     @Before
     fun setUp() {
         fakeClusterRepository = FakeClusterRepository()
-        fakePodRepository = FakePodRepository()
+        resources.lastSynced.value = 1_700_000_000_000L
+        resources.onSync = {
+            resources.lastSynced.value = System.currentTimeMillis()
+            resources.syncResult
+        }
         onlineFlow.value = true
         viewModel = HomeViewModel(
             getClustersUseCase = GetClustersUseCase(fakeClusterRepository, testDispatcherProvider),
@@ -81,10 +81,9 @@ class HomeViewModelTest {
                 fakeClusterRepository,
                 testDispatcherProvider,
             ),
-            getPodsUseCase = GetPodsUseCase(fakePodRepository),
-            getNamespacesUseCase = GetNamespacesUseCase(fakePodRepository),
-            getLastRefreshedUseCase = GetLastRefreshedUseCase(fakePodRepository),
-            refreshWorkloadsUseCase = RefreshWorkloadsUseCase(fakePodRepository),
+            getNamespacesUseCase = GetNamespacesUseCase(namespaces),
+            observeLastSynced = ObserveLastSyncedUseCase(resources),
+            refreshWorkloadsUseCase = RefreshWorkloadsUseCase(namespaces, resources),
             addClusterUseCase = AddClusterUseCase(fakeClusterRepository, testDispatcherProvider),
             setActiveClusterUseCase = SetActiveClusterUseCase(
                 fakeClusterRepository,
@@ -95,7 +94,7 @@ class HomeViewModelTest {
                 testDispatcherProvider,
             ),
             clearCachedDataUseCase = ClearCachedDataUseCase(fakeClusterRepository),
-            deleteNamespaceUseCase = DeleteNamespaceUseCase(fakePodRepository),
+            deleteNamespaceUseCase = DeleteNamespaceUseCase(namespaces),
             updateClusterNameUseCase = UpdateClusterNameUseCase(fakeClusterRepository),
             testClusterConnectionUseCase = TestClusterConnectionUseCase(
                 fakeClusterRepository,
@@ -161,7 +160,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `ConnectAndSaveSubmitted with valid kubeconfig saves, sets active and loads pods`() =
+    fun `ConnectAndSaveSubmitted with valid kubeconfig saves, sets active and refreshes its pods`() =
         runTest(testDispatcher) {
             val validYaml = """
             apiVersion: v1
@@ -181,12 +180,12 @@ class HomeViewModelTest {
             assertFalse(state.showAddClusterSheet)
             assertEquals(1, state.clusters.size)
             assertEquals("test-cluster", state.activeCluster?.name)
-            assertEquals(2, state.pods.size)
+            assertTrue(resources.syncCalls.any { it.clusterId == state.activeCluster?.id && it.kind == ResourceKinds.Pods })
             assertEquals(ClusterConnectionStatus.CONNECTED, state.clusterConnectionStatus)
         }
 
     @Test
-    fun `SelectNamespace updates selected namespace and filters pods`() = runTest(testDispatcher) {
+    fun `SelectNamespace updates the selected namespace`() = runTest(testDispatcher) {
         val validYaml = """
             apiVersion: v1
             kind: Config
@@ -205,8 +204,6 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         assertEquals("kube-system", viewModel.uiState.value.selectedNamespace)
-        assertEquals(1, viewModel.uiState.value.pods.size)
-        assertEquals("coredns-1", viewModel.uiState.value.pods.first().name)
     }
 
     @Test
@@ -268,7 +265,7 @@ class HomeViewModelTest {
         }
 
     @Test
-    fun `selecting specific namespace updates selected namespace and filters pods`() =
+    fun `refreshing after selecting a namespace syncs that namespace's pods`() =
         runTest(testDispatcher) {
             val validYaml = """
             apiVersion: v1
@@ -285,11 +282,11 @@ class HomeViewModelTest {
             advanceUntilIdle()
 
             viewModel.onAction(HomeUiAction.SelectNamespace("default"))
+            viewModel.onAction(HomeUiAction.RefreshWorkloads)
             advanceUntilIdle()
 
-            val state = viewModel.uiState.value
-            assertEquals("default", state.selectedNamespace)
-            assertEquals(1, state.pods.size)
+            val lastPodSync = resources.syncCalls.last { it.kind == ResourceKinds.Pods }
+            assertEquals(NamespaceScope.Only("default"), lastPodSync.scope)
         }
 
     @Test
@@ -415,7 +412,14 @@ class HomeViewModelTest {
         val job = launch {
             viewModel.effects.collect { if (it is HomeUiEffect.ShowToast) toasts += it.message }
         }
-        fakePodRepository.refreshBehaviour["a"] = 10_000L to Result.Error(AppError.Network("timeout"))
+        resources.onSync = { call ->
+            if (call.clusterId == "a") {
+                delay(10_000L)
+                Result.Error(AppError.Network("timeout"))
+            } else {
+                Result.Success(Unit)
+            }
+        }
         fakeClusterRepository.clustersFlow.value = listOf(
             Cluster(id = "a", name = "a", serverUrl = "https://a:6443", rawKubeconfig = "x", contextName = "a", isActive = true),
             Cluster(id = "b", name = "b", serverUrl = "https://b:6443", rawKubeconfig = "x", contextName = "b"),
@@ -524,187 +528,5 @@ class HomeViewModelTest {
         }
 
         override suspend fun migratePlaintextClusters(): Result<Int> = Result.Success(0)
-    }
-
-    private class FakePodRepository : PodRepository {
-        private val lastRefreshedFlow = MutableStateFlow<Long?>(1700000000000L)
-
-        override fun getPodsStream(clusterId: String?, namespace: String?): Flow<List<Pod>> {
-            if (clusterId == null) return flowOf(emptyList())
-            val all = listOf(
-                Pod(
-                    id = "p-1",
-                    name = "coredns-1",
-                    namespace = "kube-system",
-                    status = PodStatus.RUNNING,
-                ),
-                Pod(
-                    id = "p-2",
-                    name = "nginx-web",
-                    namespace = "default",
-                    status = PodStatus.RUNNING,
-                ),
-            )
-            val filtered = if (!namespace.isNullOrBlank() && namespace != "All Namespaces") {
-                all.filter { it.namespace == namespace }
-            } else {
-                all
-            }
-            return flowOf(filtered)
-        }
-
-        override fun getNamespacesStream(clusterId: String?): Flow<List<String>> {
-            return flowOf(listOf("All Namespaces", "default", "kube-system", "monitoring"))
-        }
-
-        override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> {
-            return lastRefreshedFlow.asStateFlow()
-        }
-
-        /** Per-cluster refresh behaviour: how long it takes and what it returns. */
-        val refreshBehaviour = mutableMapOf<String, Pair<Long, Result<Unit>>>()
-
-        override suspend fun refreshWorkloads(
-            clusterId: String?,
-            namespace: String?
-        ): Result<Unit> {
-            refreshBehaviour[clusterId]?.let { (delayMs, result) ->
-                delay(delayMs)
-                return result
-            }
-            lastRefreshedFlow.value = System.currentTimeMillis()
-            return Result.Success(Unit)
-        }
-
-        override suspend fun getPodMetrics(
-            clusterId: String?,
-            namespace: String?,
-        ): Result<List<PodMetricSample>> = Result.Success(emptyList())
-
-        override suspend fun getSinglePodMetrics(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-        ): Result<PodMetricSample?> = Result.Success(null)
-
-        override suspend fun listPodsBySelector(
-            rawKubeconfig: String,
-            namespace: String?,
-            labelSelector: String,
-        ): Result<List<Pod>> = Result.Success(emptyList())
-
-        override suspend fun getPodsBySelector(
-            clusterId: String?,
-            namespace: String?,
-            labelSelector: String,
-        ): Result<List<Pod>> = Result.Success(emptyList())
-
-        override suspend fun describePod(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-        ): Result<PodDetails> {
-            return Result.Success(
-                PodDetails(
-                    name = podName,
-                    namespace = namespace,
-                    status = PodStatus.RUNNING,
-                ),
-            )
-        }
-
-        override suspend fun deletePod(
-            clusterId: String?,
-            namespace: String,
-            podName: String
-        ): Result<Unit> {
-            return Result.Success(Unit)
-        }
-
-        override suspend fun deleteNamespace(
-            clusterId: String?,
-            namespace: String
-        ): Result<Unit> {
-            return Result.Success(Unit)
-        }
-
-        override suspend fun createNamespace(
-            clusterId: String?,
-            name: String,
-        ): Result<Unit> = Result.Success(Unit)
-
-        override suspend fun createPodFromManifest(
-            clusterId: String?,
-            manifestYaml: String,
-        ): Result<Unit> = Result.Success(Unit)
-
-        override suspend fun getPodLogs(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-            containerName: String?,
-            tailLines: Long?,
-        ): Result<String> {
-            return Result.Success("Fake logs output")
-        }
-
-        override fun streamPodLogs(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-            containerName: String?,
-            tailLines: Long?,
-        ): Flow<String> {
-            return flowOf("Fake streamed log line")
-        }
-
-        override suspend fun execCommand(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-            containerName: String,
-            command: String,
-            stdin: String,
-        ): Result<CommandExecResult> {
-            return Result.Success(CommandExecResult())
-        }
-
-        override suspend fun startTerminalSession(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-            containerName: String,
-            onStdout: (String) -> Unit,
-            onStderr: (String) -> Unit,
-            onError: (String) -> Unit,
-            onDone: () -> Unit,
-        ): Result<TerminalSession> {
-            val session = object : TerminalSession {
-                override fun write(input: String) {}
-                override fun writeBytes(bytes: ByteArray) {}
-                override fun close() {}
-            }
-            return Result.Success(session)
-        }
-
-        override suspend fun startExecSession(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-            containerName: String,
-            command: String,
-            tty: Boolean,
-            onStdout: (String) -> Unit,
-            onStderr: (String) -> Unit,
-            onError: (String) -> Unit,
-            onDone: () -> Unit,
-        ): Result<TerminalSession> {
-            val session = object : TerminalSession {
-                override fun write(input: String) {}
-                override fun writeBytes(bytes: ByteArray) {}
-                override fun close() {}
-            }
-            return Result.Success(session)
-        }
     }
 }

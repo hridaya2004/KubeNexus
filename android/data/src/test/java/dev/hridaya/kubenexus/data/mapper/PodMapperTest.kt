@@ -2,13 +2,12 @@ package dev.hridaya.kubenexus.data.mapper
 
 import dev.hridaya.kubenexus.data.source.remote.dto.EventListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.K8sJson
-import dev.hridaya.kubenexus.data.source.remote.dto.PodDto
+import dev.hridaya.kubenexus.data.source.remote.dto.K8sListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.NamespaceListDto
-import dev.hridaya.kubenexus.data.source.remote.dto.PodListDto
+import dev.hridaya.kubenexus.data.source.remote.dto.PodDto
 import dev.hridaya.kubenexus.domain.model.PodStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -28,8 +27,8 @@ class PodMapperTest {
             "fixture $name not found on the test classpath"
         }.bufferedReader().use { it.readText() }
 
-    private fun podList(): PodListDto =
-        K8sJson.decodeFromString<PodListDto>(loadFixture("pod-list.json"))
+    private fun podList(): K8sListDto<PodDto> =
+        K8sJson.decodeFromString(K8sListDto.serializer(PodDto.serializer()), loadFixture("pod-list.json"))
 
     @Test
     fun `decodes a pod list containing fields the DTOs do not model`() {
@@ -159,28 +158,6 @@ class PodMapperTest {
         val details = podList().items[0].toDetails(rawJson = raw)
 
         assertEquals(raw, details.rawDescribeText)
-    }
-
-    @Test
-    fun `entity round trip preserves the creation timestamp instead of a rendered age`() {
-        val pod = podList().items[0].toDomain()
-        val restored = pod.toEntity(clusterId = "cluster-a").toDomain()
-
-        assertNotNull(pod.creationTimestampMillis)
-        assertEquals(pod.creationTimestampMillis, restored.creationTimestampMillis)
-        assertEquals(pod.status, restored.status)
-        assertEquals(pod.readyContainers, restored.readyContainers)
-        assertEquals(pod.restarts, restored.restarts)
-        assertEquals(pod.image, restored.image)
-        assertEquals("cluster-a_default_${pod.name}", pod.toEntity("cluster-a").id)
-    }
-
-    @Test
-    fun `crash loop status survives the entity round trip`() {
-        val pod = podList().items[1].toDomain()
-        val restored = pod.toEntity(clusterId = "cluster-a").toDomain()
-
-        assertEquals(PodStatus.CRASH_LOOP, restored.status)
     }
 
     @Test

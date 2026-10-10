@@ -1,5 +1,7 @@
 package dev.hridaya.kubenexus.domain.model
 
+import dev.hridaya.kubenexus.domain.model.resource.KubeObjectSummary
+
 /**
  * Read-only summary of an apps/v1 Deployment for list rendering.
  *
@@ -8,15 +10,15 @@ package dev.hridaya.kubenexus.domain.model
  * boundary.
  */
 data class DeploymentSummary(
-    val id: String,
-    val name: String,
-    val namespace: String,
+    override val id: String,
+    override val name: String,
+    override val namespace: String,
     val desiredReplicas: Int,
     val readyReplicas: Int,
     val availableReplicas: Int,
     val images: List<String>,
-    val creationTimestampMillis: Long,
-) {
+    override val creationTimestampMillis: Long,
+) : KubeObjectSummary {
 
     /** True when every desired replica is ready and available. */
     val isHealthy: Boolean

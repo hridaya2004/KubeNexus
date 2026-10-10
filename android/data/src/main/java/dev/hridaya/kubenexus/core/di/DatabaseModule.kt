@@ -9,12 +9,10 @@ import dagger.hilt.components.SingletonComponent
 import dev.hridaya.kubenexus.data.source.local.KubeNexusDatabase
 import dev.hridaya.kubenexus.data.source.local.dao.APIResourceDao
 import dev.hridaya.kubenexus.data.source.local.dao.ClusterDao
-import dev.hridaya.kubenexus.data.source.local.dao.DeploymentDao
 import dev.hridaya.kubenexus.data.source.local.dao.ExplainedResourceDao
 import dev.hridaya.kubenexus.data.source.local.dao.NamespaceDao
 import dev.hridaya.kubenexus.data.source.local.dao.OpenApiSchemaDao
-import dev.hridaya.kubenexus.data.source.local.dao.PodDao
-import dev.hridaya.kubenexus.data.source.local.dao.ServiceDao
+import dev.hridaya.kubenexus.data.source.local.dao.ResourceCacheDao
 import javax.inject.Singleton
 
 @Module
@@ -31,11 +29,6 @@ object DatabaseModule {
     fun provideClusterDao(
         database: KubeNexusDatabase
     ): ClusterDao = database.clusterDao()
-
-    @Provides
-    fun providePodDao(
-        database: KubeNexusDatabase
-    ): PodDao = database.podDao()
 
     @Provides
     fun provideNamespaceDao(
@@ -58,12 +51,7 @@ object DatabaseModule {
     ): OpenApiSchemaDao = database.openApiSchemaDao()
 
     @Provides
-    fun provideDeploymentDao(
+    fun provideResourceCacheDao(
         database: KubeNexusDatabase
-    ): DeploymentDao = database.deploymentDao()
-
-    @Provides
-    fun provideServiceDao(
-        database: KubeNexusDatabase
-    ): ServiceDao = database.serviceDao()
+    ): ResourceCacheDao = database.resourceCacheDao()
 }

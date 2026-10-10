@@ -14,21 +14,23 @@ import dev.hridaya.kubenexus.data.repository.ClusterRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.DeploymentRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.ExploreRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.LogcatRepositoryImpl
+import dev.hridaya.kubenexus.data.repository.NamespaceRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.PodRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.PortForwardRepositoryImpl
-import dev.hridaya.kubenexus.data.repository.ServiceRepositoryImpl
+import dev.hridaya.kubenexus.data.repository.ResourceRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.ThemePreferencesRepositoryImpl
+import dev.hridaya.kubenexus.data.source.local.DataStoreThemePreferencesDataSource
 import dev.hridaya.kubenexus.data.source.local.DefaultLogcatLocalDataSource
 import dev.hridaya.kubenexus.data.source.local.LogcatLocalDataSource
-import dev.hridaya.kubenexus.data.source.local.DataStoreThemePreferencesDataSource
 import dev.hridaya.kubenexus.data.source.local.ThemePreferencesLocalDataSource
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
 import dev.hridaya.kubenexus.domain.repository.DeploymentRepository
 import dev.hridaya.kubenexus.domain.repository.ExploreRepository
 import dev.hridaya.kubenexus.domain.repository.LogcatRepository
+import dev.hridaya.kubenexus.domain.repository.NamespaceRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
-import dev.hridaya.kubenexus.domain.repository.ServiceRepository
+import dev.hridaya.kubenexus.domain.repository.ResourceRepository
 import dev.hridaya.kubenexus.domain.repository.ThemePreferencesRepository
 import javax.inject.Singleton
 
@@ -60,9 +62,15 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindServiceRepository(
-        impl: ServiceRepositoryImpl
-    ): ServiceRepository
+    abstract fun bindResourceRepository(
+        impl: ResourceRepositoryImpl
+    ): ResourceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNamespaceRepository(
+        impl: NamespaceRepositoryImpl
+    ): NamespaceRepository
 
     @Binds
     @Singleton

@@ -18,7 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.presentation.common.components.segmentedShape
-import dev.hridaya.kubenexus.presentation.home.components.PodCard
+import dev.hridaya.kubenexus.presentation.resources.kinds.PodsPresentation
+import dev.hridaya.kubenexus.presentation.resources.list.components.ResourceCard
 
 @Composable
 internal fun DeploymentPodsSection(
@@ -101,11 +102,11 @@ internal fun DeploymentPodsSection(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     pods.forEachIndexed { index, pod ->
-                        PodCard(
-                            shape = segmentedShape(index, pods.size),
-                            pod = pod,
+                        ResourceCard(
+                            row = PodsPresentation.row(pod),
                             showNamespace = false,
                             onClick = { onPodClick(pod) },
+                            shape = segmentedShape(index, pods.size),
                         )
                     }
                 }

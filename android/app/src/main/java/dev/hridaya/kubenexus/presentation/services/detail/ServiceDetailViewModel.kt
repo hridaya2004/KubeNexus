@@ -10,9 +10,11 @@ import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
+import dev.hridaya.kubenexus.domain.model.resource.NamespaceScope
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
+import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetServiceDetailsUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetServicesStreamUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObserveResourcesUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,8 +35,8 @@ class ServiceDetailViewModel @AssistedInject constructor(
     @Assisted("serviceName") val serviceName: String,
     @Assisted("namespace") val namespace: String,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
-    private val getServiceDetailsUseCase: GetServiceDetailsUseCase,
-    private val getServicesStreamUseCase: GetServicesStreamUseCase,
+    private val describeResource: DescribeResourceUseCase,
+    private val observeResources: ObserveResourcesUseCase,
     private val networkMonitor: NetworkMonitor? = null,
     private val dispatcherProvider: DispatcherProvider? = null,
 ) : ViewModel() {
@@ -103,8 +105,8 @@ class ServiceDetailViewModel @AssistedInject constructor(
 
             // Instant offline load from Room cache
             if (_uiState.value.service == null) {
-                val cachedSummary = getServicesStreamUseCase?.invoke(clusterId, namespace)
-                    ?.firstOrNull()
+                val cachedSummary = observeResources(clusterId, ResourceKinds.Services, NamespaceScope.Only(namespace))
+                    .firstOrNull()
                     ?.firstOrNull { it.name == serviceName && it.namespace == namespace }
 
                 if (cachedSummary != null) {
@@ -161,7 +163,7 @@ class ServiceDetailViewModel @AssistedInject constructor(
         clusterId: String?,
         namespace: String,
         name: String,
-    ): Result<ServiceDetails> = getServiceDetailsUseCase(clusterId, namespace, name)
+    ): Result<ServiceDetails> = describeResource(clusterId, ResourceKinds.Services, namespace, name)
 
     private companion object {
         const val LOAD_ERROR_MESSAGE =

@@ -4,7 +4,6 @@ import dev.hridaya.kubenexus.data.source.remote.dto.DeploymentDto
 import dev.hridaya.kubenexus.data.source.remote.dto.EventDto
 import dev.hridaya.kubenexus.data.source.remote.dto.EventListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.K8sJson
-import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -93,31 +92,6 @@ class DeploymentMapperTest {
             Instant.parse("2026-03-02T08:13:59Z").toEpochMilli(),
             scaledDown.lastTimestampMillis,
         )
-    }
-
-    @Test
-    fun `summary survives the entity round trip including multi-image lists`() {
-        val original = DeploymentSummary(
-            id = "ignored-here",
-            name = "web-frontend",
-            namespace = "web",
-            desiredReplicas = 3,
-            readyReplicas = 2,
-            availableReplicas = 2,
-            images = listOf("nginx:1.27.3", "busybox:1.36"),
-            creationTimestampMillis = 1_772_000_000_000L,
-        )
-
-        val restored = original.toEntity(clusterId = "c-1").toDomain()
-
-        assertEquals("c-1_web_web-frontend", restored.id)
-        assertEquals(original.name, restored.name)
-        assertEquals(original.namespace, restored.namespace)
-        assertEquals(original.desiredReplicas, restored.desiredReplicas)
-        assertEquals(original.readyReplicas, restored.readyReplicas)
-        assertEquals(original.availableReplicas, restored.availableReplicas)
-        assertEquals(original.images, restored.images)
-        assertEquals(original.creationTimestampMillis, restored.creationTimestampMillis)
     }
 
     @Test

@@ -7,15 +7,10 @@ import client.LogCallback
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
-import dev.hridaya.kubenexus.domain.model.DeploymentDetails
-import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.domain.model.Namespace
-import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.PortForwardListener
-import dev.hridaya.kubenexus.domain.model.ServiceDetails
-import dev.hridaya.kubenexus.domain.model.ServiceSummary
+import dev.hridaya.kubenexus.domain.model.resource.ResourceType
 
 /**
  * A running native log stream started by [KubeNexusNativeBridge.streamPodLogs].
@@ -29,8 +24,10 @@ fun interface LogStreamHandle {
  * Bridge interface defining the contract for interacting with the native Go
  * runtime provided by kubenexus.aar.
  *
- * Resource reads cross the boundary as verbatim Kubernetes JSON and are decoded
- * into domain models here, so no `client.*` type appears in a resource signature.
+ * Resources cross the boundary as verbatim Kubernetes JSON through the generic
+ * [listResources] / [getResource] / [createResource] / [deleteResource] calls,
+ * keyed by [ResourceType], so supporting a new kind needs no new bridge method
+ * and no `client.*` type appears in a resource signature.
  * The remaining `client.*` references are the streaming primitives — log and exec
  * callbacks and the exec session handle — which are genuinely not expressible as
  * a request/response pair and therefore stay purpose-built Gomobile bindings.
@@ -52,18 +49,55 @@ interface KubeNexusNativeBridge {
     fun touch(): Boolean
 
     /**
-     * Lists pods in a namespace, or across all namespaces when [namespace] is
-     * null or blank.
+     * Lists objects of [type] and returns the verbatim Kubernetes list as JSON.
      *
-     * [labelSelector] and [limit] map directly onto the Kubernetes list options;
-     * pass an empty selector and a zero limit to list everything.
+     * A blank [namespace] lists across all namespaces, or the whole cluster for
+     * cluster-scoped types. [labelSelector] maps onto the list option of the same
+     * name, e.g. "app=web"; blank lists everything.
      */
-    fun listPods(
+    fun listResources(
         rawKubeconfig: String,
-        namespace: String? = null,
+        type: ResourceType,
+        namespace: String,
         labelSelector: String = "",
-        limit: Long = 0,
-    ): Result<List<Pod>>
+    ): Result<String>
+
+    /** Fetches one object of [type] and returns it verbatim as JSON. */
+    fun getResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String,
+    ): Result<String>
+
+    /**
+     * Creates the single object described by [manifest] (YAML or JSON) in the
+     * namespace its own metadata names, and returns the created object as JSON.
+     */
+    fun createResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        manifest: String,
+    ): Result<String>
+
+    /** Deletes one object of [type], leaving propagation to the server default. */
+    fun deleteResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String,
+    ): Result<Unit>
+
+    /**
+     * Lists the events whose involved object is the [involvedKind] named
+     * [involvedName] in [namespace], as verbatim Kubernetes list JSON.
+     */
+    fun listEvents(
+        rawKubeconfig: String,
+        namespace: String,
+        involvedKind: String,
+        involvedName: String,
+    ): Result<String>
 
     /**
      * Retrieves existing cluster namespaces from native runtime.
@@ -113,71 +147,6 @@ interface KubeNexusNativeBridge {
     fun openAPISchemaJSON(rawKubeconfig: String): Result<String>
 
     /**
-     * Describes a pod in detail, including its events.
-     */
-    fun describePod(
-        rawKubeconfig: String,
-        namespace: String,
-        podName: String,
-    ): Result<PodDetails>
-
-    /**
-     * Deletes a pod from native runtime.
-     */
-    fun deletePod(rawKubeconfig: String, namespace: String, podName: String): Result<Unit>
-
-    /**
-     * Lists apps/v1 Deployments in [namespace], or across all namespaces when
-     * it is null or blank.
-     */
-    fun listDeployments(
-        rawKubeconfig: String,
-        namespace: String? = null,
-    ): Result<List<DeploymentSummary>>
-
-    /**
-     * Describes one Deployment in detail, including its status conditions and
-     * events. Events are fetched separately and are non-fatal: a failure
-     * loading them must not lose the Deployment itself.
-     */
-    fun describeDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<DeploymentDetails>
-
-    /**
-     * Lists v1 Services in [namespace], or across all namespaces when it is
-     * null or blank.
-     */
-    fun listServices(
-        rawKubeconfig: String,
-        namespace: String? = null,
-    ): Result<List<ServiceSummary>>
-
-    /**
-     * Describes one Service in detail, including its ports and events. Events
-     * are fetched separately and are non-fatal, exactly as in [describePod].
-     */
-    fun describeService(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<ServiceDetails>
-
-    /**
-     * Creates a new apps/v1 Deployment by applying [manifestYaml] (YAML or
-     * JSON) and returns the created object verbatim as JSON.
-     *
-     * A blank [namespace] uses the one declared in the manifest itself.
-     */
-    fun createDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String>
-
-    /**
      * Scales an apps/v1 Deployment to [replicas] count.
      */
     fun scaleDeployment(
@@ -195,39 +164,6 @@ interface KubeNexusNativeBridge {
         namespace: String,
         name: String,
     ): Result<Unit>
-
-    /**
-     * Deletes an apps/v1 Deployment by name in [namespace].
-     */
-    fun deleteDeployment(
-        rawKubeconfig: String,
-        namespace: String,
-        name: String,
-    ): Result<Unit>
-
-    /**
-     * Creates a new v1 Pod by applying [manifestYaml] (YAML or JSON) and
-     * returns the created object verbatim as JSON.
-     *
-     * A blank [namespace] uses the one declared in the manifest itself.
-     */
-    fun createPod(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String>
-
-    /**
-     * Creates a new v1 Service by applying [manifestYaml] (YAML or JSON) and
-     * returns the created object verbatim as JSON.
-     *
-     * A blank [namespace] uses the one declared in the manifest itself.
-     */
-    fun createService(
-        rawKubeconfig: String,
-        namespace: String,
-        manifestYaml: String,
-    ): Result<String>
 
     /**
      * Fetches historical logs for a pod container with optional tail line limit.

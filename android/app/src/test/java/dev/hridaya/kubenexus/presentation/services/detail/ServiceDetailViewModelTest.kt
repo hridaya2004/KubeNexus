@@ -11,11 +11,12 @@ import dev.hridaya.kubenexus.domain.model.K8sEventSummary
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
 import dev.hridaya.kubenexus.domain.model.ServiceSummary
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
-import dev.hridaya.kubenexus.domain.repository.ServiceRepository
+import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetServiceDetailsUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetServicesStreamUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObserveResourcesUseCase
+import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,7 +50,7 @@ class ServiceDetailViewModelTest {
     }
 
     private lateinit var fakeClusterRepository: FakeClusterRepository
-    private lateinit var fakeServiceRepository: FakeServiceRepository
+    private val resources = FakeResourceRepository()
 
     private val sampleSummary = ServiceSummary(
         id = "c1_default_web",
@@ -88,7 +89,6 @@ class ServiceDetailViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeClusterRepository = FakeClusterRepository()
-        fakeServiceRepository = FakeServiceRepository()
 
         fakeClusterRepository.activeClusterFlow.value = Cluster(
             id = "c1",
@@ -113,16 +113,16 @@ class ServiceDetailViewModelTest {
             serviceName = "web",
             namespace = "default",
             getActiveClusterUseCase = GetActiveClusterUseCase(fakeClusterRepository, testDispatcherProvider),
-            getServiceDetailsUseCase = GetServiceDetailsUseCase(fakeServiceRepository),
-            getServicesStreamUseCase = GetServicesStreamUseCase(fakeServiceRepository),
+            describeResource = DescribeResourceUseCase(resources),
+            observeResources = ObserveResourcesUseCase(resources),
             dispatcherProvider = testDispatcherProvider,
         )
     }
 
     @Test
     fun `loads cached summary immediately and fetches live service details`() = runTest(testDispatcher) {
-        fakeServiceRepository.cachedServicesFlow.value = listOf(sampleSummary)
-        fakeServiceRepository.serviceDetailsResult = Result.Success(sampleDetails)
+        resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
+        resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))
 
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -139,22 +139,22 @@ class ServiceDetailViewModelTest {
 
     @Test
     fun `refresh action reloads service details and updates lastRefreshedAt`() = runTest(testDispatcher) {
-        fakeServiceRepository.cachedServicesFlow.value = listOf(sampleSummary)
-        fakeServiceRepository.serviceDetailsResult = Result.Success(sampleDetails)
+        resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
+        resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertNotNull(initialRefreshedAt)
-        val requestsBeforeRefresh = fakeServiceRepository.detailsRequests
-        fakeServiceRepository.serviceDetailsResult = Result.Success(sampleDetails.copy(type = "NodePort"))
+        val requestsBeforeRefresh = resources.describeCalls.size
+        resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails.copy(type = "NodePort")))
 
         viewModel.onAction(ServiceDetailUiAction.Refresh)
         advanceUntilIdle()
 
         // Refresh must fetch again and show what it fetched, not just keep the old state.
-        assertEquals(requestsBeforeRefresh + 1, fakeServiceRepository.detailsRequests)
+        assertEquals(requestsBeforeRefresh + 1, resources.describeCalls.size)
         assertEquals("NodePort", viewModel.uiState.value.service?.type)
         val newRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertNotNull(newRefreshedAt)
@@ -198,21 +198,5 @@ class ServiceDetailViewModelTest {
         override suspend fun updateClusterStatus(id: String, status: ClusterStatus, lastConnectedAt: Long?): Result<Unit> = Result.Success(Unit)
         override suspend fun migratePlaintextClusters(): Result<Int> = Result.Success(0)
         override suspend fun getClusterById(id: String): Cluster? = activeClusterFlow.value
-    }
-
-    private class FakeServiceRepository : ServiceRepository {
-        val cachedServicesFlow = MutableStateFlow<List<ServiceSummary>>(emptyList())
-        var serviceDetailsResult: Result<ServiceDetails> = Result.Error(AppError.NotFound("not found"))
-
-        override suspend fun createFromManifest(clusterId: String?, manifestYaml: String): Result<Unit> = Result.Success(Unit)
-        override fun getServicesStream(clusterId: String?, namespace: String?): Flow<List<ServiceSummary>> = cachedServicesFlow
-        override suspend fun syncServices(clusterId: String?, namespace: String?): Result<Unit> = Result.Success(Unit)
-        var detailsRequests = 0
-
-        override suspend fun getServiceDetails(clusterId: String?, namespace: String, name: String): Result<ServiceDetails> {
-            detailsRequests++
-            return serviceDetailsResult
-        }
-        override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
     }
 }

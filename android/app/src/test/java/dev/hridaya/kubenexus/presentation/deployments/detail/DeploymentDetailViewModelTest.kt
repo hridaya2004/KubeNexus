@@ -7,25 +7,21 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
-import dev.hridaya.kubenexus.domain.model.CommandExecResult
 import dev.hridaya.kubenexus.domain.model.DeploymentDetails
 import dev.hridaya.kubenexus.domain.model.DeploymentSummary
 import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodDetails
-import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.PodStatus
-import dev.hridaya.kubenexus.domain.model.TerminalSession
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
 import dev.hridaya.kubenexus.domain.repository.DeploymentRepository
-import dev.hridaya.kubenexus.domain.repository.PodRepository
-import dev.hridaya.kubenexus.domain.usecase.DeleteDeploymentUseCase
+import dev.hridaya.kubenexus.domain.usecase.DeleteResourceUseCase
+import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetDeploymentDetailsUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetDeploymentsStreamUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetDeploymentsUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetPodsBySelectorUseCase
+import dev.hridaya.kubenexus.domain.usecase.ListResourcesUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObserveResourcesUseCase
 import dev.hridaya.kubenexus.domain.usecase.RestartDeploymentUseCase
 import dev.hridaya.kubenexus.domain.usecase.ScaleDeploymentUseCase
+import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,7 +32,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -62,7 +57,7 @@ class DeploymentDetailViewModelTest {
 
     private lateinit var fakeClusterRepository: FakeClusterRepository
     private lateinit var fakeDeploymentRepository: FakeDeploymentRepository
-    private lateinit var fakePodRepository: FakePodRepository
+    private val resources = FakeResourceRepository()
 
     private val sampleSummary = DeploymentSummary(
         id = "c1_default_nginx",
@@ -108,7 +103,6 @@ class DeploymentDetailViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeClusterRepository = FakeClusterRepository()
         fakeDeploymentRepository = FakeDeploymentRepository()
-        fakePodRepository = FakePodRepository()
 
         fakeClusterRepository.activeClusterFlow.value = Cluster(
             id = "c1",
@@ -133,23 +127,28 @@ class DeploymentDetailViewModelTest {
             deploymentName = "nginx",
             namespace = "default",
             getActiveClusterUseCase = GetActiveClusterUseCase(fakeClusterRepository, testDispatcherProvider),
-            getDeploymentDetailsUseCase = GetDeploymentDetailsUseCase(fakeDeploymentRepository),
-            getDeploymentsUseCase = GetDeploymentsUseCase(fakeDeploymentRepository),
-            getDeploymentsStreamUseCase = GetDeploymentsStreamUseCase(fakeDeploymentRepository),
-            scaleDeploymentUseCase = ScaleDeploymentUseCase(fakeDeploymentRepository),
-            restartDeploymentUseCase = RestartDeploymentUseCase(fakeDeploymentRepository),
-            deleteDeploymentUseCase = DeleteDeploymentUseCase(fakeDeploymentRepository),
-            getPodsBySelectorUseCase = GetPodsBySelectorUseCase(fakePodRepository),
+            describeResource = DescribeResourceUseCase(resources),
+            listResources = ListResourcesUseCase(resources),
+            observeResources = ObserveResourcesUseCase(resources),
+            deleteResource = DeleteResourceUseCase(resources),
+            scaleDeploymentUseCase = ScaleDeploymentUseCase(fakeDeploymentRepository, resources),
+            restartDeploymentUseCase = RestartDeploymentUseCase(fakeDeploymentRepository, resources),
             dispatcherProvider = testDispatcherProvider,
         )
+    }
+
+    /** The cached rows and the live list agree, as they do after a sync. */
+    private fun givenDeployments(vararg deployments: DeploymentSummary) {
+        resources.givenCached(ResourceKinds.Deployments, deployments.toList())
+        resources.givenList(ResourceKinds.Deployments, Result.Success(deployments.toList()))
     }
 
     @Test
     fun `loads cached summary immediately from Room stream and fetches live details`() =
         runTest(testDispatcher) {
-            fakeDeploymentRepository.cachedDeploymentsFlow.value = listOf(sampleSummary)
-            fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails)
-            fakePodRepository.podsToReturn = listOf(samplePod)
+            givenDeployments(sampleSummary)
+            resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
+            resources.givenList(ResourceKinds.Pods, Result.Success(listOf(samplePod)))
 
             val viewModel = createViewModel()
             advanceUntilIdle()
@@ -168,8 +167,8 @@ class DeploymentDetailViewModelTest {
 
     @Test
     fun `performScale scales deployment and reloads on success`() = runTest(testDispatcher) {
-        fakeDeploymentRepository.cachedDeploymentsFlow.value = listOf(sampleSummary)
-        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails)
+        givenDeployments(sampleSummary)
+        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
 
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -184,13 +183,13 @@ class DeploymentDetailViewModelTest {
         viewModel.onAction(DeploymentDetailUiAction.ScaleInputChanged(5))
         assertEquals(5, viewModel.uiState.value.scaleInput)
 
-        val requestsBeforeScale = fakeDeploymentRepository.detailsRequests
-        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails.copy(desiredReplicas = 5))
+        val requestsBeforeScale = resources.describeCalls.size
+        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails.copy(desiredReplicas = 5)))
 
         viewModel.onAction(DeploymentDetailUiAction.ConfirmScale)
         advanceUntilIdle()
 
-        assertEquals(requestsBeforeScale + 1, fakeDeploymentRepository.detailsRequests)
+        assertEquals(requestsBeforeScale + 1, resources.describeCalls.size)
         assertEquals(5, viewModel.uiState.value.details?.desiredReplicas)
         assertEquals(5, fakeDeploymentRepository.capturedScaleReplicas)
         assertEquals("c1", fakeDeploymentRepository.capturedScaleClusterId)
@@ -205,7 +204,7 @@ class DeploymentDetailViewModelTest {
 
     @Test
     fun `performScale surfaces error and emits snackbar when scale fails`() = runTest(testDispatcher) {
-        fakeDeploymentRepository.cachedDeploymentsFlow.value = listOf(sampleSummary)
+        givenDeployments(sampleSummary)
         fakeDeploymentRepository.scaleResult = Result.Error(AppError.Network("RBAC denied scaling"))
 
         val viewModel = createViewModel()
@@ -228,8 +227,8 @@ class DeploymentDetailViewModelTest {
 
     @Test
     fun `performRestart triggers rollout restart and refreshes on success`() = runTest(testDispatcher) {
-        fakeDeploymentRepository.cachedDeploymentsFlow.value = listOf(sampleSummary)
-        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails)
+        givenDeployments(sampleSummary)
+        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
 
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -255,7 +254,7 @@ class DeploymentDetailViewModelTest {
 
     @Test
     fun `performDelete deletes deployment and emits NavigateBack on success`() = runTest(testDispatcher) {
-        fakeDeploymentRepository.cachedDeploymentsFlow.value = listOf(sampleSummary)
+        givenDeployments(sampleSummary)
 
         val viewModel = createViewModel()
         advanceUntilIdle()
@@ -269,9 +268,10 @@ class DeploymentDetailViewModelTest {
         viewModel.onAction(DeploymentDetailUiAction.ConfirmDelete)
         advanceUntilIdle()
 
-        assertEquals("c1", fakeDeploymentRepository.capturedDeleteClusterId)
-        assertEquals("default", fakeDeploymentRepository.capturedDeleteNamespace)
-        assertEquals("nginx", fakeDeploymentRepository.capturedDeleteName)
+        assertEquals(
+            FakeResourceRepository.ObjectCall("c1", ResourceKinds.Deployments, "default", "nginx"),
+            resources.deleteCalls.single(),
+        )
 
         assertTrue(effects.contains(DeploymentDetailUiEffect.NavigateBack))
 
@@ -303,22 +303,22 @@ class DeploymentDetailViewModelTest {
 
     @Test
     fun `refresh action triggers reload and updates lastRefreshedAt`() = runTest(testDispatcher) {
-        fakeDeploymentRepository.cachedDeploymentsFlow.value = listOf(sampleSummary)
-        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails)
+        givenDeployments(sampleSummary)
+        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertTrue(initialRefreshedAt != null && initialRefreshedAt > 0)
-        val requestsBeforeRefresh = fakeDeploymentRepository.detailsRequests
-        fakeDeploymentRepository.deploymentDetailsResult = Result.Success(sampleDetails.copy(readyReplicas = 1))
+        val requestsBeforeRefresh = resources.describeCalls.size
+        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails.copy(readyReplicas = 1)))
 
         viewModel.onAction(DeploymentDetailUiAction.Refresh)
         advanceUntilIdle()
 
         // Refresh must fetch again and show what it fetched, not just keep the old state.
-        assertEquals(requestsBeforeRefresh + 1, fakeDeploymentRepository.detailsRequests)
+        assertEquals(requestsBeforeRefresh + 1, resources.describeCalls.size)
         assertEquals(1, viewModel.uiState.value.details?.readyReplicas)
         val refreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertTrue(refreshedAt != null && refreshedAt >= initialRefreshedAt!!)
@@ -350,10 +350,8 @@ class DeploymentDetailViewModelTest {
         override suspend fun getClusterById(id: String): Cluster? = activeClusterFlow.value
     }
 
+    /** Only the rollout calls; everything else goes through [resources]. */
     private class FakeDeploymentRepository : DeploymentRepository {
-        val cachedDeploymentsFlow = MutableStateFlow<List<DeploymentSummary>>(emptyList())
-        var deploymentDetailsResult: Result<DeploymentDetails> = Result.Error(AppError.NotFound("not found"))
-
         var capturedScaleClusterId: String? = null
         var capturedScaleNamespace: String? = null
         var capturedScaleName: String? = null
@@ -364,30 +362,6 @@ class DeploymentDetailViewModelTest {
         var capturedRestartNamespace: String? = null
         var capturedRestartName: String? = null
         var restartResult: Result<Unit> = Result.Success(Unit)
-
-        var capturedDeleteClusterId: String? = null
-        var capturedDeleteNamespace: String? = null
-        var capturedDeleteName: String? = null
-        var deleteResult: Result<Unit> = Result.Success(Unit)
-
-        override suspend fun createFromManifest(clusterId: String?, manifestYaml: String): Result<Unit> = Result.Success(Unit)
-
-        override suspend fun getDeployments(clusterId: String?, namespace: String?): Result<List<DeploymentSummary>> =
-            Result.Success(cachedDeploymentsFlow.value)
-
-        override fun getDeploymentsStream(clusterId: String?, namespace: String?): Flow<List<DeploymentSummary>> =
-            cachedDeploymentsFlow
-
-        override suspend fun syncDeployments(clusterId: String?, namespace: String?): Result<Unit> = Result.Success(Unit)
-
-        var detailsRequests = 0
-
-        override suspend fun getDeploymentDetails(clusterId: String?, namespace: String, name: String): Result<DeploymentDetails> {
-            detailsRequests++
-            return deploymentDetailsResult
-        }
-
-        override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
 
         override suspend fun scaleDeployment(clusterId: String?, namespace: String, name: String, replicas: Int): Result<Unit> {
             capturedScaleClusterId = clusterId
@@ -403,40 +377,5 @@ class DeploymentDetailViewModelTest {
             capturedRestartName = name
             return restartResult
         }
-
-        override suspend fun deleteDeployment(clusterId: String?, namespace: String, name: String): Result<Unit> {
-            capturedDeleteClusterId = clusterId
-            capturedDeleteNamespace = namespace
-            capturedDeleteName = name
-            return deleteResult
-        }
-    }
-
-    private class FakePodRepository : PodRepository {
-        var podsToReturn: List<Pod> = emptyList()
-
-        override suspend fun getPodsBySelector(
-            clusterId: String?,
-            namespace: String?,
-            labelSelector: String,
-        ): Result<List<Pod>> = Result.Success(podsToReturn)
-
-        override fun getPodsStream(clusterId: String?, namespace: String?): Flow<List<Pod>> = flowOf(emptyList())
-        override fun getNamespacesStream(clusterId: String?): Flow<List<String>> = flowOf(emptyList())
-        override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
-        override suspend fun refreshWorkloads(clusterId: String?, namespace: String?): Result<Unit> = Result.Success(Unit)
-        override suspend fun listPodsBySelector(rawKubeconfig: String, namespace: String?, labelSelector: String): Result<List<Pod>> = Result.Success(emptyList())
-        override suspend fun describePod(clusterId: String?, namespace: String, podName: String): Result<PodDetails> = Result.Error(AppError.NotFound("not found"))
-        override suspend fun getPodMetrics(clusterId: String?, namespace: String?): Result<List<PodMetricSample>> = Result.Success(emptyList())
-        override suspend fun getSinglePodMetrics(clusterId: String?, namespace: String, podName: String): Result<PodMetricSample?> = Result.Success(null)
-        override suspend fun deletePod(clusterId: String?, namespace: String, podName: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun deleteNamespace(clusterId: String?, namespace: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun createNamespace(clusterId: String?, name: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun createPodFromManifest(clusterId: String?, manifestYaml: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun getPodLogs(clusterId: String?, namespace: String, podName: String, containerName: String?, tailLines: Long?): Result<String> = Result.Success("")
-        override fun streamPodLogs(clusterId: String?, namespace: String, podName: String, containerName: String?, tailLines: Long?): Flow<String> = flowOf()
-        override suspend fun execCommand(clusterId: String?, namespace: String, podName: String, containerName: String, command: String, stdin: String): Result<CommandExecResult> = Result.Error(AppError.Unknown("not implemented"))
-        override suspend fun startTerminalSession(clusterId: String?, namespace: String, podName: String, containerName: String, onStdout: (String) -> Unit, onStderr: (String) -> Unit, onError: (String) -> Unit, onDone: () -> Unit): Result<TerminalSession> = Result.Error(AppError.Unknown("not implemented"))
-        override suspend fun startExecSession(clusterId: String?, namespace: String, podName: String, containerName: String, command: String, tty: Boolean, onStdout: (String) -> Unit, onStderr: (String) -> Unit, onError: (String) -> Unit, onDone: () -> Unit): Result<TerminalSession> = Result.Error(AppError.Unknown("not implemented"))
     }
 }

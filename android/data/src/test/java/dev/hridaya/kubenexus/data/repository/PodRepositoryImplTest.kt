@@ -1,375 +1,115 @@
 package dev.hridaya.kubenexus.data.repository
 
-import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import client.LogCallback
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
-import dev.hridaya.kubenexus.data.source.local.dao.ClusterDao
-import dev.hridaya.kubenexus.data.source.local.dao.NamespaceDao
-import dev.hridaya.kubenexus.data.source.local.dao.PodDao
-import dev.hridaya.kubenexus.data.source.local.entity.ClusterEntity
-import dev.hridaya.kubenexus.data.source.local.entity.NamespaceEntity
-import dev.hridaya.kubenexus.data.source.local.entity.PodEntity
-import dev.hridaya.kubenexus.data.source.local.entity.SyncMetadataEntity
-import dev.hridaya.kubenexus.domain.model.Pod
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import dev.hridaya.kubenexus.data.nativebridge.LogStreamHandle
+import dev.hridaya.kubenexus.data.testing.InMemoryClusterDao
+import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
+import dev.hridaya.kubenexus.domain.model.PodMetricSample
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 class PodRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val testDispatcherProvider = object : DispatcherProvider {
-        override val main: CoroutineDispatcher = testDispatcher
-        override val io: CoroutineDispatcher = testDispatcher
-        override val default: CoroutineDispatcher = testDispatcher
-        override val unconfined: CoroutineDispatcher = testDispatcher
-    }
+    private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+    private val clusterDao = InMemoryClusterDao()
+    private val bridge = RecordingPodBridge()
 
-    private lateinit var fakeDao: FakeClusterDao
-    private lateinit var encryptor: AesGcmKubeconfigEncryptor
-    private lateinit var recordingBridge: RecordingBridge
-    private lateinit var repository: PodRepositoryImpl
+    private val repository = PodRepositoryImpl(
+        clusterCalls = ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher)),
+        nativeBridge = bridge,
+        dispatcherProvider = TestDispatcherProvider(testDispatcher),
+    )
 
-    private val sampleKubeconfig = """
-        apiVersion: v1
-        clusters:
-        - cluster:
-            certificate-authority-data: LS0tLS1CRUdJTi...
-            server: https://192.168.49.2:8443
-          name: minikube
-        contexts:
-        - context:
-            cluster: minikube
-            namespace: default
-            user: minikube
-          name: minikube
-        current-context: minikube
-        kind: Config
-        preferences: {}
-        users:
-        - name: minikube
-          user:
-            client-certificate-data: LS0tLS1CRUdJTi...
-            client-key-data: LS0tLS1CRUdJTi...
-            token: secret-token-12345
-    """.trimIndent()
+    private fun givenCluster() = clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG))
 
-    private val sampleManifest = """
-        apiVersion: v1
-        kind: Pod
-        metadata:
-          name: nginx
-          namespace: web
-    """.trimIndent()
+    @Test
+    fun `logs are fetched with the decrypted kubeconfig and the requested container and tail`() =
+        runTest(testDispatcher) {
+            givenCluster()
 
-    @Before
-    fun setUp() {
-        fakeDao = FakeClusterDao()
-        val secretKey = AesGcmKubeconfigEncryptor.generateKey()
-        encryptor = AesGcmKubeconfigEncryptor(secretKey)
-        recordingBridge = RecordingBridge()
+            val result = repository.getPodLogs(CLUSTER, "web", "web-1", containerName = "nginx", tailLines = 50)
 
-        repository = PodRepositoryImpl(
-            clusterDao = fakeDao,
-            podDao = NoOpPodDao(),
-            namespaceDao = NoOpNamespaceDao(),
-            nativeBridge = recordingBridge,
-            encryptor = encryptor,
-            dispatcherProvider = testDispatcherProvider,
-        )
+            assertEquals(Result.Success("log line"), result)
+            assertEquals(listOf(KUBECONFIG, "web", "web-1", "nginx", "50"), bridge.lastLogsRequest)
+        }
+
+    @Test
+    fun `single pod metrics pass through a missing sample`() = runTest(testDispatcher) {
+        givenCluster()
+
+        val result = repository.getSinglePodMetrics(CLUSTER, "web", "web-1")
+
+        assertEquals(Result.Success(null), result)
     }
 
     @Test
-    fun `createPodFromManifest fails when no cluster is selected`() = runTest(testDispatcher) {
-        val result =
-            repository.createPodFromManifest(clusterId = null, manifestYaml = sampleManifest)
+    fun `metrics failures are reported as sanitized network errors`() = runTest(testDispatcher) {
+        givenCluster()
+        bridge.metricsResult = Result.Error(AppError.Unknown("metrics denied: token: secret-token-12345"))
 
-        assertTrue(result is Result.Error)
-        assertEquals(
-            "No cluster selected",
-            (result as Result.Error).error.message,
-        )
+        val result = repository.getPodMetrics(CLUSTER, "web")
+
+        assertEquals(Result.Error(AppError.Network("metrics denied: token: [REDACTED]")), result)
     }
 
     @Test
-    fun `createPodFromManifest fails when cluster id is unknown`() = runTest(testDispatcher) {
-        val result = repository.createPodFromManifest(
-            clusterId = "c-missing",
-            manifestYaml = sampleManifest,
-        )
+    fun `a log stream without a cluster reports why instead of hanging`() = runTest(testDispatcher) {
+        val lines = repository.streamPodLogs(null, "web", "web-1").toList()
 
-        assertTrue(result is Result.Error)
-        assertTrue((result as Result.Error).error is AppError.NotFound)
-        assertEquals(
-            "Cluster 'c-missing' not found",
-            result.error.message,
-        )
+        assertEquals(listOf("Error: No cluster selected"), lines)
     }
 
     @Test
-    fun `createPodFromManifest decrypts kubeconfig and applies reviewed manifest verbatim`() =
-        runTest(testDispatcher) {
-            seedCluster(id = "c-1", rawKubeconfig = encryptor.encrypt(sampleKubeconfig))
+    fun `a log stream that fails to start reports a sanitized error`() = runTest(testDispatcher) {
+        givenCluster()
+        bridge.streamResult = Result.Error(AppError.Unknown("stream denied: token: secret-token-12345"))
 
-            val result = repository.createPodFromManifest(
-                clusterId = "c-1",
-                manifestYaml = sampleManifest,
-            )
+        val lines = repository.streamPodLogs(CLUSTER, "web", "web-1").toList()
 
-            assertTrue(result is Result.Success)
-            assertEquals(Unit, (result as Result.Success).data)
-            // The bridge must receive the decrypted plaintext, never the stored ciphertext.
-            assertEquals(sampleKubeconfig, recordingBridge.capturedKubeconfig)
-            // The manifest declares its own namespace, so none is passed on top of it.
-            assertEquals("", recordingBridge.capturedNamespace)
-            assertEquals(sampleManifest, recordingBridge.capturedManifest)
-        }
-
-    @Test
-    fun `createPodFromManifest surfaces sanitized bridge error messages`() =
-        runTest(testDispatcher) {
-            seedCluster(id = "c-1", rawKubeconfig = encryptor.encrypt(sampleKubeconfig))
-            recordingBridge.resultToReturn = Result.Error(
-                AppError.Unknown("pods denied: token: secret-token-12345 rejected"),
-            )
-
-            val result = repository.createPodFromManifest(
-                clusterId = "c-1",
-                manifestYaml = sampleManifest,
-            )
-
-            assertTrue(result is Result.Error)
-            val error = (result as Result.Error).error
-            assertTrue(error is AppError.Network)
-            assertEquals(
-                "pods denied: token: [REDACTED] rejected",
-                error.message,
-            )
-        }
-
-    @Test
-    fun `createPodFromManifest maps bridge exceptions to network errors`() =
-        runTest(testDispatcher) {
-            seedCluster(id = "c-1", rawKubeconfig = encryptor.encrypt(sampleKubeconfig))
-            recordingBridge.errorToThrow = RuntimeException("connection reset by peer")
-
-            val result = repository.createPodFromManifest(
-                clusterId = "c-1",
-                manifestYaml = sampleManifest,
-            )
-
-            assertTrue(result is Result.Error)
-            val error = (result as Result.Error).error
-            assertTrue(error is AppError.Network)
-            assertEquals("connection reset by peer", error.message)
-        }
-
-    // A cancelled call (the screen closed, or a newer refresh replaced it) is not a failure:
-    // it must reach the caller as cancellation, not be logged and returned as an error.
-    @Test
-    fun `cancellation propagates instead of being reported as a failed request`() =
-        runTest(testDispatcher) {
-            seedCluster(id = "c-1", rawKubeconfig = encryptor.encrypt(sampleKubeconfig))
-            recordingBridge.errorToThrow = CancellationException("screen closed")
-
-            val thrown = runCatching {
-                repository.createPodFromManifest(clusterId = "c-1", manifestYaml = sampleManifest)
-            }.exceptionOrNull()
-
-            assertTrue(thrown is CancellationException)
-        }
-
-    @Test
-    fun `getPodsBySelector decrypts kubeconfig and passes selector to bridge`() =
-        runTest(testDispatcher) {
-            seedCluster(id = "c-1", rawKubeconfig = encryptor.encrypt(sampleKubeconfig))
-            recordingBridge.listPodsResultToReturn = Result.Success(emptyList())
-
-            val result = repository.getPodsBySelector(
-                clusterId = "c-1",
-                namespace = "web",
-                labelSelector = "app=nginx",
-            )
-
-            assertTrue(result is Result.Success)
-            assertEquals(sampleKubeconfig, recordingBridge.capturedListPodsKubeconfig)
-            assertEquals("web", recordingBridge.capturedListPodsNamespace)
-            assertEquals("app=nginx", recordingBridge.capturedListPodsSelector)
-        }
-
-    private fun seedCluster(id: String, rawKubeconfig: String) {
-        fakeDao.clusters[id] = ClusterEntity(
-            id = id,
-            name = "Test Cluster",
-            serverUrl = "https://k8s.example.com",
-            rawKubeconfig = rawKubeconfig,
-            contextName = "ctx",
-            userName = "admin",
-            namespace = "default",
-            isActive = true,
-            createdAt = 1000L,
-            lastConnectedAt = null,
-            status = "CONNECTED",
-        )
+        assertEquals(1, lines.size)
+        assertTrue(lines.single().startsWith("[Stream error]"))
+        assertTrue("token" in lines.single() && "secret-token-12345" !in lines.single())
     }
 
-    /**
-     * Records every [createPod] argument so tests can assert exactly what
-     * crossed the bridge, then returns the preconfigured outcome.
-     */
-    private class RecordingBridge : FakeKubeNexusNativeBridge() {
-        var capturedKubeconfig: String? = null
-        var capturedNamespace: String? = null
-        var capturedManifest: String? = null
-        var resultToReturn: Result<String>? = null
-        var errorToThrow: Throwable? = null
+    private class RecordingPodBridge : FakeKubeNexusNativeBridge() {
+        var lastLogsRequest: List<String?>? = null
+        var metricsResult: Result<List<PodMetricSample>> = Result.Success(emptyList())
+        var streamResult: Result<LogStreamHandle> = Result.Success(LogStreamHandle {})
 
-        var capturedListPodsKubeconfig: String? = null
-        var capturedListPodsNamespace: String? = null
-        var capturedListPodsSelector: String? = null
-        var listPodsResultToReturn: Result<List<Pod>>? = null
-
-        override fun listPods(
-            rawKubeconfig: String,
-            namespace: String?,
-            labelSelector: String,
-            limit: Long,
-        ): Result<List<Pod>> {
-            capturedListPodsKubeconfig = rawKubeconfig
-            capturedListPodsNamespace = namespace
-            capturedListPodsSelector = labelSelector
-            errorToThrow?.let { throw it }
-            return listPodsResultToReturn ?: Result.Success(emptyList())
-        }
-
-        override fun createPod(
+        override fun getPodLogs(
             rawKubeconfig: String,
             namespace: String,
-            manifestYaml: String,
+            podName: String,
+            container: String?,
+            tailLines: Long?,
         ): Result<String> {
-            capturedKubeconfig = rawKubeconfig
-            capturedNamespace = namespace
-            capturedManifest = manifestYaml
-            errorToThrow?.let { throw it }
-            return resultToReturn ?: Result.Success(manifestYaml)
+            lastLogsRequest = listOf(rawKubeconfig, namespace, podName, container, tailLines?.toString())
+            return Result.Success("log line")
         }
+
+        override fun topPods(rawKubeconfig: String, namespace: String?): Result<List<PodMetricSample>> = metricsResult
+
+        override fun streamPodLogs(
+            rawKubeconfig: String,
+            namespace: String,
+            podName: String,
+            container: String?,
+            tailLines: Long?,
+            callback: LogCallback,
+        ): Result<LogStreamHandle> = streamResult
     }
 
-    private class NoOpPodDao : PodDao {
-        override fun getPodsStream(clusterId: String): Flow<List<PodEntity>> =
-            MutableStateFlow(emptyList())
-
-        override fun getPodsByNamespaceStream(
-            clusterId: String,
-            namespace: String
-        ): Flow<List<PodEntity>> =
-            MutableStateFlow(emptyList())
-
-        override suspend fun getPodIdsForCluster(clusterId: String): List<String> = emptyList()
-
-        override suspend fun getPodIdsForNamespace(
-            clusterId: String,
-            namespace: String
-        ): List<String> =
-            emptyList()
-
-        override suspend fun getPodsList(clusterId: String): List<PodEntity> = emptyList()
-
-        override suspend fun insertPods(pods: List<PodEntity>) = Unit
-
-        override suspend fun deletePodsForCluster(clusterId: String) = Unit
-
-        override suspend fun deletePodsForNamespace(clusterId: String, namespace: String) = Unit
-
-        override suspend fun deletePod(podId: String) = Unit
-
-        override suspend fun deletePodsByIds(ids: List<String>) = Unit
-
-        override fun getSyncMetadataStream(key: String): Flow<Long?> = MutableStateFlow(null)
-
-        override suspend fun getLastRefreshedTime(key: String): Long? = null
-
-        override suspend fun insertSyncMetadata(metadata: SyncMetadataEntity) = Unit
-    }
-
-    private class NoOpNamespaceDao : NamespaceDao {
-        override fun getNamespacesStream(clusterId: String): Flow<List<NamespaceEntity>> =
-            MutableStateFlow(emptyList())
-
-        override suspend fun insertNamespaces(namespaces: List<NamespaceEntity>) = Unit
-
-        override suspend fun deleteNamespacesForCluster(clusterId: String) = Unit
-
-        override suspend fun deleteNamespace(clusterId: String, name: String) = Unit
-    }
-
-    private class FakeClusterDao : ClusterDao() {
-        val clusters = mutableMapOf<String, ClusterEntity>()
-
-        override fun observeClusters(): Flow<List<ClusterEntity>> =
-            MutableStateFlow(clusters.values.toList())
-
-        override fun observeActiveCluster(): Flow<ClusterEntity?> =
-            MutableStateFlow(clusters.values.firstOrNull { it.isActive })
-
-        override suspend fun getClusterById(id: String): ClusterEntity? = clusters[id]
-
-        override suspend fun getAllClusters(): List<ClusterEntity> = clusters.values.toList()
-
-        override suspend fun insertCluster(cluster: ClusterEntity) {
-            clusters[cluster.id] = cluster
-        }
-
-        override suspend fun updateCluster(cluster: ClusterEntity) {
-            clusters[cluster.id] = cluster
-        }
-
-        override suspend fun deleteCluster(id: String) {
-            clusters.remove(id)
-        }
-
-        override suspend fun deletePodsForCluster(id: String) = Unit
-        override suspend fun deleteNamespacesForCluster(id: String) = Unit
-        override suspend fun deleteAPIResourcesForCluster(id: String) = Unit
-        override suspend fun deleteExplainedResourcesForCluster(id: String) = Unit
-        override suspend fun deleteOpenApiSchemaForCluster(id: String) = Unit
-        override suspend fun deleteSyncMetadataForCluster(id: String) = Unit
-        override suspend fun deleteDeploymentsForCluster(id: String) = Unit
-        override suspend fun deleteServicesForCluster(id: String) = Unit
-        override suspend fun deleteAllPods() = Unit
-        override suspend fun deleteAllNamespaces() = Unit
-        override suspend fun deleteAllDeployments() = Unit
-        override suspend fun deleteAllServices() = Unit
-        override suspend fun deleteAllAPIResources() = Unit
-        override suspend fun deleteAllExplainedResources() = Unit
-        override suspend fun deleteAllOpenApiSchemas() = Unit
-        override suspend fun deleteAllSyncMetadata() = Unit
-
-        override suspend fun deactivateAllClusters() {
-            clusters.replaceAll { _, v -> v.copy(isActive = false) }
-        }
-
-        override suspend fun activateCluster(id: String) {
-            clusters[id]?.let { clusters[id] = it.copy(isActive = true) }
-        }
-
-        override suspend fun updateClusterName(id: String, name: String) {
-            clusters[id]?.let { clusters[id] = it.copy(name = name) }
-        }
-
-        override suspend fun updateStatus(id: String, status: String, lastConnectedAt: Long?) {
-            clusters[id]?.let {
-                clusters[id] = it.copy(status = status, lastConnectedAt = lastConnectedAt)
-            }
-        }
+    private companion object {
+        const val CLUSTER = "c-1"
+        const val KUBECONFIG = "apiVersion: v1\nkind: Config\nusers:\n- name: u\n  user:\n    token: secret-token-12345"
     }
 }

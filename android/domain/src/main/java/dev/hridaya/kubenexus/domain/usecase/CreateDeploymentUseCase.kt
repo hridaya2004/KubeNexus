@@ -3,7 +3,7 @@ package dev.hridaya.kubenexus.domain.usecase
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.DeploymentDraft
-import dev.hridaya.kubenexus.domain.repository.DeploymentRepository
+import dev.hridaya.kubenexus.domain.repository.ResourceRepository
 import dev.hridaya.kubenexus.domain.util.DeploymentYamlGenerator
 import javax.inject.Inject
 
@@ -16,7 +16,7 @@ import javax.inject.Inject
  * anything other than what the user confirmed.
  */
 class CreateDeploymentUseCase @Inject constructor(
-    private val deploymentRepository: DeploymentRepository,
+    private val resourceRepository: ResourceRepository,
 ) {
 
     /**
@@ -34,6 +34,6 @@ class CreateDeploymentUseCase @Inject constructor(
 
     /** Applies the reviewed [manifestYaml]. */
     suspend operator fun invoke(clusterId: String?, manifestYaml: String): Result<Unit> {
-        return deploymentRepository.createFromManifest(clusterId, manifestYaml)
+        return resourceRepository.create(clusterId, manifestYaml)
     }
 }

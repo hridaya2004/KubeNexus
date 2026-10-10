@@ -12,9 +12,10 @@ import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.domain.model.TerminalSession
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
-import dev.hridaya.kubenexus.domain.usecase.DeletePodUseCase
-import dev.hridaya.kubenexus.domain.usecase.DescribePodUseCase
+import dev.hridaya.kubenexus.domain.usecase.DeleteResourceUseCase
+import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodLogsUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodMetricsUseCase
@@ -51,11 +52,11 @@ class PodDetailViewModel @AssistedInject constructor(
     @Assisted("podName") private val podName: String,
     @Assisted("namespace") private val namespace: String,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
-    private val describePodUseCase: DescribePodUseCase,
+    private val describeResource: DescribeResourceUseCase,
     private val getPodMetricsUseCase: GetPodMetricsUseCase,
     private val getPodLogsUseCase: GetPodLogsUseCase,
     private val streamPodLogsUseCase: StreamPodLogsUseCase,
-    private val deletePodUseCase: DeletePodUseCase,
+    private val deleteResource: DeleteResourceUseCase,
     private val startExecSessionUseCase: StartExecSessionUseCase,
     private val checkClusterHealthUseCase: CheckClusterHealthUseCase,
     private val networkMonitor: NetworkMonitor,
@@ -361,7 +362,7 @@ class PodDetailViewModel @AssistedInject constructor(
         }
 
         viewModelScope.launch(dispatcherProvider.main) {
-            when (val result = describePodUseCase(cid, namespace, podName)) {
+            when (val result = describeResource(cid, ResourceKinds.Pods, namespace, podName)) {
                 is Result.Success -> {
                     val details = result.data
                     val defaultContainer = details.containers.firstOrNull()?.name
@@ -622,7 +623,7 @@ class PodDetailViewModel @AssistedInject constructor(
         _uiState.update { it.copy(isDeletingPod = true) }
 
         viewModelScope.launch(dispatcherProvider.main) {
-            when (val result = deletePodUseCase(cid, namespace, podName)) {
+            when (val result = deleteResource(cid, ResourceKinds.Pods, namespace, podName)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(

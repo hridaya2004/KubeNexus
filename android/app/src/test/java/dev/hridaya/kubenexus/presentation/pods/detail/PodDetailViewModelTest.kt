@@ -11,23 +11,24 @@ import dev.hridaya.kubenexus.domain.model.ClusterHealth
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
 import dev.hridaya.kubenexus.domain.model.CommandExecResult
 import dev.hridaya.kubenexus.domain.model.ContainerDetail
-import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodConditionDetail
 import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodEventDetail
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import dev.hridaya.kubenexus.domain.model.PodStatus
 import dev.hridaya.kubenexus.domain.model.TerminalSession
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
-import dev.hridaya.kubenexus.domain.usecase.DeletePodUseCase
-import dev.hridaya.kubenexus.domain.usecase.DescribePodUseCase
+import dev.hridaya.kubenexus.domain.usecase.DeleteResourceUseCase
+import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodLogsUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodMetricsUseCase
 import dev.hridaya.kubenexus.domain.usecase.StartExecSessionUseCase
 import dev.hridaya.kubenexus.domain.usecase.StreamPodLogsUseCase
+import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -79,6 +80,7 @@ class PodDetailViewModelTest {
 
     private lateinit var fakeClusterRepository: FakeClusterRepository
     private lateinit var fakePodRepository: FakePodRepository
+    private val resources = FakeResourceRepository()
     private lateinit var onlineFlow: MutableStateFlow<Boolean>
     private lateinit var viewModel: PodDetailViewModel
 
@@ -87,6 +89,7 @@ class PodDetailViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeClusterRepository = FakeClusterRepository()
         fakePodRepository = FakePodRepository()
+        resources.givenDescribe(ResourceKinds.Pods, Result.Success(podDetails("test-pod-1", "default")))
         onlineFlow = MutableStateFlow(true)
         val fakeNetworkMonitor = object : NetworkMonitor {
             override val isOnline: Flow<Boolean> = onlineFlow
@@ -99,11 +102,11 @@ class PodDetailViewModelTest {
                 fakeClusterRepository,
                 testDispatcherProvider,
             ),
-            describePodUseCase = DescribePodUseCase(fakePodRepository),
+            describeResource = DescribeResourceUseCase(resources),
             getPodMetricsUseCase = GetPodMetricsUseCase(fakePodRepository),
             getPodLogsUseCase = GetPodLogsUseCase(fakePodRepository),
             streamPodLogsUseCase = StreamPodLogsUseCase(fakePodRepository),
-            deletePodUseCase = DeletePodUseCase(fakePodRepository),
+            deleteResource = DeleteResourceUseCase(resources),
             startExecSessionUseCase = StartExecSessionUseCase(fakePodRepository),
             checkClusterHealthUseCase = CheckClusterHealthUseCase(
                 fakeClusterRepository,
@@ -413,14 +416,14 @@ class PodDetailViewModelTest {
                 viewModel.uiState.value.logs.any { it.contains("Network disconnected") },
             )
 
-            val describesBeforeReconnect = fakePodRepository.describeCalls
+            val describesBeforeReconnect = resources.describeCalls.size
             onlineFlow.value = true
             idleNow()
             assertTrue(viewModel.uiState.value.isOnline)
             assertNotNull(viewModel.uiState.value.podDetails)
             assertTrue(
                 "reconnecting must refetch the describe",
-                fakePodRepository.describeCalls > describesBeforeReconnect,
+                resources.describeCalls.size > describesBeforeReconnect,
             )
         }
 
@@ -428,7 +431,7 @@ class PodDetailViewModelTest {
     fun `refreshDescribe when describe fails sets error and resets flags`() = vmTest {
         idleNow()
 
-        fakePodRepository.describeError = "Connection refused: cannot reach cluster"
+        resources.givenDescribe(ResourceKinds.Pods, Result.Error(AppError.Network("Connection refused: cannot reach cluster")))
         viewModel.onAction(PodDetailUiAction.RefreshDescribe)
         idleNow()
 
@@ -540,8 +543,6 @@ class PodDetailViewModelTest {
     }
 
     private class FakePodRepository : PodRepository {
-        var describeError: String? = null
-        var describeCalls = 0
         var lastGetPodLogsTail: Long? = null
         var lastGetPodLogsContainer: String? = null
         var lastStreamPodLogsTail: Long? = null
@@ -569,20 +570,9 @@ class PodDetailViewModelTest {
             fun remoteExit() = onDone()
         }
 
-        override fun getPodsStream(
-            clusterId: String?,
-            namespace: String?,
-        ): Flow<List<Pod>> = flowOf(emptyList())
 
-        override fun getNamespacesStream(clusterId: String?): Flow<List<String>> =
-            flowOf(listOf("default"))
 
-        override fun getLastRefreshedStream(clusterId: String?): Flow<Long?> = flowOf(null)
 
-        override suspend fun refreshWorkloads(
-            clusterId: String?,
-            namespace: String?,
-        ): Result<Unit> = Result.Success(Unit)
 
         override suspend fun getPodMetrics(
             clusterId: String?,
@@ -595,48 +585,12 @@ class PodDetailViewModelTest {
             podName: String,
         ): Result<PodMetricSample?> = Result.Success(null)
 
-        override suspend fun listPodsBySelector(
-            rawKubeconfig: String,
-            namespace: String?,
-            labelSelector: String,
-        ): Result<List<Pod>> = Result.Success(emptyList())
 
-        override suspend fun getPodsBySelector(
-            clusterId: String?,
-            namespace: String?,
-            labelSelector: String,
-        ): Result<List<Pod>> = Result.Success(emptyList())
 
-        override suspend fun describePod(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-        ): Result<PodDetails> {
-            describeCalls++
-            describeError?.let { return Result.Error(AppError.Network(it)) }
-            return Result.Success(defaultDetails(podName, namespace))
-        }
 
-        override suspend fun deletePod(
-            clusterId: String?,
-            namespace: String,
-            podName: String,
-        ): Result<Unit> = Result.Success(Unit)
 
-        override suspend fun deleteNamespace(
-            clusterId: String?,
-            namespace: String,
-        ): Result<Unit> = Result.Success(Unit)
 
-        override suspend fun createNamespace(
-            clusterId: String?,
-            name: String,
-        ): Result<Unit> = Result.Success(Unit)
 
-        override suspend fun createPodFromManifest(
-            clusterId: String?,
-            manifestYaml: String,
-        ): Result<Unit> = Result.Success(Unit)
 
         override suspend fun getPodLogs(
             clusterId: String?,
@@ -724,32 +678,32 @@ class PodDetailViewModelTest {
                 onDone()
             }
         }
-
-        private fun defaultDetails(podName: String, namespace: String) = PodDetails(
-            name = podName,
-            namespace = namespace,
-            status = PodStatus.RUNNING,
-            node = "k8s-node-1",
-            ip = "10.244.0.15",
-            containers = listOf(
-                ContainerDetail(
-                    name = "container-app",
-                    image = "kubenexus/api:v1",
-                    ready = true,
-                    restartCount = 0,
-                ),
-            ),
-            conditions = listOf(
-                PodConditionDetail(type = "Ready", status = "True"),
-            ),
-            events = listOf(
-                PodEventDetail(
-                    type = "Normal",
-                    reason = "Started",
-                    message = "Started container",
-                    age = "5m",
-                ),
-            ),
-        )
     }
 }
+
+private fun podDetails(podName: String, namespace: String) = PodDetails(
+    name = podName,
+    namespace = namespace,
+    status = PodStatus.RUNNING,
+    node = "k8s-node-1",
+    ip = "10.244.0.15",
+    containers = listOf(
+        ContainerDetail(
+            name = "container-app",
+            image = "kubenexus/api:v1",
+            ready = true,
+            restartCount = 0,
+        ),
+    ),
+    conditions = listOf(
+        PodConditionDetail(type = "Ready", status = "True"),
+    ),
+    events = listOf(
+        PodEventDetail(
+            type = "Normal",
+            reason = "Started",
+            message = "Started container",
+            age = "5m",
+        ),
+    ),
+)

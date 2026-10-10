@@ -9,12 +9,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.domain.usecase.DeleteDeploymentUseCase
+import dev.hridaya.kubenexus.domain.model.resource.NamespaceScope
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
+import dev.hridaya.kubenexus.domain.usecase.DeleteResourceUseCase
+import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetDeploymentDetailsUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetDeploymentsStreamUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetDeploymentsUseCase
-import dev.hridaya.kubenexus.domain.usecase.GetPodsBySelectorUseCase
+import dev.hridaya.kubenexus.domain.usecase.ListResourcesUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObserveResourcesUseCase
 import dev.hridaya.kubenexus.domain.usecase.RestartDeploymentUseCase
 import dev.hridaya.kubenexus.domain.usecase.ScaleDeploymentUseCase
 import kotlinx.coroutines.Dispatchers
@@ -40,13 +41,12 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     @Assisted("deploymentName") val deploymentName: String,
     @Assisted("namespace") val namespace: String,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
-    private val getDeploymentDetailsUseCase: GetDeploymentDetailsUseCase,
-    private val getDeploymentsUseCase: GetDeploymentsUseCase,
-    private val getDeploymentsStreamUseCase: GetDeploymentsStreamUseCase? = null,
-    private val scaleDeploymentUseCase: ScaleDeploymentUseCase? = null,
-    private val restartDeploymentUseCase: RestartDeploymentUseCase? = null,
-    private val deleteDeploymentUseCase: DeleteDeploymentUseCase? = null,
-    private val getPodsBySelectorUseCase: GetPodsBySelectorUseCase? = null,
+    private val describeResource: DescribeResourceUseCase,
+    private val listResources: ListResourcesUseCase,
+    private val observeResources: ObserveResourcesUseCase,
+    private val deleteResource: DeleteResourceUseCase,
+    private val scaleDeploymentUseCase: ScaleDeploymentUseCase,
+    private val restartDeploymentUseCase: RestartDeploymentUseCase,
     private val networkMonitor: NetworkMonitor? = null,
     private val dispatcherProvider: DispatcherProvider? = null,
 ) : ViewModel() {
@@ -152,8 +152,8 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     }
 
     private suspend fun loadSummary(clusterId: String?) {
-        val cachedSummary = getDeploymentsStreamUseCase?.invoke(clusterId, namespace)
-            ?.firstOrNull()
+        val cachedSummary = observeResources(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))
+            .firstOrNull()
             ?.firstOrNull { it.name == deploymentName && it.namespace == namespace }
         if (cachedSummary != null) {
             _uiState.update { state ->
@@ -165,7 +165,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
             }
         }
 
-        when (val result = getDeploymentsUseCase(clusterId, namespace)) {
+        when (val result = listResources(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))) {
             is Result.Success -> {
                 val match = result.data.firstOrNull { candidate ->
                     candidate.name == deploymentName && candidate.namespace == namespace
@@ -202,7 +202,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         _uiState.update { state ->
             state.copy(isDetailsLoading = state.details == null, detailsErrorMessage = null)
         }
-        when (val result = getDeploymentDetailsUseCase(clusterId, namespace, deploymentName)) {
+        when (val result = describeResource(clusterId, ResourceKinds.Deployments, namespace, deploymentName)) {
             is Result.Success -> {
                 val details = result.data
                 _uiState.update { state ->
@@ -227,12 +227,17 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     }
 
     private suspend fun loadPodsForSelector(clusterId: String?, selectorMap: Map<String, String>) {
-        if (selectorMap.isEmpty() || getPodsBySelectorUseCase == null) {
+        if (selectorMap.isEmpty()) {
             return
         }
         _uiState.update { it.copy(isPodsLoading = true, podsErrorMessage = null) }
-        val labelSelector = selectorMap.entries.joinToString(",") { "${it.key}=${it.value}" }
-        when (val podsResult = getPodsBySelectorUseCase.invoke(clusterId, namespace, labelSelector)) {
+        val podsResult = listResources(
+            clusterId = clusterId,
+            kind = ResourceKinds.Pods,
+            scope = NamespaceScope.Only(namespace),
+            matchLabels = selectorMap,
+        )
+        when (podsResult) {
             is Result.Success -> _uiState.update {
                 it.copy(isPodsLoading = false, associatedPods = podsResult.data, podsErrorMessage = null)
             }
@@ -254,7 +259,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         }
         viewModelScope.launch {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
-            val result = scaleDeploymentUseCase?.invoke(clusterId, namespace, deploymentName, targetReplicas)
+            val result = scaleDeploymentUseCase(clusterId, namespace, deploymentName, targetReplicas)
             when (result) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isMutating = false) }
@@ -288,7 +293,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         }
         viewModelScope.launch {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
-            val result = restartDeploymentUseCase?.invoke(clusterId, namespace, deploymentName)
+            val result = restartDeploymentUseCase(clusterId, namespace, deploymentName)
             when (result) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isMutating = false) }
@@ -322,7 +327,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         }
         viewModelScope.launch {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
-            val result = deleteDeploymentUseCase?.invoke(clusterId, namespace, deploymentName)
+            val result = deleteResource(clusterId, ResourceKinds.Deployments, namespace, deploymentName)
             when (result) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isMutating = false) }

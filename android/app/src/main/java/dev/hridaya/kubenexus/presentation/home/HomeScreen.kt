@@ -40,6 +40,8 @@ import dev.hridaya.kubenexus.presentation.home.components.CreateFabMenu
 import dev.hridaya.kubenexus.presentation.home.components.EmptyClustersView
 import dev.hridaya.kubenexus.presentation.home.components.ErrorDialog
 import dev.hridaya.kubenexus.presentation.home.components.HomeWorkloadsList
+import dev.hridaya.kubenexus.presentation.resources.ResourceCatalog
+import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import dev.hridaya.kubenexus.ui.theme.appBarColors
 
@@ -47,12 +49,8 @@ import dev.hridaya.kubenexus.ui.theme.appBarColors
 fun HomeRoute(
     viewModel: HomeViewModel,
     onNavigateToManageClusters: () -> Unit,
-    onNavigateToPods: () -> Unit,
-    onNavigateToDeployments: () -> Unit,
-    onNavigateToServices: () -> Unit,
-    onNavigateToCreatePod: () -> Unit,
-    onNavigateToCreateDeployment: () -> Unit,
-    onNavigateToCreateService: () -> Unit,
+    onOpenResources: (ResourcePresentation<*>) -> Unit,
+    onCreateResource: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
     activePortForwardCount: Int = 0,
     onOpenPortForwardSessions: () -> Unit = {},
@@ -65,12 +63,8 @@ fun HomeRoute(
         uiState = uiState,
         onAction = viewModel::onAction,
         onNavigateToManageClusters = onNavigateToManageClusters,
-        onNavigateToPods = onNavigateToPods,
-        onNavigateToDeployments = onNavigateToDeployments,
-        onNavigateToServices = onNavigateToServices,
-        onNavigateToCreatePod = onNavigateToCreatePod,
-        onNavigateToCreateDeployment = onNavigateToCreateDeployment,
-        onNavigateToCreateService = onNavigateToCreateService,
+        onOpenResources = onOpenResources,
+        onCreateResource = onCreateResource,
         activePortForwardCount = activePortForwardCount,
         onOpenPortForwardSessions = onOpenPortForwardSessions,
         modifier = modifier,
@@ -83,12 +77,8 @@ fun HomeScreen(
     uiState: HomeUiState,
     onAction: (HomeUiAction) -> Unit,
     onNavigateToManageClusters: () -> Unit,
-    onNavigateToPods: () -> Unit,
-    onNavigateToDeployments: () -> Unit,
-    onNavigateToServices: () -> Unit,
-    onNavigateToCreatePod: () -> Unit,
-    onNavigateToCreateDeployment: () -> Unit,
-    onNavigateToCreateService: () -> Unit,
+    onOpenResources: (ResourcePresentation<*>) -> Unit,
+    onCreateResource: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
     activePortForwardCount: Int = 0,
     onOpenPortForwardSessions: () -> Unit = {},
@@ -171,9 +161,7 @@ fun HomeScreen(
                     HomeWorkloadsList(
                         isRefreshing = uiState.isRefreshing,
                         lastRefreshedAt = uiState.lastRefreshedAt,
-                        onNavigateToPods = onNavigateToPods,
-                        onNavigateToDeployments = onNavigateToDeployments,
-                        onNavigateToServices = onNavigateToServices,
+                        onOpenResources = onOpenResources,
                         onNoopAction = { onAction(HomeUiAction.TriggerNoopAction(it)) },
                         listState = listState,
                     )
@@ -204,9 +192,8 @@ fun HomeScreen(
                     onExpandedChange = { expanded ->
                         onAction(if (expanded) HomeUiAction.OpenFabMenu else HomeUiAction.DismissFabMenu)
                     },
-                    onAddPodClick = onNavigateToCreatePod,
-                    onAddDeploymentClick = onNavigateToCreateDeployment,
-                    onAddServiceClick = onNavigateToCreateService,
+                    creatableResources = ResourceCatalog.all,
+                    onAddResourceClick = onCreateResource,
                     onAddClusterClick = { onAction(HomeUiAction.OpenAddClusterSheet) },
                 )
             }
@@ -276,12 +263,8 @@ private fun HomeScreenPreview() {
             ),
             onAction = {},
             onNavigateToManageClusters = {},
-            onNavigateToPods = {},
-            onNavigateToDeployments = {},
-            onNavigateToServices = {},
-            onNavigateToCreatePod = {},
-            onNavigateToCreateDeployment = {},
-            onNavigateToCreateService = {},
+            onOpenResources = {},
+            onCreateResource = {},
         )
     }
 }
@@ -297,12 +280,8 @@ private fun HomeScreenEmptyPreview() {
             ),
             onAction = {},
             onNavigateToManageClusters = {},
-            onNavigateToPods = {},
-            onNavigateToDeployments = {},
-            onNavigateToServices = {},
-            onNavigateToCreatePod = {},
-            onNavigateToCreateDeployment = {},
-            onNavigateToCreateService = {},
+            onOpenResources = {},
+            onCreateResource = {},
         )
     }
 }

@@ -21,7 +21,6 @@ data class HomeUiState(
     val clusterConnectionStatus: ClusterConnectionStatus = ClusterConnectionStatus.OFFLINE,
     val clusters: List<Cluster> = emptyList(),
     val activeCluster: Cluster? = null,
-    val pods: List<Pod> = emptyList(),
     val availableNamespaces: List<String> = listOf(
         "All Namespaces",
         "default",

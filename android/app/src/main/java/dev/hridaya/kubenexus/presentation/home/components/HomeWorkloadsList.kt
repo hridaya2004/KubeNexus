@@ -14,11 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
@@ -30,17 +26,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.core.common.util.TimeFormatter
+import dev.hridaya.kubenexus.presentation.resources.ResourceCatalog
+import dev.hridaya.kubenexus.presentation.resources.ResourceGroup
+import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 
+/** The resource kinds of the active cluster, grouped as [ResourceCatalog.groups] lists them. */
 @Composable
 fun HomeWorkloadsList(
     isRefreshing: Boolean,
     lastRefreshedAt: Long?,
-    onNavigateToPods: () -> Unit,
-    onNavigateToDeployments: () -> Unit,
-    onNavigateToServices: () -> Unit,
+    onOpenResources: (ResourcePresentation<*>) -> Unit,
     onNoopAction: (String) -> Unit,
     modifier: Modifier = Modifier,
+    groups: List<ResourceGroup> = ResourceCatalog.groups,
     listState: LazyListState = rememberLazyListState(),
 ) {
     LazyColumn(
@@ -64,70 +63,77 @@ fun HomeWorkloadsList(
             }
         }
 
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Workloads",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.Schedule,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = TimeFormatter.formatLastRefreshed(lastRefreshedAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+        groups.forEachIndexed { groupIndex, group ->
+            item(key = "header/${group.title}") {
+                // The refresh time belongs to the whole list, so it is shown once.
+                GroupHeader(title = group.title, lastRefreshedAt = lastRefreshedAt.takeIf { groupIndex == 0 })
+            }
+            item(key = "group/${group.title}") {
+                GroupEntries(group = group, onOpenResources = onOpenResources, onNoopAction = onNoopAction)
             }
         }
+    }
+}
 
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                ResourcePreferenceCard(
-                    title = "Pods",
-                    subtitle = "Container instances and workload state",
-                    icon = Icons.Outlined.Layers,
-                    onClick = onNavigateToPods,
-                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 4),
+@Composable
+private fun GroupHeader(title: String, lastRefreshedAt: Long?) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        if (lastRefreshedAt != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
                 )
-                ResourcePreferenceCard(
-                    title = "Deployments",
-                    subtitle = "Declarative updates for Pods and ReplicaSets",
-                    icon = Icons.Outlined.Apps,
-                    onClick = onNavigateToDeployments,
-                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4),
-                )
-                ResourcePreferenceCard(
-                    title = "Services",
-                    subtitle = "Stable network endpoints for Pods",
-                    icon = Icons.Outlined.Dns,
-                    onClick = onNavigateToServices,
-                    shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4),
-                )
-                ResourcePreferenceCard(
-                    title = "ReplicaSets",
-                    subtitle = "Maintain stable set of replica Pods",
-                    icon = Icons.Outlined.Widgets,
-                    onClick = {
-                        onNoopAction("ReplicaSet management coming soon")
-                    },
-                    shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4),
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = TimeFormatter.formatLastRefreshed(lastRefreshedAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GroupEntries(
+    group: ResourceGroup,
+    onOpenResources: (ResourcePresentation<*>) -> Unit,
+    onNoopAction: (String) -> Unit,
+) {
+    val count = group.resources.size + group.upcoming.size
+    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        group.resources.forEachIndexed { index, presentation ->
+            ResourcePreferenceCard(
+                title = presentation.title,
+                subtitle = presentation.description,
+                icon = presentation.icon,
+                onClick = { onOpenResources(presentation) },
+                shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+            )
+        }
+        group.upcoming.forEachIndexed { index, upcoming ->
+            ResourcePreferenceCard(
+                title = upcoming.title,
+                subtitle = upcoming.description,
+                icon = upcoming.icon,
+                onClick = { onNoopAction("${upcoming.title} management coming soon") },
+                shapes = ListItemDefaults.segmentedShapes(index = group.resources.size + index, count = count),
+            )
         }
     }
 }
@@ -139,9 +145,7 @@ private fun HomeWorkloadsListPreview() {
         HomeWorkloadsList(
             isRefreshing = false,
             lastRefreshedAt = System.currentTimeMillis(),
-            onNavigateToPods = {},
-            onNavigateToDeployments = {},
-            onNavigateToServices = {},
+            onOpenResources = {},
             onNoopAction = {},
         )
     }

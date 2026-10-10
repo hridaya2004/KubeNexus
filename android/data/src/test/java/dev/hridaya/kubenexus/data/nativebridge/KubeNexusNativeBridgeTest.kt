@@ -3,8 +3,6 @@ package dev.hridaya.kubenexus.data.nativebridge
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.Namespace
-import dev.hridaya.kubenexus.domain.model.Pod
-import dev.hridaya.kubenexus.domain.model.PodStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,34 +18,6 @@ class KubeNexusNativeBridgeTest {
         fakeBridge.initialize()
         assertTrue(fakeBridge.isAvailable())
         assertTrue(fakeBridge.touch())
-    }
-
-    @Test
-    fun `bridge surfaces pods as domain models`() {
-        val fakeBridge = object : FakeKubeNexusNativeBridge() {
-            override fun listPods(
-                rawKubeconfig: String,
-                namespace: String?,
-                labelSelector: String,
-                limit: Long,
-            ): Result<List<Pod>> = Result.Success(
-                listOf(
-                    Pod(id = "kube-system_coredns", name = "coredns", namespace = "kube-system"),
-                    Pod(
-                        id = "kube-system_traefik",
-                        name = "traefik",
-                        namespace = "kube-system",
-                        status = PodStatus.CRASH_LOOP,
-                    ),
-                ),
-            )
-        }
-
-        val pods = fakeBridge.listPods("mock-kubeconfig", null).getOrThrow()
-
-        assertEquals(2, pods.size)
-        assertEquals("coredns", pods[0].name)
-        assertEquals(PodStatus.CRASH_LOOP, pods[1].status)
     }
 
     @Test

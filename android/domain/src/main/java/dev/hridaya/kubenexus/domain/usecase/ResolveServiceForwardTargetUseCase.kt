@@ -6,7 +6,9 @@ import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodStatus
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServiceForwardTarget
-import dev.hridaya.kubenexus.domain.repository.PodRepository
+import dev.hridaya.kubenexus.domain.model.resource.NamespaceScope
+import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
+import dev.hridaya.kubenexus.domain.repository.ResourceRepository
 import javax.inject.Inject
 
 /**
@@ -19,10 +21,10 @@ import javax.inject.Inject
  * ports.
  */
 class ResolveServiceForwardTargetUseCase @Inject constructor(
-    private val podRepository: PodRepository,
+    private val resourceRepository: ResourceRepository,
 ) {
     suspend operator fun invoke(
-        rawKubeconfig: String,
+        clusterId: String?,
         service: ServiceDetails,
         servicePort: Int,
     ): Result<ServiceForwardTarget> {
@@ -33,9 +35,10 @@ class ResolveServiceForwardTargetUseCase @Inject constructor(
         }
 
         val labelSelector = service.selector.entries.joinToString(",") { "${it.key}=${it.value}" }
-        val podsResult = podRepository.listPodsBySelector(
-            rawKubeconfig = rawKubeconfig,
-            namespace = service.namespace,
+        val podsResult = resourceRepository.list(
+            clusterId = clusterId,
+            kind = ResourceKinds.Pods,
+            scope = NamespaceScope.Only(service.namespace),
             labelSelector = labelSelector,
         )
 

@@ -4,10 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CloudQueue
-import androidx.compose.material.icons.outlined.Lan
-import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
@@ -23,26 +20,23 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.traversalIndex
+import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 
 @Composable
 fun CreateFabMenu(
     expanded: Boolean,
     visible: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    onAddPodClick: () -> Unit,
-    onAddDeploymentClick: () -> Unit,
-    onAddServiceClick: () -> Unit,
+    creatableResources: List<ResourcePresentation<*>>,
+    onAddResourceClick: (ResourcePresentation<*>) -> Unit,
     onAddClusterClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     BackHandler(enabled = expanded) { onExpandedChange(false) }
 
-    val items = listOf(
-        MenuEntry("Add Pod", Icons.Outlined.Layers, onAddPodClick),
-        MenuEntry("Add Deployment", Icons.Outlined.Apps, onAddDeploymentClick),
-        MenuEntry("Add Service", Icons.Outlined.Lan, onAddServiceClick),
-        MenuEntry("Add Cluster", Icons.Outlined.CloudQueue, onAddClusterClick),
-    )
+    val items = creatableResources.map { presentation ->
+        MenuEntry("Add ${presentation.singularTitle}", presentation.icon) { onAddResourceClick(presentation) }
+    } + MenuEntry("Add Cluster", Icons.Outlined.CloudQueue, onAddClusterClick)
 
     FloatingActionButtonMenu(
         expanded = expanded,

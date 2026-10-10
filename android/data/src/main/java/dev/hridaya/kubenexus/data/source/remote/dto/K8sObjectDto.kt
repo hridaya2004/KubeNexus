@@ -20,6 +20,25 @@ import kotlinx.serialization.Serializable
  * Kotlin drifting apart.
  */
 
+/**
+ * Any decoded Kubernetes object. The generic resource code needs only its
+ * metadata; everything else is the kind's own business.
+ */
+interface KubeObjectDto {
+    val metadata: ObjectMetaDto
+}
+
+/**
+ * The `items` of any Kubernetes list response, decoded with the item serializer
+ * of the kind being listed. One envelope serves every kind, so no per-kind
+ * `*ListDto` is needed for new resources.
+ */
+@Serializable
+data class K8sListDto<T>(
+    val metadata: ListMetaDto = ListMetaDto(),
+    val items: List<T> = emptyList(),
+)
+
 @Serializable
 data class ObjectMetaDto(
     val name: String = "",
@@ -133,18 +152,10 @@ data class PodStatusDto(
 data class PodDto(
     val apiVersion: String? = null,
     val kind: String? = null,
-    val metadata: ObjectMetaDto = ObjectMetaDto(),
+    override val metadata: ObjectMetaDto = ObjectMetaDto(),
     val spec: PodSpecDto = PodSpecDto(),
     val status: PodStatusDto = PodStatusDto(),
-)
-
-@Serializable
-data class PodListDto(
-    val apiVersion: String? = null,
-    val kind: String? = null,
-    val metadata: ListMetaDto = ListMetaDto(),
-    val items: List<PodDto> = emptyList(),
-)
+) : KubeObjectDto
 
 @Serializable
 data class NamespaceStatusDto(

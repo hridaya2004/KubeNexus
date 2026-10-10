@@ -1,7 +1,6 @@
 package dev.hridaya.kubenexus.data.mapper
 
 import dev.hridaya.kubenexus.core.common.time.K8sTime
-import dev.hridaya.kubenexus.data.source.local.entity.ServiceEntity
 import dev.hridaya.kubenexus.data.source.remote.dto.EventDto
 import dev.hridaya.kubenexus.data.source.remote.dto.NAMED_PORT_UNRESOLVED
 import dev.hridaya.kubenexus.data.source.remote.dto.ServiceDto
@@ -13,16 +12,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 
 private const val DEFAULT_NAMESPACE = "default"
-
-/**
- * Ports are stored as one TEXT column: comma-separated ports, each encoded as
- * pipe-delimited fields `name|port|targetPort|nodePort|protocol`, with empty
- * strings for absent name/nodePort. Same flat-column convention as images on
- * DeploymentEntity; none of these characters can occur in a Service port name,
- * protocol or port number, so the encoding round-trips losslessly.
- */
-private const val PORTS_SEPARATOR = ","
-private const val PORT_FIELD_SEPARATOR = "|"
 
 /**
  * Builds the describe-view of a Service. [events] comes from a separate
@@ -90,46 +79,5 @@ fun ServiceDto.toServiceSummary(): ServiceSummary {
         clusterIP = spec.clusterIP,
         ports = spec.ports.map { it.toDomain() },
         creationTimestampMillis = K8sTime.parseTimestampMillis(metadata.creationTimestamp) ?: 0L,
-    )
-}
-
-/** Maps a Service to its cache row; see [PORTS_SEPARATOR] for the ports encoding. */
-fun ServiceSummary.toEntity(clusterId: String): ServiceEntity = ServiceEntity(
-    id = "${clusterId}_${namespace}_$name",
-    clusterId = clusterId,
-    name = name,
-    namespace = namespace,
-    type = type,
-    clusterIp = clusterIP,
-    ports = ports.joinToString(separator = PORTS_SEPARATOR) { port -> port.encodeForStorage() },
-    creationTimestampMillis = creationTimestampMillis,
-)
-
-fun ServiceEntity.toDomain(): ServiceSummary = ServiceSummary(
-    id = id,
-    name = name,
-    namespace = namespace,
-    type = type,
-    clusterIP = clusterIp,
-    ports = ports.split(PORTS_SEPARATOR).filter { it.isNotBlank() }.map { it.decodeStoredPort() },
-    creationTimestampMillis = creationTimestampMillis ?: 0L,
-)
-
-private fun ServicePortDetail.encodeForStorage(): String = listOf(
-    name.orEmpty(),
-    port.toString(),
-    targetPort.toString(),
-    nodePort?.toString().orEmpty(),
-    protocol,
-).joinToString(separator = PORT_FIELD_SEPARATOR)
-
-private fun String.decodeStoredPort(): ServicePortDetail {
-    val parts = split(PORT_FIELD_SEPARATOR)
-    return ServicePortDetail(
-        name = parts.getOrNull(0)?.ifBlank { null },
-        port = parts.getOrNull(1)?.toIntOrNull() ?: 0,
-        targetPort = parts.getOrNull(2)?.toIntOrNull() ?: NAMED_PORT_UNRESOLVED,
-        nodePort = parts.getOrNull(3)?.toIntOrNull(),
-        protocol = parts.getOrNull(4) ?: "TCP",
     )
 }

@@ -2,7 +2,6 @@ package dev.hridaya.kubenexus.data.mapper
 
 import dev.hridaya.kubenexus.core.common.time.K8sTime
 import dev.hridaya.kubenexus.data.source.local.entity.NamespaceEntity
-import dev.hridaya.kubenexus.data.source.local.entity.PodEntity
 import dev.hridaya.kubenexus.data.source.remote.dto.ContainerDto
 import dev.hridaya.kubenexus.data.source.remote.dto.ContainerStateDto
 import dev.hridaya.kubenexus.data.source.remote.dto.ContainerStatusDto
@@ -78,25 +77,6 @@ fun PodDto.toDomain(): Pod = Pod(
         .flatMap { it.ports }
         .filter { !it.name.isNullOrBlank() && it.containerPort > 0 }
         .associate { it.name!! to it.containerPort },
-)
-
-/**
- * Maps a pod to its cache row. The creation timestamp is persisted rather than a
- * pre-rendered age string, so a cached row is not stuck with a value formatted at
- * sync time.
- */
-fun Pod.toEntity(clusterId: String): PodEntity = PodEntity(
-    id = "${clusterId}_${namespace}_$name",
-    clusterId = clusterId,
-    name = name,
-    namespace = namespace,
-    status = status.title,
-    readyContainers = readyContainers,
-    restarts = restarts,
-    creationTimestampMillis = creationTimestampMillis,
-    ip = ip,
-    node = node,
-    image = image,
 )
 
 /**
@@ -184,29 +164,5 @@ fun Namespace.toEntity(clusterId: String): NamespaceEntity = NamespaceEntity(
     name = name,
     status = status,
 )
-
-fun PodEntity.toDomain(): Pod {
-    val domainStatus = when (status.lowercase()) {
-        "running" -> PodStatus.RUNNING
-        "pending" -> PodStatus.PENDING
-        "completed", "succeeded" -> PodStatus.COMPLETED
-        "failed" -> PodStatus.FAILED
-        "crashloopbackoff", "error" -> PodStatus.CRASH_LOOP
-        else -> PodStatus.UNKNOWN
-    }
-
-    return Pod(
-        id = id,
-        name = name,
-        namespace = namespace,
-        status = domainStatus,
-        readyContainers = readyContainers,
-        restarts = restarts,
-        creationTimestampMillis = creationTimestampMillis,
-        node = node,
-        ip = ip,
-        image = image,
-    )
-}
 
 fun NamespaceEntity.toDomainName(): String = name

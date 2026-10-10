@@ -111,7 +111,7 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
         externalScope.launch(dispatcherProvider.io) {
             when (val targetResult =
-                resolveServiceForwardTargetUseCase(kubeconfig, service, servicePort)) {
+                resolveServiceForwardTargetUseCase(cluster?.id, service, servicePort)) {
                 is Result.Success -> {
                     val target = targetResult.data
                     when (
