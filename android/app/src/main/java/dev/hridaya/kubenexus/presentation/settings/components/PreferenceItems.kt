@@ -4,6 +4,14 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Android
@@ -12,18 +20,22 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
-import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import dev.hridaya.kubenexus.presentation.common.components.SegmentedListSection
 import dev.hridaya.kubenexus.presentation.common.components.segmentedListItemColors
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
@@ -38,23 +50,20 @@ fun PreferenceNavigationItem(
     painter: Painter? = icon?.let { rememberVectorPainter(it) },
     subtitle: String? = null,
 ) {
-    SegmentedListItem(
-        onClick = onClick,
-        modifier = modifier,
+    PreferenceRow(
+        title = title,
+        subtitle = subtitle,
         shapes = shapes,
-        colors = segmentedListItemColors(),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+        onClick = onClick,
         leadingContent = painter?.let { { Icon(painter = it, contentDescription = null) } },
-        supportingContent = subtitle?.let { { Text(text = it) } },
         trailingContent = {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
             )
         },
-    ) {
-        Text(text = title)
-    }
+    )
 }
 
 @Composable
@@ -68,22 +77,18 @@ fun PreferenceSwitchItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    SegmentedListItem(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        modifier = modifier,
-        enabled = enabled,
+    PreferenceRow(
+        title = title,
+        subtitle = subtitle,
         shapes = shapes,
-        colors = segmentedListItemColors(),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+        onClick = { onCheckedChange(!checked) },
+        enabled = enabled,
         leadingContent = { Icon(imageVector = icon, contentDescription = null) },
-        supportingContent = { Text(text = subtitle) },
         trailingContent = {
-            Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         },
-    ) {
-        Text(text = title)
-    }
+    )
 }
 
 @Composable
@@ -92,19 +97,15 @@ fun AboutItem(
     shapes: ListItemShapes,
     modifier: Modifier = Modifier,
 ) {
-    SegmentedListItem(
-        modifier = modifier,
+    PreferenceRow(
+        title = "KubeNexus",
+        // Registered mark of LF Projects, LLC: adjectival use only, never in the product
+        // name. See legal/TRADEMARK-NOTICE.md.
+        subtitle = "Client for Kubernetes® clusters\nv$versionName",
         shapes = shapes,
-        colors = segmentedListItemColors(),
+        modifier = modifier,
         leadingContent = { Icon(imageVector = Icons.Outlined.Info, contentDescription = null) },
-        supportingContent = {
-            // Registered mark of LF Projects, LLC: adjectival use only, never in the product
-            // name. See legal/TRADEMARK-NOTICE.md.
-            Text(text = "Client for Kubernetes® clusters · v$versionName")
-        },
-    ) {
-        Text(text = "KubeNexus")
-    }
+    )
 }
 
 data class ModuleInfo(
@@ -121,16 +122,79 @@ fun ModuleItem(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    SegmentedListItem(
-        onClick = { context.copyVersion(module) },
-        modifier = modifier,
+    PreferenceRow(
+        title = module.title,
+        subtitle = module.subtitle,
         shapes = shapes,
-        colors = segmentedListItemColors(),
+        modifier = modifier,
+        onClick = { context.copyVersion(module) },
         leadingContent = { Icon(imageVector = module.icon, contentDescription = null) },
-        supportingContent = { Text(text = module.subtitle) },
-        trailingContent = { Text(text = module.version, fontFamily = FontFamily.Monospace) },
+        trailingContent = {
+            Text(
+                text = module.version,
+                style = MaterialTheme.typography.labelMedium,
+                fontFamily = FontFamily.Monospace,
+            )
+        },
+    )
+}
+
+/**
+ * A settings row in the theme's list colours. It draws them directly rather than fading between
+ * them as Material's list item does, so on a theme change it switches in the same frame as the
+ * rest of the screen.
+ */
+@Composable
+private fun PreferenceRow(
+    title: String,
+    shapes: ListItemShapes,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    leadingContent: (@Composable () -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
+) {
+    val colors = segmentedListItemColors()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shapes.shape)
+            .background(colors.containerColor(enabled = enabled, selected = false, dragged = false))
+            .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
+            .padding(ListItemDefaults.ContentPadding),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = module.title)
+        if (leadingContent != null) {
+            CompositionLocalProvider(
+                LocalContentColor provides
+                    colors.leadingContentColor(enabled = enabled, selected = false, dragged = false),
+                content = leadingContent,
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLargeEmphasized,
+                color = colors.contentColor(enabled = enabled, selected = false, dragged = false),
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.supportingContentColor(enabled = enabled, selected = false, dragged = false),
+                )
+            }
+        }
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(16.dp))
+            CompositionLocalProvider(
+                LocalContentColor provides
+                    colors.trailingContentColor(enabled = enabled, selected = false, dragged = false),
+                content = trailingContent,
+            )
+        }
     }
 }
 
