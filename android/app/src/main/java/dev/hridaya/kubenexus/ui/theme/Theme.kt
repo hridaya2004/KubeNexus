@@ -1,6 +1,5 @@
 package dev.hridaya.kubenexus.ui.theme
 
-import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -10,14 +9,12 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 import dev.hridaya.kubenexus.domain.model.ThemeMode
 
 val LocalThemeMode = compositionLocalOf { ThemeMode.SYSTEM }
@@ -26,17 +23,23 @@ val LocalAmoledDark = compositionLocalOf { false }
 val LocalOnAmoledDarkChange = compositionLocalOf<(Boolean) -> Unit> { {} }
 
 @Composable
+@ReadOnlyComposable
+fun ThemeMode.isDark(): Boolean {
+    val systemInDark = isSystemInDarkTheme()
+    return when (this) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> systemInDark
+    }
+}
+
+@Composable
 fun KubeNexusTheme(
     themeMode: ThemeMode = LocalThemeMode.current,
     amoledDark: Boolean = LocalAmoledDark.current,
     content: @Composable () -> Unit,
 ) {
-    val systemInDark = isSystemInDarkTheme()
-    val isDark = when (themeMode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> systemInDark
-    }
+    val isDark = themeMode.isDark()
     val context = LocalContext.current
 
     val baseColorScheme = remember(isDark, context) {
@@ -66,18 +69,6 @@ fun KubeNexusTheme(
 
     val logColors = remember(isDark) {
         if (isDark) DarkLogLevelColors else LightLogLevelColors
-    }
-
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        LaunchedEffect(isDark) {
-            val window = (view.context as? Activity)?.window
-            if (window != null) {
-                val insetsController = WindowCompat.getInsetsController(window, view)
-                insetsController.isAppearanceLightStatusBars = !isDark
-                insetsController.isAppearanceLightNavigationBars = !isDark
-            }
-        }
     }
 
     CompositionLocalProvider(

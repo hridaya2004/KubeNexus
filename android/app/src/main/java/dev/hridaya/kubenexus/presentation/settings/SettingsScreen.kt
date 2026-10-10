@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,6 +58,7 @@ import dev.hridaya.kubenexus.ui.theme.LocalAmoledDark
 import dev.hridaya.kubenexus.ui.theme.LocalOnAmoledDarkChange
 import dev.hridaya.kubenexus.ui.theme.LocalOnThemeModeChange
 import dev.hridaya.kubenexus.ui.theme.LocalThemeMode
+import dev.hridaya.kubenexus.ui.theme.isDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,12 +100,7 @@ fun SettingsScreen(
     val amoledDark = LocalAmoledDark.current
     val onAmoledDarkChange = LocalOnAmoledDarkChange.current
 
-    val systemInDark = isSystemInDarkTheme()
-    val isDark = when (currentThemeMode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> systemInDark
-    }
+    val isDark = currentThemeMode.isDark()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
