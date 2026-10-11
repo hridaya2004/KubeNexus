@@ -13,6 +13,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 
@@ -57,12 +58,13 @@ class ConnectivityNetworkMonitor @Inject constructor(
             }
         }
 
+        // Sent before registering, so it cannot overwrite a newer callback value.
+        channel.trySend(connectivityManager.isCurrentlyConnected())
+
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
         connectivityManager.registerNetworkCallback(request, callback)
-
-        channel.trySend(connectivityManager.isCurrentlyConnected())
 
         awaitClose {
             connectivityManager.unregisterNetworkCallback(callback)
@@ -70,6 +72,7 @@ class ConnectivityNetworkMonitor @Inject constructor(
     }
         .flowOn(dispatcherProvider.io)
         .conflate()
+        .distinctUntilChanged()
 
     private fun ConnectivityManager.isCurrentlyConnected(): Boolean {
         return activeNetwork
