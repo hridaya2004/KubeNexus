@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.hridaya.kubenexus.presentation.common.components.LoadingContent
 import dev.hridaya.kubenexus.presentation.common.namespaceOrNull
 import dev.hridaya.kubenexus.presentation.home.HomeUiEffect
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
@@ -47,12 +48,15 @@ fun MainScreen(
     val screenStores: ScreenViewModelStores = viewModel()
     // Only the cluster id, so MainScreen does not recompose on every Home state change.
     val activeClusterId by homeViewModel.activeClusterId.collectAsStateWithLifecycle()
+    val clustersLoaded by homeViewModel.clustersLoaded.collectAsStateWithLifecycle()
     val clusterKey = activeClusterId.orEmpty()
     val liveScreenKeys = backStack.screens.mapNotNull { it.storeKey(clusterKey) }.toSet()
     // Runs after the screen that was left has already gone from composition, so its
     // ViewModels are cleared (streams, sessions and native terminals released) only once
     // nothing on screen uses them.
-    LaunchedEffect(liveScreenKeys) { screenStores.retainOnly(liveScreenKeys) }
+    LaunchedEffect(liveScreenKeys, clustersLoaded) {
+        if (clustersLoaded) screenStores.retainOnly(liveScreenKeys)
+    }
 
     val context = LocalContext.current
     // The only collector of Home's effects. They come from a Channel, which hands each event to
@@ -86,6 +90,8 @@ fun MainScreen(
             tabStateHolder = tabStateHolder,
             modifier = modifier,
         )
+    } else if (!clustersLoaded) {
+        LoadingContent(modifier = modifier)
     } else {
         ScreenContent(
             screen = screen,

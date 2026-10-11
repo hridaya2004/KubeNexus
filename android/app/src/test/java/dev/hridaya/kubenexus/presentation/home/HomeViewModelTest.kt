@@ -27,6 +27,7 @@ import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
 import dev.hridaya.kubenexus.presentation.testing.FakeNamespaceRepository
 import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -36,8 +37,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -68,6 +72,7 @@ class HomeViewModelTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         fakeClusterRepository = FakeClusterRepository()
         resources.lastSynced.value = 1_700_000_000_000L
         resources.onSync = {
@@ -107,6 +112,20 @@ class HomeViewModelTest {
             networkMonitor = fakeNetworkMonitor,
             dispatcherProvider = testDispatcherProvider,
         )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `clusters are reported loaded only once they have been read`() = runTest(testDispatcher) {
+        assertFalse(viewModel.clustersLoaded.value)
+
+        advanceUntilIdle()
+
+        assertTrue(viewModel.clustersLoaded.value)
     }
 
     @Test

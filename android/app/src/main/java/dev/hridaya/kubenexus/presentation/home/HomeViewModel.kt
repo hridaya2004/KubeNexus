@@ -77,6 +77,11 @@ class HomeViewModel @Inject constructor(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    val clustersLoaded: StateFlow<Boolean> = _uiState
+        .map { !it.isLoading }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val _selectedNamespace = MutableStateFlow("All Namespaces")
     private var lastSyncedClusterId: String? = null
 
