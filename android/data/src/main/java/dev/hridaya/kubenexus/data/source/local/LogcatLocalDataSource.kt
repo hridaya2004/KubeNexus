@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.data.source.local
 
 import android.os.Process as AndroidProcess
+import android.util.Log
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
 import dev.hridaya.kubenexus.domain.model.LogLevel
@@ -33,6 +34,7 @@ internal fun isKubeNexusLog(tag: String): Boolean =
 
 private const val GO_ENGINE_LOG_TAG = "GoLog"
 private const val CRASH_LOG_TAG = "AndroidRuntime"
+private const val DUMP_LOG_TAG = "$APP_LOG_TAG_PREFIX/LogcatDump"
 
 interface LogcatLocalDataSource {
     fun streamLogs(maxBufferSize: Int): Flow<List<LogcatEntry>>
@@ -117,59 +119,31 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
     override suspend fun dumpLogs(maxLines: Int): List<LogcatEntry> =
         withContext(dispatcherProvider.io) {
             val pid = AndroidProcess.myPid().toString()
-            val entries = mutableListOf<LogcatEntry>()
-
             try {
-                val process = ProcessBuilder(
-                    "logcat",
-                    "-d",
-                    "-v",
-                    "threadtime",
-                    "-t",
-                    maxLines.toString(),
-                    "--pid=$pid",
-                ).start()
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
-
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    line?.let {
-                        val entry = parseLogLine(it)
-                        if (entry.pid == pid && isKubeNexusLog(entry.tag)) {
-                            entries.add(entry)
-                        }
-                    }
-                }
-                process.waitFor()
-                process.destroy()
-            } catch (_: Exception) {
-                try {
-                    val process = ProcessBuilder(
-                        "logcat",
-                        "-d",
-                        "-v",
-                        "threadtime",
-                        "-t",
-                        maxLines.toString(),
-                    ).start()
-                    val reader = BufferedReader(InputStreamReader(process.inputStream))
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        line?.let {
-                            val entry = parseLogLine(it)
-                            if (entry.pid == pid && isKubeNexusLog(entry.tag)) {
-                                entries.add(entry)
-                            }
-                        }
-                    }
-                    process.waitFor()
-                    process.destroy()
-                } catch (_: Exception) {
-                }
+                // An unsupported --pid is reported by exit code, not an exception.
+                readLogcat(pid, maxLines, filterByPid = true)
+                    ?: readLogcat(pid, maxLines, filterByPid = false)
+                    ?: emptyList()
+            } catch (e: IOException) {
+                Log.w(DUMP_LOG_TAG, "Could not read logcat: ${e.message}")
+                emptyList()
             }
-
-            entries
         }
+
+    /** This process's lines from a logcat dump, or null when logcat exits with an error. */
+    private fun readLogcat(pid: String, maxLines: Int, filterByPid: Boolean): List<LogcatEntry>? {
+        val command = listOf("logcat", "-d", "-v", "threadtime", "-t", maxLines.toString()) +
+            if (filterByPid) listOf("--pid=$pid") else emptyList()
+        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        try {
+            val entries = process.inputStream.bufferedReader().useLines { lines ->
+                lines.map(::parseLogLine).filter { it.pid == pid && isKubeNexusLog(it.tag) }.toList()
+            }
+            return if (process.waitFor() == 0) entries else null
+        } finally {
+            process.destroy()
+        }
+    }
 
     override suspend fun clearLogs(): Unit = withContext(dispatcherProvider.io) {
         try {
