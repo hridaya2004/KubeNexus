@@ -119,9 +119,11 @@ class ClusterRepositoryImpl @Inject constructor(
     override suspend fun deleteCluster(id: String): Result<Unit> =
         withContext(dispatcherProvider.io) {
             try {
+                val kubeconfig = clusterDao.getClusterById(id)?.let { encryptor.decryptOrEmpty(it.rawKubeconfig) }
                 // Removes the cached workloads, namespaces, discovery, explains and
                 // OpenAPI schema blob along with the cluster row.
                 clusterDao.deleteClusterWithCachedData(id)
+                kubeconfig?.let(nativeBridge::forgetClient)
                 Result.Success(Unit)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t

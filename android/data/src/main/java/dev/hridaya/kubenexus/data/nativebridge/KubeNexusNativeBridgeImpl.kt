@@ -164,6 +164,11 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
         clientCache.getOrPut(key) { Client.newClient(rawKubeconfig) }
     }
 
+    override fun forgetClient(rawKubeconfig: String) {
+        if (rawKubeconfig.isBlank()) return
+        synchronized(clientCache) { clientCache.remove(digest(rawKubeconfig)) }
+    }
+
     private fun digest(value: String): String =
         MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))

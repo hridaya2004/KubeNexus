@@ -285,4 +285,7 @@ interface KubeNexusNativeBridge {
      * Returns detailed cluster health inspection data.
      */
     fun checkHealth(rawKubeconfig: String): Result<ClusterHealth>
+
+    /** Drops the cached client for [rawKubeconfig], e.g. when its cluster is deleted. */
+    fun forgetClient(rawKubeconfig: String) = Unit
 }
