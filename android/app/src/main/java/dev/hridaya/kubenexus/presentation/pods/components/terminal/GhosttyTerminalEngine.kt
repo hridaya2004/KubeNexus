@@ -15,6 +15,9 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Owns one native Ghostty terminal and its link to a remote exec session.
@@ -48,6 +51,12 @@ class GhosttyTerminalEngine(
 
     @Volatile
     private var terminalSession: TerminalSession? = null
+
+    private val snapshotPending = AtomicBoolean(false)
+    private val snapshotRefresher: ScheduledExecutorService =
+        Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "terminal-snapshot").apply { isDaemon = true }
+        }
 
     private val writer: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "terminal-writer").apply { isDaemon = true }
@@ -91,10 +100,26 @@ class GhosttyTerminalEngine(
         val replies = synchronized(lock) {
             if (handle == 0L) return
             bridge.nativeWriteRemote(handle, data)
-            updateSnapshotLocked()
             drainRepliesLocked()
         }
+        requestSnapshot()
         sendBytes(replies)
+    }
+
+    private fun requestSnapshot() {
+        if (!snapshotPending.compareAndSet(false, true)) return
+        try {
+            snapshotRefresher.schedule(
+                {
+                    snapshotPending.set(false)
+                    synchronized(lock) { updateSnapshotLocked() }
+                },
+                SNAPSHOT_INTERVAL_MS,
+                TimeUnit.MILLISECONDS,
+            )
+        } catch (_: RejectedExecutionException) {
+            // The engine has been destroyed.
+        }
     }
 
     fun feedRemoteOutput(text: String) {
@@ -188,6 +213,7 @@ class GhosttyTerminalEngine(
         _snapshot.value = null
         terminalSession = null
         writer.shutdown()
+        snapshotRefresher.shutdownNow()
     }
 
     private fun updateSnapshotLocked() {
@@ -249,6 +275,7 @@ class GhosttyTerminalEngine(
     }
 
     private companion object {
+        const val SNAPSHOT_INTERVAL_MS = 16L
         const val TAG = "$APP_LOG_TAG_PREFIX/GhosttyTerminalEngine"
         val EMPTY = ByteArray(0)
     }

@@ -200,11 +200,13 @@ fun GhosttyTerminalView(
                         .weight(1f)
                         .background(GhosttyBg),
                 ) {
-                    val hasContent = snapshot?.let { snap ->
-                        snap.codepoints.any { it != 0 && it != 32 }
-                    } ?: false
+                    val showPlaceholder = if (uiState.isTerminalActive) {
+                        false
+                    } else {
+                        remember(snapshot) { snapshot?.codepoints?.none { it != 0 && it != 32 } ?: true }
+                    }
 
-                    if (!uiState.isTerminalActive && !hasContent) {
+                    if (showPlaceholder) {
                         TerminalDetachedPlaceholder(
                             isOnline = uiState.isOnline,
                             selectedContainer = uiState.selectedContainer,
