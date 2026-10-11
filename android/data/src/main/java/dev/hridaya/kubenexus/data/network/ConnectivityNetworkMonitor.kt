@@ -1,4 +1,4 @@
-package dev.hridaya.kubenexus.core.common.network
+package dev.hridaya.kubenexus.data.network
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -9,6 +9,7 @@ import android.net.NetworkRequest
 import androidx.core.content.getSystemService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.core.common.network.NetworkMonitor
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

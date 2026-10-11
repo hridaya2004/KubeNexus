@@ -1,4 +1,4 @@
-package dev.hridaya.kubenexus.core.di
+package dev.hridaya.kubenexus.data.di
 
 import android.util.Log
 import dagger.Module
@@ -8,16 +8,12 @@ import dagger.hilt.components.SingletonComponent
 import dev.hridaya.kubenexus.core.common.dispatcher.DefaultDispatcherProvider
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
+import dev.hridaya.kubenexus.core.di.ApplicationScope
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import javax.inject.Qualifier
 import javax.inject.Singleton
-
-@Qualifier
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ApplicationScope
 
 @Module
 @InstallIn(SingletonComponent::class)
