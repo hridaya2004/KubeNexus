@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,7 +35,9 @@ internal fun TerminalKeyButton(
             1.dp,
             if (isActive) Color.White else GhosttyKeyBorder
         ),
-        modifier = Modifier.height(32.dp),
+        modifier = Modifier
+            .height(32.dp)
+            .semantics { KEY_NAMES[label]?.let { contentDescription = it } },
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -50,6 +54,16 @@ internal fun TerminalKeyButton(
         }
     }
 }
+
+private val KEY_NAMES = mapOf(
+    "^C" to "Control C",
+    "^D" to "Control D",
+    "^Z" to "Control Z",
+    "↑" to "Up arrow",
+    "↓" to "Down arrow",
+    "←" to "Left arrow",
+    "→" to "Right arrow",
+)
 
 @Preview(showBackground = true)
 @Composable
