@@ -3,8 +3,10 @@ package dev.hridaya.kubenexus.presentation.portforward.sessions
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
+import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
 import dev.hridaya.kubenexus.domain.model.PortForwardListener
 import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
+import dev.hridaya.kubenexus.presentation.testing.FakeClusterRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,7 +46,7 @@ class PortForwardSessionsViewModelTest {
             externalScope = TestScope(testDispatcher),
             dispatcherProvider = testDispatcherProvider,
         )
-        viewModel = PortForwardSessionsViewModel(sessionManager)
+        viewModel = PortForwardSessionsViewModel(PortForwardSessionRepositoryImpl(sessionManager, FakeClusterRepository()))
     }
 
     @After

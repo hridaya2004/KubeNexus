@@ -10,6 +10,7 @@ import dev.hridaya.kubenexus.core.security.AndroidKeystoreKubeconfigEncryptor
 import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridgeImpl
+import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.ClusterRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.DeploymentRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.ExploreRepositoryImpl
@@ -32,6 +33,7 @@ import dev.hridaya.kubenexus.domain.repository.LogcatRepository
 import dev.hridaya.kubenexus.domain.repository.NamespaceRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
+import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import dev.hridaya.kubenexus.domain.repository.ResourceRepository
 import dev.hridaya.kubenexus.domain.repository.ThemePreferencesRepository
 import javax.inject.Singleton
@@ -79,6 +81,12 @@ abstract class RepositoryModule {
     abstract fun bindPortForwardRepository(
         impl: PortForwardRepositoryImpl
     ): PortForwardRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPortForwardSessionRepository(
+        impl: PortForwardSessionRepositoryImpl
+    ): PortForwardSessionRepository
 
     @Binds
     @Singleton

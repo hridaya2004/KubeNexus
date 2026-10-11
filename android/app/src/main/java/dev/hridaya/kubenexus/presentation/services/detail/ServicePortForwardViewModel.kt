@@ -9,11 +9,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.di.ApplicationScope
-import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
-import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.PortForwardSessionStatus
 import dev.hridaya.kubenexus.domain.model.PortForwardTargetKind
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
+import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.ResolveServiceForwardTargetUseCase
 import dev.hridaya.kubenexus.presentation.portforward.ActivePortForward
@@ -31,7 +30,7 @@ import kotlinx.coroutines.launch
 class ServicePortForwardViewModel @AssistedInject constructor(
     @Assisted("serviceName") private val serviceName: String,
     @Assisted("namespace") private val namespace: String,
-    private val sessionManager: PortForwardSessionManager,
+    private val sessionRepository: PortForwardSessionRepository,
     private val resolveServiceForwardTargetUseCase: ResolveServiceForwardTargetUseCase,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
     @param:ApplicationScope private val externalScope: CoroutineScope,
@@ -46,12 +45,6 @@ class ServicePortForwardViewModel @AssistedInject constructor(
         ): ServicePortForwardViewModel
     }
 
-    /**
-     * The active cluster as one snapshot, so the kubeconfig and the cluster id recorded
-     * with a forward always belong together. Written on IO, read on main.
-     */
-    @Volatile
-    private var activeCluster: Cluster? = null
     private val activeClusterId = MutableStateFlow<String?>(null)
 
     private val _uiState = MutableStateFlow(PortForwardUiState())
@@ -59,15 +52,12 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
     init {
         viewModelScope.launch(dispatcherProvider.io) {
-            getActiveClusterUseCase().collect { cluster ->
-                activeCluster = cluster
-                activeClusterId.value = cluster?.id
-            }
+            getActiveClusterUseCase().collect { cluster -> activeClusterId.value = cluster?.id }
         }
 
         viewModelScope.launch {
             // Forwards are tracked process-wide; only show the ones opened on this cluster.
-            combine(sessionManager.sessions, activeClusterId) { allSessions, clusterId ->
+            combine(sessionRepository.sessions, activeClusterId) { allSessions, clusterId ->
                 allSessions.filter { it.clusterId == clusterId }
             }.collect { allSessions ->
                 val serviceForwards = allSessions
@@ -100,9 +90,8 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
     fun start(service: ServiceDetails, localPort: Int, servicePort: Int) {
         if (_uiState.value.isStarting) return
-        val cluster = activeCluster
-        val kubeconfig = cluster?.rawKubeconfig.orEmpty()
-        if (kubeconfig.isBlank()) {
+        val clusterId = activeClusterId.value
+        if (clusterId == null) {
             _uiState.update { it.copy(error = NO_ACTIVE_CLUSTER_MESSAGE) }
             return
         }
@@ -111,19 +100,18 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
         externalScope.launch(dispatcherProvider.io) {
             when (val targetResult =
-                resolveServiceForwardTargetUseCase(cluster?.id, service, servicePort)) {
+                resolveServiceForwardTargetUseCase(clusterId, service, servicePort)) {
                 is Result.Success -> {
                     val target = targetResult.data
                     when (
-                        val startResult = sessionManager.startServiceForward(
-                            rawKubeconfig = kubeconfig,
+                        val startResult = sessionRepository.startServiceForward(
+                            clusterId = clusterId,
                             namespace = namespace,
                             serviceName = serviceName,
                             localPort = localPort,
                             servicePort = servicePort,
                             targetPodName = target.podName,
                             targetPodPort = target.podPort,
-                            clusterId = cluster?.id,
                         )
                     ) {
                         is Result.Success -> _uiState.update { it.copy(isStarting = false) }
@@ -146,7 +134,7 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
     fun stop(handleId: String) {
         externalScope.launch(dispatcherProvider.io) {
-            sessionManager.stop(handleId)
+            sessionRepository.stop(handleId)
         }
     }
 

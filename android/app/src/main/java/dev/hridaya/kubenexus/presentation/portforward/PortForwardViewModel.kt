@@ -9,10 +9,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.di.ApplicationScope
-import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
-import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.PortForwardSessionStatus
 import dev.hridaya.kubenexus.domain.model.PortForwardTargetKind
+import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +25,7 @@ import kotlinx.coroutines.launch
 class PortForwardViewModel @AssistedInject constructor(
     @Assisted("podName") private val podName: String,
     @Assisted("namespace") private val namespace: String,
-    private val sessionManager: PortForwardSessionManager,
+    private val sessionRepository: PortForwardSessionRepository,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
     @param:ApplicationScope private val externalScope: CoroutineScope,
     private val dispatcherProvider: DispatcherProvider,
@@ -40,16 +39,6 @@ class PortForwardViewModel @AssistedInject constructor(
         ): PortForwardViewModel
     }
 
-    /**
-     * Decrypted kubeconfig of the active cluster. Held here deliberately, never
-     * in [PortForwardUiState]: credentials must not reach the UI layer.
-     */
-    /**
-     * The active cluster as one snapshot, so the kubeconfig and the cluster id recorded
-     * with a forward always belong together. Written on IO, read on main.
-     */
-    @Volatile
-    private var activeCluster: Cluster? = null
     private val activeClusterId = MutableStateFlow<String?>(null)
 
     private val _uiState = MutableStateFlow(PortForwardUiState())
@@ -57,15 +46,12 @@ class PortForwardViewModel @AssistedInject constructor(
 
     init {
         viewModelScope.launch(dispatcherProvider.io) {
-            getActiveClusterUseCase().collect { cluster ->
-                activeCluster = cluster
-                activeClusterId.value = cluster?.id
-            }
+            getActiveClusterUseCase().collect { cluster -> activeClusterId.value = cluster?.id }
         }
 
         viewModelScope.launch {
             // Forwards are tracked process-wide; only show the ones opened on this cluster.
-            combine(sessionManager.sessions, activeClusterId) { allSessions, clusterId ->
+            combine(sessionRepository.sessions, activeClusterId) { allSessions, clusterId ->
                 allSessions.filter { it.clusterId == clusterId }
             }.collect { allSessions ->
                 val podForwards = allSessions
@@ -107,9 +93,8 @@ class PortForwardViewModel @AssistedInject constructor(
     /** Opens a tunnel 127.0.0.1:[localPort] -> pod:[remotePort]. */
     fun start(localPort: Int, remotePort: Int) {
         if (_uiState.value.isStarting) return
-        val cluster = activeCluster
-        val kubeconfig = cluster?.rawKubeconfig.orEmpty()
-        if (kubeconfig.isBlank()) {
+        val clusterId = activeClusterId.value
+        if (clusterId == null) {
             _uiState.update { it.copy(error = NO_ACTIVE_CLUSTER_MESSAGE) }
             return
         }
@@ -118,13 +103,12 @@ class PortForwardViewModel @AssistedInject constructor(
 
         viewModelScope.launch(dispatcherProvider.io) {
             when (
-                val result = sessionManager.startPodForward(
-                    rawKubeconfig = kubeconfig,
+                val result = sessionRepository.startPodForward(
+                    clusterId = clusterId,
                     namespace = namespace,
                     podName = podName,
                     localPort = localPort,
                     remotePort = remotePort,
-                    clusterId = cluster?.id,
                 )
             ) {
                 is Result.Success -> _uiState.update { it.copy(isStarting = false) }
@@ -140,7 +124,7 @@ class PortForwardViewModel @AssistedInject constructor(
     /** Closes one tunnel. */
     fun stop(handleId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
-            sessionManager.stop(handleId)
+            sessionRepository.stop(handleId)
         }
     }
 

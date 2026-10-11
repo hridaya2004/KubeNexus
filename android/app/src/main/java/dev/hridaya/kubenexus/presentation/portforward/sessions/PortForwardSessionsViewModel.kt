@@ -3,8 +3,8 @@ package dev.hridaya.kubenexus.presentation.portforward.sessions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
 import dev.hridaya.kubenexus.domain.model.ActivePortForwardSession
+import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,19 +12,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Exposes the app-wide port-forward tunnel list behind a sheet-friendly UI
- * state. The manager is the source of truth; this ViewModel only layers the
- * include-stopped toggle and local dismissal on top.
- *
- * INTEGRATION SEAM: this is the single file that touches the manager API.
- * If the shipped [PortForwardSessionManager] uses its own session model or a
- * different package, adapt imports and map to [ActivePortForwardSession] in
- * the init collection below — no other file changes.
- */
+/** The app-wide port-forward list, with the include-stopped toggle and local dismissal. */
 @HiltViewModel
 class PortForwardSessionsViewModel @Inject constructor(
-    private val sessionManager: PortForwardSessionManager,
+    private val sessionRepository: PortForwardSessionRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PortForwardSessionsUiState())
@@ -40,7 +31,7 @@ class PortForwardSessionsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            sessionManager.sessions.collect { sessions ->
+            sessionRepository.sessions.collect { sessions ->
                 _uiState.update { state ->
                     state.copy(sessions = sessions.notDismissed())
                 }
@@ -61,7 +52,7 @@ class PortForwardSessionsViewModel @Inject constructor(
     /** Asks the manager to tear down one tunnel; state updates via the flow. */
     fun stop(handleId: String) {
         viewModelScope.launch {
-            sessionManager.stop(handleId)
+            sessionRepository.stop(handleId)
         }
     }
 
