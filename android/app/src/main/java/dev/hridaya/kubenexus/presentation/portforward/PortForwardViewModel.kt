@@ -101,7 +101,8 @@ class PortForwardViewModel @AssistedInject constructor(
 
         _uiState.update { it.copy(isStarting = true, error = null) }
 
-        viewModelScope.launch(dispatcherProvider.io) {
+        // Not viewModelScope: leaving the screen mid-start would leave a tunnel nothing tracks.
+        externalScope.launch(dispatcherProvider.io) {
             when (
                 val result = sessionRepository.startPodForward(
                     clusterId = clusterId,
@@ -123,7 +124,7 @@ class PortForwardViewModel @AssistedInject constructor(
 
     /** Closes one tunnel. */
     fun stop(handleId: String) {
-        viewModelScope.launch(dispatcherProvider.io) {
+        externalScope.launch(dispatcherProvider.io) {
             sessionRepository.stop(handleId)
         }
     }
