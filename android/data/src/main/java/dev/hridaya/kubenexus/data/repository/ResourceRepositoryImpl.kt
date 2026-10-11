@@ -26,6 +26,7 @@ import dev.hridaya.kubenexus.domain.model.resource.ResourceKind
 import dev.hridaya.kubenexus.domain.model.resource.ResourceType
 import dev.hridaya.kubenexus.domain.repository.ResourceRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -58,7 +59,9 @@ class ResourceRepositoryImpl @Inject constructor(
             null -> cacheDao.observePayloads(clusterId, resourceKey)
             else -> cacheDao.observePayloadsInNamespace(clusterId, resourceKey, namespace)
         }
+        // Room re-emits on any write to the table.
         return payloads
+            .distinctUntilChanged()
             .map { rows -> rows.mapNotNull { payload -> codec.summaryFromCacheOrNull(payload) } }
             .flowOn(dispatcherProvider.io)
     }
