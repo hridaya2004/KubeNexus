@@ -136,8 +136,17 @@ class ResourceRepositoryImpl @Inject constructor(
                     )
             }
             clusterCalls.run(clusterId, "Failed to create resources") { cluster ->
-                for ((document, type) in documents.zip(types)) {
+                for ((index, pair) in documents.zip(types).withIndex()) {
+                    val (document, type) = pair
                     val created = nativeBridge.createResource(cluster.kubeconfig, type, document.text)
+                    if (created is Result.Error && index > 0) {
+                        return@run Result.Error(
+                            AppError.Unknown(
+                                "Created ${documents.take(index).joinToString { it.label }}, " +
+                                    "but ${document.label} failed: ${created.error.message}",
+                            ),
+                        )
+                    }
                     if (created is Result.Error) return@run created
                 }
                 Result.Success(Unit)

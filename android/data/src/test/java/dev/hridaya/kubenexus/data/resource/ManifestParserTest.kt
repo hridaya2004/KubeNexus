@@ -17,11 +17,21 @@ class ManifestParserTest {
 
         assertEquals(
             listOf(
-                ManifestDocument(apiVersion = "apps/v1", kind = "Deployment", text = deployment),
-                ManifestDocument(apiVersion = "v1", kind = "Service", text = service),
+                ManifestDocument(apiVersion = "apps/v1", kind = "Deployment", text = deployment, name = "web"),
+                ManifestDocument(apiVersion = "v1", kind = "Service", text = service, name = "web"),
             ),
             documents,
         )
+        assertEquals("Deployment 'web'", documents.first().label)
+    }
+
+    @Test
+    fun `text the parser cannot handle is a validation error, not a crash`() {
+        val deeplyNested = "a: " + "[".repeat(50_000)
+
+        val result = ManifestParser.parse(deeplyNested)
+
+        assertTrue(result is Result.Error)
     }
 
     @Test

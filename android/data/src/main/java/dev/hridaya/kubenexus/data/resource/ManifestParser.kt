@@ -11,7 +11,11 @@ data class ManifestDocument(
     val apiVersion: String,
     val kind: String,
     val text: String,
-)
+    val name: String = "",
+) {
+    val label: String
+        get() = if (name.isBlank()) kind else "$kind '$name'"
+}
 
 /**
  * Splits a manifest into its documents and reads what each one declares.
@@ -31,6 +35,10 @@ object ManifestParser {
                 Load(LoadSettings.builder().setLabel("manifest").build()).loadFromString(text)
             } catch (e: YamlEngineException) {
                 return invalid("The manifest is not valid YAML: ${e.message?.lineSequence()?.firstOrNull().orEmpty()}")
+            } catch (e: RuntimeException) {
+                return invalid("The manifest could not be read: ${e.message?.lineSequence()?.firstOrNull().orEmpty()}")
+            } catch (e: StackOverflowError) {
+                return invalid("The manifest is nested too deeply to read")
             }
             when (content) {
                 // A document holding only comments.
@@ -39,6 +47,7 @@ object ManifestParser {
                     apiVersion = content["apiVersion"]?.toString().orEmpty(),
                     kind = content["kind"]?.toString().orEmpty(),
                     text = text,
+                    name = (content["metadata"] as? Map<*, *>)?.get("name")?.toString().orEmpty(),
                 )
                 else -> return invalid("Each document in the manifest must be an object")
             }
