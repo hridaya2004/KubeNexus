@@ -22,7 +22,13 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Room's MigrationTestHelper reads the exported schemas as assets under Robolectric.
+            isIncludeAndroidResources = true
         }
+    }
+
+    sourceSets {
+        getByName("test").assets.directories.add("$projectDir/schemas")
     }
 }
 
@@ -67,6 +73,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.json)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
 }
 
 ksp {
