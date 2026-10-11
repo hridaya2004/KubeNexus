@@ -52,4 +52,26 @@ class ResourceCodecsTest {
             assertFalse("$unmodelled was cached", payloads.any { "\"$unmodelled\"" in it })
         }
     }
+
+    @Test
+    fun `annotations never reach the cache`() {
+        val lastApplied = """{\"env\":[{\"name\":\"DB_PASSWORD\",\"value\":\"hunter2\"}]}"""
+        val listJson = """
+            {"items":[{
+              "metadata":{
+                "name":"api","namespace":"prod","labels":{"app":"api"},
+                "annotations":{"kubectl.kubernetes.io/last-applied-configuration":"$lastApplied"}
+              }
+            }]}
+        """.trimIndent()
+
+        for (codec in listOf(PodCodec, DeploymentCodec, ServiceCodec)) {
+            val payload = codec.decodeForCache(listJson).single().payload
+
+            assertFalse("${codec.kind} cached annotations", "annotations" in payload)
+            assertFalse("${codec.kind} cached the applied manifest", "hunter2" in payload)
+            assertTrue("${codec.kind} dropped labels too", "\"app\"" in payload)
+            assertEquals(codec.decodeSummaries(listJson), listOf(codec.summaryFromCache(payload)))
+        }
+    }
 }
