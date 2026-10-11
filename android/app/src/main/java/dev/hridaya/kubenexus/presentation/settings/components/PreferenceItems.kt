@@ -1,9 +1,5 @@
 package dev.hridaya.kubenexus.presentation.settings.components
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -32,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -121,13 +116,11 @@ fun ModuleItem(
     shapes: ListItemShapes,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     PreferenceRow(
         title = module.title,
         subtitle = module.subtitle,
         shapes = shapes,
         modifier = modifier,
-        onClick = { context.copyVersion(module) },
         leadingContent = { Icon(imageVector = module.icon, contentDescription = null) },
         trailingContent = {
             Text(
@@ -196,12 +189,6 @@ private fun PreferenceRow(
             )
         }
     }
-}
-
-private fun Context.copyVersion(module: ModuleInfo) {
-    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    clipboard?.setPrimaryClip(ClipData.newPlainText("Version", module.version))
-    Toast.makeText(this, "Copied ${module.title} (${module.version})", Toast.LENGTH_SHORT).show()
 }
 
 @Preview(showBackground = true)
