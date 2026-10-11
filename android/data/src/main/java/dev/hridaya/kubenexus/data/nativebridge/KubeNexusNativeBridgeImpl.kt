@@ -148,7 +148,7 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
             Result.Success(block())
         } catch (t: Throwable) {
             Log.e(TAG, LogSanitizer.withStackTrace("$errorMsg: ${LogSanitizer.sanitize(t.message)}", t))
-            Result.Error(AppError.Unknown(t.message ?: errorMsg, t))
+            Result.Error(AppError.Unknown(LogSanitizer.sanitize(t.message).ifEmpty { errorMsg }, t))
         }
     }
 
