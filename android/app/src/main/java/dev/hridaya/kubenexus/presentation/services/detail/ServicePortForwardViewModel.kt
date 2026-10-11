@@ -12,9 +12,11 @@ import dev.hridaya.kubenexus.core.di.ApplicationScope
 import dev.hridaya.kubenexus.domain.model.PortForwardSessionStatus
 import dev.hridaya.kubenexus.domain.model.PortForwardTargetKind
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
-import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObservePortForwardSessionsUseCase
 import dev.hridaya.kubenexus.domain.usecase.ResolveServiceForwardTargetUseCase
+import dev.hridaya.kubenexus.domain.usecase.StartServicePortForwardUseCase
+import dev.hridaya.kubenexus.domain.usecase.StopPortForwardUseCase
 import dev.hridaya.kubenexus.presentation.portforward.ActivePortForward
 import dev.hridaya.kubenexus.presentation.portforward.PortForwardStatus
 import dev.hridaya.kubenexus.presentation.portforward.PortForwardUiState
@@ -30,7 +32,9 @@ import kotlinx.coroutines.launch
 class ServicePortForwardViewModel @AssistedInject constructor(
     @Assisted("serviceName") private val serviceName: String,
     @Assisted("namespace") private val namespace: String,
-    private val sessionRepository: PortForwardSessionRepository,
+    observePortForwardSessions: ObservePortForwardSessionsUseCase,
+    private val startServicePortForward: StartServicePortForwardUseCase,
+    private val stopPortForward: StopPortForwardUseCase,
     private val resolveServiceForwardTargetUseCase: ResolveServiceForwardTargetUseCase,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
     @param:ApplicationScope private val externalScope: CoroutineScope,
@@ -57,7 +61,7 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
         viewModelScope.launch {
             // Forwards are tracked process-wide; only show the ones opened on this cluster.
-            combine(sessionRepository.sessions, activeClusterId) { allSessions, clusterId ->
+            combine(observePortForwardSessions(), activeClusterId) { allSessions, clusterId ->
                 allSessions.filter { it.clusterId == clusterId }
             }.collect { allSessions ->
                 val serviceForwards = allSessions
@@ -104,14 +108,13 @@ class ServicePortForwardViewModel @AssistedInject constructor(
                 is Result.Success -> {
                     val target = targetResult.data
                     when (
-                        val startResult = sessionRepository.startServiceForward(
+                        val startResult = startServicePortForward(
                             clusterId = clusterId,
                             namespace = namespace,
                             serviceName = serviceName,
                             localPort = localPort,
                             servicePort = servicePort,
-                            targetPodName = target.podName,
-                            targetPodPort = target.podPort,
+                            target = target,
                         )
                     ) {
                         is Result.Success -> _uiState.update { it.copy(isStarting = false) }
@@ -134,7 +137,7 @@ class ServicePortForwardViewModel @AssistedInject constructor(
 
     fun stop(handleId: String) {
         externalScope.launch(dispatcherProvider.io) {
-            sessionRepository.stop(handleId)
+            stopPortForward(handleId)
         }
     }
 

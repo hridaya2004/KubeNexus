@@ -6,6 +6,8 @@ import dev.hridaya.kubenexus.data.portforward.PortForwardListener
 import dev.hridaya.kubenexus.data.portforward.PortForwardRepository
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
+import dev.hridaya.kubenexus.domain.usecase.ObservePortForwardSessionsUseCase
+import dev.hridaya.kubenexus.domain.usecase.StopPortForwardUseCase
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,7 +47,8 @@ class PortForwardSessionsViewModelTest {
             externalScope = TestScope(testDispatcher),
             dispatcherProvider = testDispatcherProvider,
         )
-        viewModel = PortForwardSessionsViewModel(PortForwardSessionRepositoryImpl(sessionManager) { "fake-kubeconfig" })
+        val sessions = PortForwardSessionRepositoryImpl(sessionManager) { "fake-kubeconfig" }
+        viewModel = PortForwardSessionsViewModel(ObservePortForwardSessionsUseCase(sessions), StopPortForwardUseCase(sessions))
     }
 
     @After

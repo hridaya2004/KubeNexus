@@ -6,10 +6,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
+import dev.hridaya.kubenexus.domain.model.FavouriteToggle
+import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository
-import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository.Companion.MAX_FAVOURITES
-import dev.hridaya.kubenexus.domain.repository.FavouriteToggle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -49,7 +49,7 @@ class FavouriteResourcesRepositoryImpl @Inject constructor(
                 val current = preferences.favourites()
                 added = when {
                     typeKey in current -> true
-                    current.size >= MAX_FAVOURITES -> false
+                    current.size >= MAX_FAVOURITE_RESOURCES -> false
                     else -> {
                         preferences[KEY_FAVOURITES] = (current + typeKey).joinToString(SEPARATOR)
                         true
@@ -76,7 +76,7 @@ class FavouriteResourcesRepositoryImpl @Inject constructor(
                 val current = preferences.favourites()
                 outcome = when {
                     typeKey in current -> FavouriteToggle.REMOVED
-                    current.size >= MAX_FAVOURITES -> FavouriteToggle.FULL
+                    current.size >= MAX_FAVOURITE_RESOURCES -> FavouriteToggle.FULL
                     else -> FavouriteToggle.ADDED
                 }
                 when (outcome) {

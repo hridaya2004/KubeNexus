@@ -4,9 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
-import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository
-import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository.Companion.MAX_FAVOURITES
-import dev.hridaya.kubenexus.domain.repository.FavouriteToggle
+import dev.hridaya.kubenexus.domain.model.FavouriteToggle
+import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
+import dev.hridaya.kubenexus.domain.usecase.ObserveFavouriteResourcesUseCase
+import dev.hridaya.kubenexus.domain.usecase.ToggleFavouriteResourceUseCase
 import dev.hridaya.kubenexus.presentation.resources.ResourceCatalog
 import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 import kotlinx.coroutines.channels.Channel
@@ -20,12 +21,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class FavouritesViewModel @Inject constructor(
-    private val favouriteResourcesRepository: FavouriteResourcesRepository,
+    observeFavouriteResources: ObserveFavouriteResourcesUseCase,
+    private val toggleFavouriteResource: ToggleFavouriteResourceUseCase,
     private val dispatcherProvider: DispatcherProvider,
 ) : ViewModel() {
 
     /** Null until loaded, so the screen does not flash its empty state. */
-    val favourites: StateFlow<List<ResourcePresentation<*>>?> = favouriteResourcesRepository.getFavouritesStream()
+    val favourites: StateFlow<List<ResourcePresentation<*>>?> = observeFavouriteResources()
         .map { keys -> keys.mapNotNull { key -> ResourceCatalog.all.find { it.kind.type.key == key } } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -40,10 +42,10 @@ class FavouritesViewModel @Inject constructor(
 
     private fun toggleFavourite(presentation: ResourcePresentation<*>) {
         viewModelScope.launch(dispatcherProvider.main) {
-            val message = when (favouriteResourcesRepository.toggleFavourite(presentation.kind.type.key)) {
+            val message = when (toggleFavouriteResource(presentation.kind.type.key)) {
                 FavouriteToggle.ADDED -> "${presentation.title} added to favourites"
                 FavouriteToggle.REMOVED -> "${presentation.title} removed from favourites"
-                FavouriteToggle.FULL -> "You can keep up to $MAX_FAVOURITES favourites. Remove one to add another."
+                FavouriteToggle.FULL -> "You can keep up to $MAX_FAVOURITE_RESOURCES favourites. Remove one to add another."
             }
             _effects.send(FavouritesUiEffect.ShowToast(message))
         }

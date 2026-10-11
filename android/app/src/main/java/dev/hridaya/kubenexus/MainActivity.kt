@@ -17,7 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import dev.hridaya.kubenexus.domain.repository.ThemePreferencesRepository
+import dev.hridaya.kubenexus.domain.usecase.ObserveThemeSettingsUseCase
+import dev.hridaya.kubenexus.domain.usecase.SetAmoledDarkUseCase
+import dev.hridaya.kubenexus.domain.usecase.SetThemeModeUseCase
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.main.MainScreen
 import dev.hridaya.kubenexus.presentation.update.InAppUpdate
@@ -35,7 +37,13 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject
-    lateinit var themePreferencesRepository: ThemePreferencesRepository
+    lateinit var observeThemeSettings: ObserveThemeSettingsUseCase
+
+    @Inject
+    lateinit var setThemeMode: SetThemeModeUseCase
+
+    @Inject
+    lateinit var setAmoledDark: SetAmoledDarkUseCase
 
     private val viewModel: HomeViewModel by viewModels()
 
@@ -48,36 +56,32 @@ class MainActivity : ComponentActivity() {
         window.isNavigationBarContrastEnforced = false
         keepSystemSplashWhileLoading()
 
-        val themeRepo = themePreferencesRepository
+        val themeSettings = observeThemeSettings()
         // Android remembers the app's theme once told, but a choice saved before it was ever
         // told still has to be handed over.
-        lifecycleScope.launch { themeRepo.getThemeModeStream().first().applyToSystem(this@MainActivity) }
+        lifecycleScope.launch { themeSettings.first().mode.applyToSystem(this@MainActivity) }
 
         setContent {
-            val loadedThemeMode by themeRepo.getThemeModeStream()
-                .collectAsStateWithLifecycle(initialValue = null)
-            val loadedAmoledDark by themeRepo.getAmoledDarkStream()
-                .collectAsStateWithLifecycle(initialValue = null)
-            val storedThemeMode = loadedThemeMode ?: return@setContent
-            val storedAmoledDark = loadedAmoledDark ?: return@setContent
+            val loadedSettings by themeSettings.collectAsStateWithLifecycle(initialValue = null)
+            val stored = loadedSettings ?: return@setContent
             SideEffect { themeLoaded = true }
 
             // A new choice applies straight away and is saved in the background, rather than
             // waiting for the preferences write to finish before the screen changes.
-            var themeMode by rememberSaveable(storedThemeMode) { mutableStateOf(storedThemeMode) }
-            var amoledDark by rememberSaveable(storedAmoledDark) { mutableStateOf(storedAmoledDark) }
+            var themeMode by rememberSaveable(stored.mode) { mutableStateOf(stored.mode) }
+            var amoledDark by rememberSaveable(stored.amoledDark) { mutableStateOf(stored.amoledDark) }
 
             CompositionLocalProvider(
                 LocalThemeMode provides themeMode,
                 LocalOnThemeModeChange provides { newMode ->
                     themeMode = newMode
                     newMode.applyToSystem(this@MainActivity)
-                    lifecycleScope.launch { themeRepo.setThemeMode(newMode) }
+                    lifecycleScope.launch { setThemeMode(newMode) }
                 },
                 LocalAmoledDark provides amoledDark,
                 LocalOnAmoledDarkChange provides { newAmoled ->
                     amoledDark = newAmoled
-                    lifecycleScope.launch { themeRepo.setAmoledDark(newAmoled) }
+                    lifecycleScope.launch { setAmoledDark(newAmoled) }
                 },
             ) {
                 KubeNexusTheme(

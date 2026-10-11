@@ -11,8 +11,10 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.di.ApplicationScope
 import dev.hridaya.kubenexus.domain.model.PortForwardSessionStatus
 import dev.hridaya.kubenexus.domain.model.PortForwardTargetKind
-import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObservePortForwardSessionsUseCase
+import dev.hridaya.kubenexus.domain.usecase.StartPodPortForwardUseCase
+import dev.hridaya.kubenexus.domain.usecase.StopPortForwardUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,9 @@ import kotlinx.coroutines.launch
 class PortForwardViewModel @AssistedInject constructor(
     @Assisted("podName") private val podName: String,
     @Assisted("namespace") private val namespace: String,
-    private val sessionRepository: PortForwardSessionRepository,
+    observePortForwardSessions: ObservePortForwardSessionsUseCase,
+    private val startPodPortForward: StartPodPortForwardUseCase,
+    private val stopPortForward: StopPortForwardUseCase,
     private val getActiveClusterUseCase: GetActiveClusterUseCase,
     @param:ApplicationScope private val externalScope: CoroutineScope,
     private val dispatcherProvider: DispatcherProvider,
@@ -51,7 +55,7 @@ class PortForwardViewModel @AssistedInject constructor(
 
         viewModelScope.launch {
             // Forwards are tracked process-wide; only show the ones opened on this cluster.
-            combine(sessionRepository.sessions, activeClusterId) { allSessions, clusterId ->
+            combine(observePortForwardSessions(), activeClusterId) { allSessions, clusterId ->
                 allSessions.filter { it.clusterId == clusterId }
             }.collect { allSessions ->
                 val podForwards = allSessions
@@ -104,7 +108,7 @@ class PortForwardViewModel @AssistedInject constructor(
         // Not viewModelScope: leaving the screen mid-start would leave a tunnel nothing tracks.
         externalScope.launch(dispatcherProvider.io) {
             when (
-                val result = sessionRepository.startPodForward(
+                val result = startPodPortForward(
                     clusterId = clusterId,
                     namespace = namespace,
                     podName = podName,
@@ -125,7 +129,7 @@ class PortForwardViewModel @AssistedInject constructor(
     /** Closes one tunnel. */
     fun stop(handleId: String) {
         externalScope.launch(dispatcherProvider.io) {
-            sessionRepository.stop(handleId)
+            stopPortForward(handleId)
         }
     }
 

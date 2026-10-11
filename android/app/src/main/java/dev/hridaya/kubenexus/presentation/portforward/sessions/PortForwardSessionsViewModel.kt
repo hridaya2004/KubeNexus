@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.hridaya.kubenexus.domain.model.ActivePortForwardSession
-import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
+import dev.hridaya.kubenexus.domain.usecase.ObservePortForwardSessionsUseCase
+import dev.hridaya.kubenexus.domain.usecase.StopPortForwardUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 /** The app-wide port-forward list, with the include-stopped toggle and local dismissal. */
 @HiltViewModel
 class PortForwardSessionsViewModel @Inject constructor(
-    private val sessionRepository: PortForwardSessionRepository,
+    private val observePortForwardSessions: ObservePortForwardSessionsUseCase,
+    private val stopPortForward: StopPortForwardUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PortForwardSessionsUiState())
@@ -31,7 +33,7 @@ class PortForwardSessionsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            sessionRepository.sessions.collect { sessions ->
+            observePortForwardSessions().collect { sessions ->
                 _uiState.update { state ->
                     state.copy(sessions = sessions.notDismissed())
                 }
@@ -52,7 +54,7 @@ class PortForwardSessionsViewModel @Inject constructor(
     /** Asks the manager to tear down one tunnel; state updates via the flow. */
     fun stop(handleId: String) {
         viewModelScope.launch {
-            sessionRepository.stop(handleId)
+            stopPortForward(handleId)
         }
     }
 

@@ -1,8 +1,10 @@
 package dev.hridaya.kubenexus.presentation.favourites
 
+import dev.hridaya.kubenexus.domain.model.FavouriteToggle
+import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository
-import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository.Companion.MAX_FAVOURITES
-import dev.hridaya.kubenexus.domain.repository.FavouriteToggle
+import dev.hridaya.kubenexus.domain.usecase.ObserveFavouriteResourcesUseCase
+import dev.hridaya.kubenexus.domain.usecase.ToggleFavouriteResourceUseCase
 import dev.hridaya.kubenexus.presentation.resources.kinds.DeploymentsPresentation
 import dev.hridaya.kubenexus.presentation.resources.kinds.PodsPresentation
 import dev.hridaya.kubenexus.presentation.resources.kinds.ServicesPresentation
@@ -34,7 +36,7 @@ class FavouritesViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = FavouritesViewModel(repository, TestDispatcherProvider(testDispatcher))
+        viewModel = favouritesViewModel(repository)
     }
 
     @After
@@ -42,13 +44,19 @@ class FavouritesViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private fun favouritesViewModel(repository: FavouriteResourcesRepository) = FavouritesViewModel(
+        ObserveFavouriteResourcesUseCase(repository),
+        ToggleFavouriteResourceUseCase(repository),
+        TestDispatcherProvider(testDispatcher),
+    )
+
     @Test
     fun `favourites are unknown until read, so an empty list really means none`() = runTest(testDispatcher) {
         val firstRead = MutableSharedFlow<List<String>>()
         val slowRepository = object : FavouriteResourcesRepository by repository {
             override fun getFavouritesStream(): Flow<List<String>> = firstRead
         }
-        val viewModel = FavouritesViewModel(slowRepository, TestDispatcherProvider(testDispatcher))
+        val viewModel = favouritesViewModel(slowRepository)
         advanceUntilIdle()
         assertNull(viewModel.favourites.value)
 
@@ -85,15 +93,15 @@ class FavouritesViewModelTest {
 
     @Test
     fun `adding past the maximum tells the user and changes nothing`() = runTest(testDispatcher) {
-        repository.keys.value = (1..MAX_FAVOURITES).map { "example.com/v1/kind$it" }
+        repository.keys.value = (1..MAX_FAVOURITE_RESOURCES).map { "example.com/v1/kind$it" }
         advanceUntilIdle()
 
         viewModel.onAction(FavouritesUiAction.ToggleFavourite(PodsPresentation))
         advanceUntilIdle()
 
-        assertEquals(MAX_FAVOURITES, repository.keys.value.size)
+        assertEquals(MAX_FAVOURITE_RESOURCES, repository.keys.value.size)
         val effect = viewModel.effects.first() as FavouritesUiEffect.ShowToast
-        assertEquals("You can keep up to $MAX_FAVOURITES favourites. Remove one to add another.", effect.message)
+        assertEquals("You can keep up to $MAX_FAVOURITE_RESOURCES favourites. Remove one to add another.", effect.message)
     }
 
     private class FakeFavouriteResourcesRepository : FavouriteResourcesRepository {
@@ -103,7 +111,7 @@ class FavouritesViewModelTest {
 
         override suspend fun addFavourite(typeKey: String): Boolean {
             if (typeKey in keys.value) return true
-            if (keys.value.size >= MAX_FAVOURITES) return false
+            if (keys.value.size >= MAX_FAVOURITE_RESOURCES) return false
             keys.value += typeKey
             return true
         }
@@ -114,7 +122,7 @@ class FavouritesViewModelTest {
 
         override suspend fun toggleFavourite(typeKey: String): FavouriteToggle = when {
             typeKey in keys.value -> FavouriteToggle.REMOVED.also { keys.value -= typeKey }
-            keys.value.size >= MAX_FAVOURITES -> FavouriteToggle.FULL
+            keys.value.size >= MAX_FAVOURITE_RESOURCES -> FavouriteToggle.FULL
             else -> FavouriteToggle.ADDED.also { keys.value += typeKey }
         }
     }

@@ -12,7 +12,10 @@ import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObservePortForwardSessionsUseCase
 import dev.hridaya.kubenexus.domain.usecase.ResolveServiceForwardTargetUseCase
+import dev.hridaya.kubenexus.domain.usecase.StartServicePortForwardUseCase
+import dev.hridaya.kubenexus.domain.usecase.StopPortForwardUseCase
 import dev.hridaya.kubenexus.presentation.testing.FakeClusterRepository
 import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -58,10 +61,13 @@ class ServicePortForwardViewModelTest {
         )
         fakeClusterRepository = FakeClusterRepository()
 
+        val sessions = PortForwardSessionRepositoryImpl(sessionManager) { "fake-kubeconfig" }
         viewModel = ServicePortForwardViewModel(
             serviceName = "web-svc",
             namespace = "default",
-            sessionRepository = PortForwardSessionRepositoryImpl(sessionManager) { "fake-kubeconfig" },
+            observePortForwardSessions = ObservePortForwardSessionsUseCase(sessions),
+            startServicePortForward = StartServicePortForwardUseCase(sessions),
+            stopPortForward = StopPortForwardUseCase(sessions),
             resolveServiceForwardTargetUseCase = ResolveServiceForwardTargetUseCase(resources),
             getActiveClusterUseCase = GetActiveClusterUseCase(
                 fakeClusterRepository,

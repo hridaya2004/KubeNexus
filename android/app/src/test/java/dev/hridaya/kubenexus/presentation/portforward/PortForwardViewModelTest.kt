@@ -6,6 +6,9 @@ import dev.hridaya.kubenexus.data.portforward.PortForwardRepository
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
+import dev.hridaya.kubenexus.domain.usecase.ObservePortForwardSessionsUseCase
+import dev.hridaya.kubenexus.domain.usecase.StartPodPortForwardUseCase
+import dev.hridaya.kubenexus.domain.usecase.StopPortForwardUseCase
 import dev.hridaya.kubenexus.presentation.testing.FakeClusterRepository
 import dev.hridaya.kubenexus.presentation.testing.TestDispatcherProvider
 import kotlinx.coroutines.Dispatchers
@@ -40,10 +43,13 @@ class PortForwardViewModelTest {
             externalScope = TestScope(testDispatcher),
             dispatcherProvider = dispatchers,
         )
+        val sessions = PortForwardSessionRepositoryImpl(manager) { "fake-kubeconfig" }
         viewModel = PortForwardViewModel(
             podName = "web-0",
             namespace = "default",
-            sessionRepository = PortForwardSessionRepositoryImpl(manager) { "fake-kubeconfig" },
+            observePortForwardSessions = ObservePortForwardSessionsUseCase(sessions),
+            startPodPortForward = StartPodPortForwardUseCase(sessions),
+            stopPortForward = StopPortForwardUseCase(sessions),
             getActiveClusterUseCase = GetActiveClusterUseCase(clusters, dispatchers),
             externalScope = TestScope(testDispatcher),
             dispatcherProvider = dispatchers,

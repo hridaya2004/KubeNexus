@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository.Companion.MAX_FAVOURITES
+import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import dev.hridaya.kubenexus.presentation.home.HomeScreen
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.home.components.ResourceGroupHeader
@@ -121,7 +121,7 @@ fun FavouritesList(
 
         item(key = "header") {
             ResourceGroupHeader(
-                title = "Favourites · ${favourites.size} of $MAX_FAVOURITES",
+                title = "Favourites · ${favourites.size} of $MAX_FAVOURITE_RESOURCES",
                 lastRefreshedAt = lastRefreshedAt,
             )
         }
@@ -185,7 +185,7 @@ private fun EmptyFavouritesView(onBrowseResources: () -> Unit, modifier: Modifie
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Star the resources you use most to keep up to $MAX_FAVOURITES of them here.",
+                text = "Star the resources you use most to keep up to $MAX_FAVOURITE_RESOURCES of them here.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
