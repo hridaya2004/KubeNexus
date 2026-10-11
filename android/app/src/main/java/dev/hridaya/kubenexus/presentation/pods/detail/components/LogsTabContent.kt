@@ -193,6 +193,7 @@ fun LogsTabContent(
 
         GhosttyTerminalLogViewer(
             logs = uiState.logs,
+            firstLineNumber = uiState.firstLogLineNumber,
             isStreaming = uiState.isStreamingLogs,
             onClearLogs = { onAction(PodDetailUiAction.ClearLogs) },
             title = uiState.podName,

@@ -206,7 +206,7 @@ class PodDetailViewModel @AssistedInject constructor(
                     if (_uiState.value.isStreamingLogs) {
                         stopStreaming()
                         _uiState.update {
-                            it.copy(logs = it.logs.appendCapped("[Network disconnected - log stream stopped]"))
+                            it.appendingLogs("[Network disconnected - log stream stopped]")
                         }
                     }
                 }
@@ -313,7 +313,7 @@ class PodDetailViewModel @AssistedInject constructor(
 
             is PodDetailUiAction.FetchAllLogs -> {
                 stopStreaming()
-                _uiState.update { it.copy(logs = emptyList()) }
+                _uiState.update { it.copy(logs = emptyList(), firstLogLineNumber = 1) }
                 fetchLogs(overrideTail = null)
             }
 
@@ -326,7 +326,7 @@ class PodDetailViewModel @AssistedInject constructor(
             }
 
             is PodDetailUiAction.ClearLogs -> {
-                _uiState.update { it.copy(logs = emptyList()) }
+                _uiState.update { it.copy(logs = emptyList(), firstLogLineNumber = 1) }
             }
 
             is PodDetailUiAction.StartInteractiveTerminal -> {
@@ -426,6 +426,7 @@ class PodDetailViewModel @AssistedInject constructor(
                         it.copy(
                             isLoadingLogs = false,
                             logs = lines,
+                            firstLogLineNumber = 1,
                         )
                     }
                 }
@@ -436,6 +437,7 @@ class PodDetailViewModel @AssistedInject constructor(
                         it.copy(
                             isLoadingLogs = false,
                             logs = listOf("Error fetching logs: ${result.error.message}"),
+                            firstLogLineNumber = 1,
                         )
                     }
                 }
@@ -456,6 +458,7 @@ class PodDetailViewModel @AssistedInject constructor(
         _uiState.update {
             it.copy(
                 logs = emptyList(),
+                firstLogLineNumber = 1,
                 isStreamingLogs = true,
                 isLoadingLogs = false,
             )
@@ -466,28 +469,25 @@ class PodDetailViewModel @AssistedInject constructor(
                 .batched(LOG_BATCH_WINDOW_MS)
                 .onStart {
                     val tailDesc = if (tail != null && tail > 0) " (tail $tail lines)" else ""
-                    _uiState.update { it.copy(logs = listOf("[Streaming logs initiated for container '${container ?: "default"}'$tailDesc]...")) }
+                    _uiState.update { it.copy(logs = listOf("[Streaming logs initiated for container '${container ?: "default"}'$tailDesc]..."), firstLogLineNumber = 1) }
                 }
                 .onCompletion { cause ->
                     // The stream ends by itself when the container stops or the connection
                     // drops; say so, and stop showing it as live. Cancellation is a user stop.
                     if (cause == null) {
                         _uiState.update {
-                            it.copy(isStreamingLogs = false, logs = it.logs.appendCapped("[Log stream ended]"))
+                            it.appendingLogs("[Log stream ended]").copy(isStreamingLogs = false)
                         }
                     }
                 }
                 .catch { t ->
                     _uiState.update {
-                        it.copy(
-                            isStreamingLogs = false,
-                            logs = it.logs.appendCapped("[Log stream closed: ${t.message}]"),
-                        )
+                        it.appendingLogs("[Log stream closed: ${t.message}]").copy(isStreamingLogs = false)
                     }
                 }
                 .collect { lines ->
                     _uiState.update {
-                        it.copy(logs = it.logs.appendCapped(lines))
+                        it.appendingLogs(lines)
                     }
                 }
         }
@@ -704,8 +704,12 @@ class PodDetailViewModel @AssistedInject constructor(
     }
 }
 
-/** Appends [line], dropping the oldest lines beyond [PodDetailViewModel.MAX_LOG_LINES]. */
-private fun List<String>.appendCapped(line: String): List<String> = appendCapped(listOf(line))
+private fun PodDetailUiState.appendingLogs(line: String): PodDetailUiState = appendingLogs(listOf(line))
+
+private fun PodDetailUiState.appendingLogs(lines: List<String>): PodDetailUiState {
+    val next = logs.appendCapped(lines)
+    return copy(logs = next, firstLogLineNumber = firstLogLineNumber + (logs.size + lines.size - next.size))
+}
 
 /** Appends [lines], dropping the oldest lines beyond [PodDetailViewModel.MAX_LOG_LINES]. */
 private fun List<String>.appendCapped(lines: List<String>): List<String> {

@@ -45,6 +45,8 @@ data class PodDetailUiState(
     val selectedTab: PodDetailTab = PodDetailTab.DESCRIBE,
     val selectedContainer: String? = null,
     val logs: List<String> = emptyList(),
+    /** The line number of `logs[0]`; it grows as the line cap drops the oldest lines. */
+    val firstLogLineNumber: Int = 1,
     val isStreamingLogs: Boolean = false,
     val isLoadingLogs: Boolean = false,
     val tailLines: Long? = 250L,

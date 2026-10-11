@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +20,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun LogLinesList(
-    lines: List<String>,
+    lines: VisibleLogLines,
     wrapLines: Boolean,
     highlightQuery: String,
     listState: LazyListState,
@@ -40,14 +39,15 @@ internal fun LogLinesList(
             state = listState,
             modifier = modifier.fillMaxSize(),
         ) {
-            itemsIndexed(lines) { index, line ->
+            items(count = lines.size, key = lines::numberAt) { position ->
+                val line = lines.lineAt(position)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 1.dp),
                 ) {
                     Text(
-                        text = (index + 1).toString().padStart(4, ' '),
+                        text = lines.numberAt(position).toString().padStart(4, ' '),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontFamily = FontFamily.Monospace,
                         ),
@@ -75,4 +75,25 @@ internal fun LogLinesList(
             }
         }
     }
+}
+
+/** The log lines on screen: all of [lines], or only those at [indices] while searching. */
+internal class VisibleLogLines(
+    private val lines: List<String>,
+    private val indices: List<Int>?,
+    private val firstLineNumber: Int,
+) {
+    val size: Int get() = indices?.size ?: lines.size
+
+    fun isEmpty(): Boolean = size == 0
+
+    fun isNotEmpty(): Boolean = size > 0
+
+    fun lineAt(position: Int): String = lines.getOrElse(indexAt(position)) { "" }
+
+    fun numberAt(position: Int): Int = firstLineNumber + indexAt(position)
+
+    fun lastOrNull(): String? = if (isEmpty()) null else lineAt(size - 1)
+
+    private fun indexAt(position: Int): Int = indices?.getOrNull(position) ?: position
 }

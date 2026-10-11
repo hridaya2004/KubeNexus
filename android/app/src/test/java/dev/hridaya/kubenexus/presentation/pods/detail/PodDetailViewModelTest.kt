@@ -334,6 +334,7 @@ class PodDetailViewModelTest {
         val logs = viewModel.uiState.value.logs
         assertEquals(PodDetailViewModel.MAX_LOG_LINES, logs.size)
         assertEquals("line 5999", logs.last())
+        assertEquals(1_002, viewModel.uiState.value.firstLogLineNumber)
     }
 
     // "View logs" on a container card selects it while the Describe tab is still open.

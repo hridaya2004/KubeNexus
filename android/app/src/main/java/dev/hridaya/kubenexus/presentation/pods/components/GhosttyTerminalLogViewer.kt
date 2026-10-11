@@ -55,6 +55,7 @@ fun GhosttyTerminalLogViewer(
     onClearLogs: () -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
+    firstLineNumber: Int = 1,
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
@@ -66,13 +67,14 @@ fun GhosttyTerminalLogViewer(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val filteredLogs = remember(logs, searchQuery) {
+    val matchingIndices = remember(logs, searchQuery) {
         if (searchQuery.isBlank()) {
-            logs
+            null
         } else {
-            logs.filter { it.contains(searchQuery, ignoreCase = true) }
+            logs.indices.filter { logs[it].contains(searchQuery, ignoreCase = true) }
         }
     }
+    val filteredLogs = VisibleLogLines(logs, matchingIndices, firstLineNumber)
 
     // Content-aware bottom detection
     val isAtBottom by remember {
