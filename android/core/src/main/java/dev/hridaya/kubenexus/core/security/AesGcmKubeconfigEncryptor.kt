@@ -119,6 +119,10 @@ open class AesGcmKubeconfigEncryptor(private val keyProvider: () -> SecretKey) :
             // AEADBadTagException when the key was replaced (the Keystore entry was lost and
             // regenerated) or the payload was altered.
             throw KubeconfigDecryptionException("Stored credentials cannot be decrypted with this device's key.", e)
+        } catch (e: KubeconfigDecryptionException) {
+            throw e
+        } catch (e: RuntimeException) {
+            throw KubeconfigDecryptionException("The device's key store could not decrypt the stored credentials.", e)
         }
     }
 }

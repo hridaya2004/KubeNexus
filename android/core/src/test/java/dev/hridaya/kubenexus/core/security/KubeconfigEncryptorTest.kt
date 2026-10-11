@@ -113,4 +113,15 @@ class KubeconfigEncryptorTest {
         assertEquals("", encryptor.decryptOrEmpty("enc:v1:dGVzdA=="))
         assertEquals(sampleKubeconfig, encryptor.decryptOrEmpty(encrypted))
     }
+
+    @Test
+    fun `a key store runtime failure is reported as unreadable credentials`() {
+        val encrypted = encryptor.encrypt(sampleKubeconfig)
+        val failingKeyStore = AesGcmKubeconfigEncryptor { throw java.security.ProviderException("Keystore operation failed") }
+
+        val thrown = runCatching { failingKeyStore.decrypt(encrypted) }.exceptionOrNull()
+
+        assertTrue(thrown is KubeconfigDecryptionException)
+        assertEquals("", failingKeyStore.decryptOrEmpty(encrypted))
+    }
 }
