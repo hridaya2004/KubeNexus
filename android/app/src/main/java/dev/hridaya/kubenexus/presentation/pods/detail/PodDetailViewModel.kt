@@ -539,6 +539,15 @@ class PodDetailViewModel @AssistedInject constructor(
         // Set from native callback threads, read here on the main thread.
         val shellMissing = AtomicBoolean(false)
         var attached = false
+        // Held until the probe passes, so a failed shell's error never reaches the grid.
+        val probeOutput = StringBuilder()
+        var live = false
+        fun output(text: String) {
+            if (attempt != terminalAttempt) return
+            synchronized(probeOutput) {
+                if (live) terminalEngine.feedRemoteOutput(text) else probeOutput.append(text)
+            }
+        }
 
         val sessionResult = startExecSessionUseCase(
             clusterId = clusterId,
@@ -547,10 +556,10 @@ class PodDetailViewModel @AssistedInject constructor(
             containerName = container,
             command = command,
             tty = true,
-            onStdout = { output -> terminalEngine.feedRemoteOutput(output) },
-            onStderr = { output ->
-                if (isMissingExecutable(output)) shellMissing.set(true)
-                terminalEngine.feedRemoteOutput(output)
+            onStdout = { text -> output(text) },
+            onStderr = { text ->
+                if (isMissingExecutable(text)) shellMissing.set(true)
+                output(text)
             },
             onError = { err ->
                 if (isMissingExecutable(err)) {
@@ -593,6 +602,10 @@ class PodDetailViewModel @AssistedInject constructor(
         attached = true
         activeTerminalSession = session
         terminalEngine.attachSession(session)
+        synchronized(probeOutput) {
+            live = true
+            if (probeOutput.isNotEmpty()) terminalEngine.feedRemoteOutput(probeOutput.toString())
+        }
         _uiState.update {
             it.copy(isTerminalActive = true, activeShellCommand = command.substringAfterLast('/'))
         }
