@@ -141,6 +141,21 @@ class PodDetailViewModel @AssistedInject constructor(
         metricsJob = null
     }
 
+    private var resumeStreamOnStart = false
+
+    /** Closes a live log stream while the screen is hidden; [resumeLogStream] reopens it. */
+    fun pauseLogStream() {
+        if (!_uiState.value.isStreamingLogs) return
+        stopStreaming()
+        resumeStreamOnStart = true
+    }
+
+    fun resumeLogStream() {
+        if (!resumeStreamOnStart) return
+        resumeStreamOnStart = false
+        if (_uiState.value.isOnline) startStreaming()
+    }
+
     /** Returns true when the endpoint responded, regardless of whether it had a sample. */
     private suspend fun fetchMetricsSample(): Boolean {
         val clusterId = activeClusterId ?: return false

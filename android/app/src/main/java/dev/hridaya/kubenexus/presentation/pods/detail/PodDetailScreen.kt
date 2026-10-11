@@ -67,12 +67,14 @@ fun PodDetailRoute(
         }
     }
 
-    // Metrics polling is tied to the screen being visible. The ViewModel outlives
-    // the UI, so starting the poll loop in its init kept it running while the app
-    // was backgrounded.
+    // Tied to visibility, because the ViewModel outlives the UI.
     LifecycleStartEffect(viewModel) {
         viewModel.startMetricsPolling()
-        onStopOrDispose { viewModel.stopMetricsPolling() }
+        viewModel.resumeLogStream()
+        onStopOrDispose {
+            viewModel.stopMetricsPolling()
+            viewModel.pauseLogStream()
+        }
     }
 
     PodDetailScreen(

@@ -280,6 +280,37 @@ class PodDetailViewModelTest {
     }
 
     @Test
+    fun `a live log stream is closed while the screen is hidden and reopened on return`() = vmTest {
+        idleNow()
+        viewModel.onAction(PodDetailUiAction.StartStreamingLogs)
+        idleNow()
+        assertEquals(1, fakePodRepository.openStreams)
+
+        viewModel.pauseLogStream()
+        idleNow()
+        assertEquals(0, fakePodRepository.openStreams)
+
+        viewModel.resumeLogStream()
+        idleNow()
+        assertEquals(1, fakePodRepository.openStreams)
+        assertTrue(viewModel.uiState.value.isStreamingLogs)
+
+        viewModel.onAction(PodDetailUiAction.StopStreamingLogs)
+        idleNow()
+    }
+
+    @Test
+    fun `returning to the screen does not start a stream the user had not started`() = vmTest {
+        idleNow()
+        viewModel.pauseLogStream()
+        viewModel.resumeLogStream()
+        idleNow()
+
+        assertEquals(0, fakePodRepository.openStreams)
+        assertFalse(viewModel.uiState.value.isStreamingLogs)
+    }
+
+    @Test
     fun `a log stream that ends by itself is no longer shown as streaming`() = vmTest {
         idleNow()
         fakePodRepository.streamEnds = true
@@ -551,6 +582,8 @@ class PodDetailViewModelTest {
         /** A followed stream stays open until cancelled, like the real one. */
         var streamEnds = false
 
+        var openStreams = 0
+
         /** Shells the fake container does not have; exec reports them as missing. */
         val missingShells = mutableListOf<String>()
         val execCommands = mutableListOf<String>()
@@ -617,8 +650,13 @@ class PodDetailViewModelTest {
             val lines = streamLines
             val ends = streamEnds
             return flow {
-                lines.forEach { emit(it) }
-                if (!ends) awaitCancellation()
+                openStreams++
+                try {
+                    lines.forEach { emit(it) }
+                    if (!ends) awaitCancellation()
+                } finally {
+                    openStreams--
+                }
             }
         }
 
