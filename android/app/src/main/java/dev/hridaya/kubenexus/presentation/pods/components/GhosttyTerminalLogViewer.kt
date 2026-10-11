@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +45,7 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.common.util.LogExportHelper
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -67,11 +69,18 @@ fun GhosttyTerminalLogViewer(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val matchingIndices = remember(logs, searchQuery) {
-        if (searchQuery.isBlank()) {
+    var appliedQuery by remember { mutableStateOf("") }
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotBlank()) delay(SEARCH_DEBOUNCE_MS)
+        appliedQuery = searchQuery
+    }
+    val matchingIndices by produceState<List<Int>?>(null, logs, appliedQuery) {
+        value = if (appliedQuery.isBlank()) {
             null
         } else {
-            logs.indices.filter { logs[it].contains(searchQuery, ignoreCase = true) }
+            withContext(Dispatchers.Default) {
+                logs.indices.filter { logs[it].contains(appliedQuery, ignoreCase = true) }
+            }
         }
     }
     val filteredLogs = VisibleLogLines(logs, matchingIndices, firstLineNumber)
@@ -241,7 +250,7 @@ fun GhosttyTerminalLogViewer(
                     LogLinesList(
                         lines = filteredLogs,
                         wrapLines = wrapLines,
-                        highlightQuery = searchQuery,
+                        highlightQuery = appliedQuery,
                         listState = listState,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -313,3 +322,5 @@ private fun GhosttyTerminalLogViewerPreview() {
         )
     }
 }
+
+private const val SEARCH_DEBOUNCE_MS = 150L
