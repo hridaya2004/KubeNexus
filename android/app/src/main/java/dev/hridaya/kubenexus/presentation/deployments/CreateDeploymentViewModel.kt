@@ -231,7 +231,7 @@ class CreateDeploymentViewModel @AssistedInject constructor(
                 is Result.Error -> _uiState.update {
                     it.copy(
                         isCreatingNamespace = false,
-                        newNamespaceError = NAMESPACE_ERROR_MESSAGE,
+                        newNamespaceError = result.error.message.ifBlank { NAMESPACE_ERROR_MESSAGE },
                     )
                 }
 
@@ -311,6 +311,6 @@ class CreateDeploymentViewModel @AssistedInject constructor(
         const val APPLY_ERROR_MESSAGE =
             "Couldn't create the deployment. Please try again in a moment."
         const val NAMESPACE_ERROR_MESSAGE =
-            "Couldn't create that namespace. The name may already be taken."
+            "Couldn't create that namespace."
     }
 }

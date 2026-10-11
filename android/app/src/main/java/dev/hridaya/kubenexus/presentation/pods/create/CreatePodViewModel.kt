@@ -185,7 +185,7 @@ class CreatePodViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> _uiState.update {
-                    it.copy(isSubmitting = false, errorMessage = APPLY_ERROR_MESSAGE)
+                    it.copy(isSubmitting = false, errorMessage = result.error.message.ifBlank { APPLY_ERROR_MESSAGE })
                 }
 
                 is Result.Loading -> Unit
@@ -204,7 +204,7 @@ class CreatePodViewModel @AssistedInject constructor(
 
         _uiState.update { it.copy(isCreatingNamespace = true, newNamespaceError = null) }
         viewModelScope.launch(dispatcherProvider.io) {
-            when (createNamespaceUseCase(clusterId, name)) {
+            when (val result = createNamespaceUseCase(clusterId, name)) {
                 is Result.Success -> {
                     // Append without refetching and land the draft in the new namespace.
                     _uiState.update { current ->
@@ -226,7 +226,7 @@ class CreatePodViewModel @AssistedInject constructor(
                 is Result.Error -> _uiState.update {
                     it.copy(
                         isCreatingNamespace = false,
-                        newNamespaceError = NAMESPACE_ERROR_MESSAGE
+                        newNamespaceError = result.error.message.ifBlank { NAMESPACE_ERROR_MESSAGE }
                     )
                 }
 
@@ -290,6 +290,6 @@ class CreatePodViewModel @AssistedInject constructor(
         const val APPLY_ERROR_MESSAGE =
             "Couldn't create the pod. Please try again in a moment."
         const val NAMESPACE_ERROR_MESSAGE =
-            "Couldn't create that namespace. The name may already be taken."
+            "Couldn't create that namespace."
     }
 }

@@ -239,7 +239,7 @@ class CreatePodViewModelTest {
         assertEquals("team-a", state.namespace)
         assertFalse(state.isSubmitting)
         assertEquals(
-            "Couldn't create the pod. Please try again in a moment.",
+            "forbidden: pods is forbidden",
             state.errorMessage,
         )
     }
@@ -300,7 +300,7 @@ class CreatePodViewModelTest {
             assertEquals("team-b", state.newNamespaceName)
             assertFalse(state.isCreatingNamespace)
             assertEquals(
-                "Couldn't create that namespace. The name may already be taken.",
+                "already exists",
                 state.newNamespaceError,
             )
             assertFalse(state.availableNamespaces.contains("team-b"))

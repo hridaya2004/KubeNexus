@@ -208,7 +208,7 @@ class CreateServiceViewModel @AssistedInject constructor(
 
         _uiState.update { it.copy(isCreatingNamespace = true, newNamespaceError = null) }
         viewModelScope.launch(dispatcherProvider.io) {
-            when (createNamespaceUseCase(clusterId, name)) {
+            when (val result = createNamespaceUseCase(clusterId, name)) {
                 is Result.Success -> {
                     // Append without refetching and land the draft in the new namespace.
                     _uiState.update { current ->
@@ -230,7 +230,7 @@ class CreateServiceViewModel @AssistedInject constructor(
                 is Result.Error -> _uiState.update {
                     it.copy(
                         isCreatingNamespace = false,
-                        newNamespaceError = NAMESPACE_ERROR_MESSAGE
+                        newNamespaceError = result.error.message.ifBlank { NAMESPACE_ERROR_MESSAGE }
                     )
                 }
 
@@ -299,6 +299,6 @@ class CreateServiceViewModel @AssistedInject constructor(
         const val APPLY_ERROR_MESSAGE =
             "Couldn't create the service. Please try again in a moment."
         const val NAMESPACE_ERROR_MESSAGE =
-            "Couldn't create that namespace. The name may already be taken."
+            "Couldn't create that namespace."
     }
 }
