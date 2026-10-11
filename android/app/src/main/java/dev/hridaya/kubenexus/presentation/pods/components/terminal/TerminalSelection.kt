@@ -1,9 +1,6 @@
 package dev.hridaya.kubenexus.presentation.pods.components.terminal
 
-import androidx.compose.ui.geometry.Offset
-import dev.hridaya.kubenexus.core.terminal.GhosttyBridge
 import dev.hridaya.kubenexus.core.terminal.TerminalSnapshot
-import kotlin.math.max
 
 data class TerminalSelection(
     val anchorIndex: Int,
@@ -24,21 +21,6 @@ data class TerminalSelection(
         if (updateAnchor) copy(anchorIndex = newEndCell)
         else copy(focusIndex = newEndCell)
 }
-
-data class TerminalSelectionState(
-    val boundsLeft: Float,
-    val boundsTop: Float,
-    val boundsRight: Float,
-    val boundsBottom: Float,
-    val startOffset: Offset,
-    val endOffset: Offset,
-    val cellWidthPx: Float,
-    val cellHeightPx: Float,
-    val cols: Int,
-    val canvasWidthPx: Int,
-    val canvasHeightPx: Int,
-    val text: String?,
-)
 
 internal fun TerminalSnapshot.isSpacerContinuation(cellIndex: Int): Boolean {
     return ((flags[cellIndex].toInt() and 0xFF) and TerminalSnapshot.CELL_FLAG_SPACER) != 0
@@ -133,62 +115,4 @@ internal fun extractSelectionText(snapshot: TerminalSnapshot, range: IntRange): 
     }
 
     return builder.toString()
-}
-
-internal fun buildSelectionState(
-    snapshot: TerminalSnapshot,
-    selection: TerminalSelection,
-    cellWidth: Float,
-    cellHeight: Float,
-    canvasWidthPx: Int,
-    canvasHeightPx: Int,
-    terminalHandle: Long,
-    ghosttyBridge: GhosttyBridge,
-): TerminalSelectionState? {
-    val cols = max(snapshot.cols, 1)
-    val cellCount = snapshot.codepoints.size
-
-    val visibleRange = selection.normalized(cellCount) ?: return null
-    val startCol = visibleRange.first % cols
-    val startRow = visibleRange.first / cols
-    val endCol = visibleRange.last % cols
-    val endRow = visibleRange.last / cols
-    val fullWidth = cols * cellWidth
-    val boundsLeft = if (startRow == endRow) startCol * cellWidth else 0f
-    val boundsRight = if (startRow == endRow) (endCol + 1) * cellWidth else fullWidth
-    val boundsTop = startRow * cellHeight
-    val boundsBottom = (endRow + 1) * cellHeight
-
-    val screenOffset = snapshot.viewportScrollY * cols
-    val screenStart =
-        (minOf(selection.anchorIndex, selection.focusIndex) + screenOffset).coerceAtLeast(0)
-    val screenEnd =
-        (maxOf(selection.anchorIndex, selection.focusIndex) + screenOffset).coerceAtLeast(
-            screenStart
-        )
-    val text = if (terminalHandle != 0L && snapshot.cols > 0) {
-        val screenText =
-            ghosttyBridge.nativeFormatSelectionScreenRange(terminalHandle, screenStart, screenEnd)
-        screenText ?: ghosttyBridge.nativeFormatSelectionRange(
-            terminalHandle,
-            visibleRange.first,
-            visibleRange.last
-        )
-    } else {
-        extractSelectionText(snapshot, visibleRange)
-    }
-    return TerminalSelectionState(
-        boundsLeft = boundsLeft,
-        boundsTop = boundsTop,
-        boundsRight = boundsRight,
-        boundsBottom = boundsBottom,
-        startOffset = Offset(startCol * cellWidth, startRow * cellHeight),
-        endOffset = Offset((endCol + 1) * cellWidth, (endRow + 1) * cellHeight),
-        cellWidthPx = cellWidth,
-        cellHeightPx = cellHeight,
-        cols = cols,
-        canvasWidthPx = canvasWidthPx,
-        canvasHeightPx = canvasHeightPx,
-        text = text,
-    )
 }

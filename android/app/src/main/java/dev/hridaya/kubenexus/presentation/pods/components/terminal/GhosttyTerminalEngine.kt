@@ -54,7 +54,6 @@ class GhosttyTerminalEngine(
     }
 
     val isNativeLoaded: Boolean get() = bridge.isLoaded()
-    val terminalHandle: Long get() = synchronized(lock) { handle }
 
     /**
      * Creates the native terminal, replacing any existing one. Without arguments the current

@@ -46,12 +46,10 @@ fun TerminalCanvas(
     selectionBackgroundColor: Color = Color(0xFF444444),
     selection: TerminalSelection? = null,
     onSelectionChange: (TerminalSelection?) -> Unit = {},
-    terminalHandle: Long = 0,
     onResize: (cols: Int, rows: Int, cellWidth: Int, cellHeight: Int, widthPx: Int, heightPx: Int) -> Unit =
         { _, _, _, _, _, _ -> },
     onTap: () -> Unit = {},
     onScroll: (delta: Int, x: Float, y: Float) -> Unit = { _, _, _ -> },
-    onSelectionChanged: (TerminalSelectionState?) -> Unit = {},
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current

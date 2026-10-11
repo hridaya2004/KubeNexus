@@ -213,7 +213,6 @@ fun GhosttyTerminalView(
                     } else {
                         TerminalCanvas(
                             snapshot = snapshot,
-                            terminalHandle = engine.terminalHandle,
                             selection = terminalSelection,
                             onSelectionChange = { terminalSelection = it },
                             onResize = { cols, rows, cellW, cellH, _, _ ->
