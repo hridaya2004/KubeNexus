@@ -26,6 +26,7 @@ import dev.hridaya.kubenexus.domain.usecase.SetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.TestClusterConnectionUseCase
 import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
 import dev.hridaya.kubenexus.presentation.common.namespaceFilterOptions
+import dev.hridaya.kubenexus.presentation.common.namespaceOrNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -403,7 +404,7 @@ class HomeViewModel @Inject constructor(
 
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch(dispatcherProvider.main) {
-            val result = refreshWorkloadsUseCase(clusterId, namespace)
+            val result = refreshWorkloadsUseCase(clusterId, namespace?.let(::namespaceOrNull))
             if (!isActiveCluster(clusterId)) return@launch
             when (result) {
                 is Result.Success -> {
