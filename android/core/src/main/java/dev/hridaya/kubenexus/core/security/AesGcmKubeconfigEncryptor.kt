@@ -6,8 +6,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import android.util.Base64 as AndroidBase64
-import java.util.Base64 as JavaBase64
+import java.util.Base64
 
 /**
  * AES-256-GCM implementation of [KubeconfigEncryptor].
@@ -37,22 +36,10 @@ open class AesGcmKubeconfigEncryptor(private val keyProvider: () -> SecretKey) :
             return keyGen.generateKey()
         }
 
-        private fun encodeBase64(bytes: ByteArray): String {
-            return try {
-                JavaBase64.getEncoder().encodeToString(bytes)
-            } catch (_: Throwable) {
-                AndroidBase64.encodeToString(bytes, AndroidBase64.NO_WRAP)
-            }
-        }
+        private fun encodeBase64(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
 
-        private fun decodeBase64(input: String): ByteArray {
-            val clean = input.replace("\\s".toRegex(), "")
-            return try {
-                JavaBase64.getDecoder().decode(clean)
-            } catch (_: Throwable) {
-                AndroidBase64.decode(clean, AndroidBase64.DEFAULT)
-            }
-        }
+        private fun decodeBase64(input: String): ByteArray =
+            Base64.getDecoder().decode(input.replace("\\s".toRegex(), ""))
     }
 
     override fun isEncrypted(text: String): Boolean {
