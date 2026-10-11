@@ -60,7 +60,7 @@ internal fun MainTopLevelScaffold(
                     icon = {
                         Icon(
                             imageVector = if (selected) destination.selectedIcon else destination.unselectedIcon,
-                            contentDescription = destination.title,
+                            contentDescription = null,
                         )
                     },
                     label = { Text(text = destination.title) },

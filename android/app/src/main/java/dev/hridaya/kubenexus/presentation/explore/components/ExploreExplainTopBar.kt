@@ -13,9 +13,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import dev.hridaya.kubenexus.domain.model.APIResource
 
@@ -34,7 +36,9 @@ fun ExploreExplainTopBar(
             Text(
                 text = resource.name,
                 fontFamily = FontFamily.Monospace,
-                modifier = Modifier.clickable {
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .clickable(onClickLabel = "Copy kubectl explain command", role = Role.Button) {
                     val clipboard =
                         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val commandClip =

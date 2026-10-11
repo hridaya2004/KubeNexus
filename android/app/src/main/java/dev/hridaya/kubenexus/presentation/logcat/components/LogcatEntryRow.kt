@@ -58,7 +58,7 @@ fun LogcatEntryRow(
 
     Row(
         modifier = rowModifier
-            .clickable(onClick = onCopy)
+            .clickable(onClickLabel = "Copy log entry", onClick = onCopy)
             .padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.Top,
     ) {

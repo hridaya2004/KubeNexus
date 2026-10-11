@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -35,10 +37,14 @@ internal fun UsageChart(samples: List<PodMetricSample>, range: MetricsRange) {
     val cpuMax = (cpuValues.maxOrNull() ?: 0.0).coerceAtLeast(1e-9)
     val memMax = (memValues.maxOrNull() ?: 0.0).coerceAtLeast(1.0)
 
+    val latest = samples.last()
+    val description = "CPU and memory over the last ${range.label}. " +
+        "Now ${formatCores(latest.cpuCores)} CPU and ${formatBytes(latest.memoryBytes)} memory."
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp),
+            .height(150.dp)
+            .semantics { contentDescription = description },
     ) {
         // Paddings must be density-aware: raw floats clip axis labels on real
         // devices even though they look right in the preview.

@@ -1,6 +1,5 @@
 package dev.hridaya.kubenexus.presentation.portforward
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -181,13 +182,14 @@ private fun RemotePortSection(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSelect(target.remotePort) }
+                    .selectable(
+                        selected = target.remotePort == selectedRemote,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(target.remotePort) },
+                    )
                     .padding(vertical = 2.dp),
             ) {
-                RadioButton(
-                    selected = target.remotePort == selectedRemote,
-                    onClick = { onSelect(target.remotePort) },
-                )
+                RadioButton(selected = target.remotePort == selectedRemote, onClick = null)
                 Column {
                     Text(
                         text = "${target.containerName}: ${target.remoteLabel}",
