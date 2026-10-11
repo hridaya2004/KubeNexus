@@ -36,7 +36,9 @@ import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 fun HomeWorkloadsList(
     isRefreshing: Boolean,
     lastRefreshedAt: Long?,
+    favouriteKeys: Set<String>,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
+    onToggleFavourite: (ResourcePresentation<*>) -> Unit,
     onNoopAction: (String) -> Unit,
     modifier: Modifier = Modifier,
     groups: List<ResourceGroup> = ResourceCatalog.groups,
@@ -66,17 +68,23 @@ fun HomeWorkloadsList(
         groups.forEachIndexed { groupIndex, group ->
             item(key = "header/${group.title}") {
                 // The refresh time belongs to the whole list, so it is shown once.
-                GroupHeader(title = group.title, lastRefreshedAt = lastRefreshedAt.takeIf { groupIndex == 0 })
+                ResourceGroupHeader(title = group.title, lastRefreshedAt = lastRefreshedAt.takeIf { groupIndex == 0 })
             }
             item(key = "group/${group.title}") {
-                GroupEntries(group = group, onOpenResources = onOpenResources, onNoopAction = onNoopAction)
+                GroupEntries(
+                    group = group,
+                    favouriteKeys = favouriteKeys,
+                    onOpenResources = onOpenResources,
+                    onToggleFavourite = onToggleFavourite,
+                    onNoopAction = onNoopAction,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun GroupHeader(title: String, lastRefreshedAt: Long?) {
+internal fun ResourceGroupHeader(title: String, lastRefreshedAt: Long?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,7 +120,9 @@ private fun GroupHeader(title: String, lastRefreshedAt: Long?) {
 @Composable
 private fun GroupEntries(
     group: ResourceGroup,
+    favouriteKeys: Set<String>,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
+    onToggleFavourite: (ResourcePresentation<*>) -> Unit,
     onNoopAction: (String) -> Unit,
 ) {
     val count = group.resources.size + group.upcoming.size
@@ -124,6 +134,8 @@ private fun GroupEntries(
                 icon = presentation.icon,
                 onClick = { onOpenResources(presentation) },
                 shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+                isFavourite = presentation.kind.type.key in favouriteKeys,
+                onToggleFavourite = { onToggleFavourite(presentation) },
             )
         }
         group.upcoming.forEachIndexed { index, upcoming ->
@@ -145,7 +157,9 @@ private fun HomeWorkloadsListPreview() {
         HomeWorkloadsList(
             isRefreshing = false,
             lastRefreshedAt = System.currentTimeMillis(),
+            favouriteKeys = setOf(ResourceCatalog.all.first().kind.type.key),
             onOpenResources = {},
+            onToggleFavourite = {},
             onNoopAction = {},
         )
     }

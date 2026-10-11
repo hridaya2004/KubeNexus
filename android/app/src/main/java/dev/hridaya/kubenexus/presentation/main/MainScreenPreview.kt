@@ -20,7 +20,7 @@ private fun MainScreenNavigationPreview() {
             navigationItems = {
                 Destination.topLevelDestinations.forEach { destination ->
                     NavigationSuiteItem(
-                        selected = destination == Destination.Home,
+                        selected = destination == Destination.Favourites,
                         onClick = {},
                         icon = {
                             Icon(

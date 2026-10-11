@@ -33,7 +33,7 @@ fun MainScreen(
     homeViewModel: HomeViewModel,
     modifier: Modifier = Modifier,
 ) {
-    var currentDestination by rememberSaveable { mutableStateOf(Destination.Home) }
+    var currentDestination by rememberSaveable { mutableStateOf(Destination.Favourites) }
     val backStack = rememberBackStack()
     val portForwardSessionsViewModel: PortForwardSessionsViewModel = hiltViewModel()
     val portForwardSessionsState by rememberPortForwardSessionsState(portForwardSessionsViewModel)
@@ -62,7 +62,7 @@ fun MainScreen(
                 HomeUiEffect.NavigateToHome -> {
                     backStack.clear()
                     showPortForwardSessions = false
-                    currentDestination = Destination.Home
+                    currentDestination = Destination.Favourites
                 }
             }
         }

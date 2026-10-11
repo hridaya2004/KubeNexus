@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -33,6 +34,8 @@ import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.presentation.common.components.LoadingContent
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
+import dev.hridaya.kubenexus.presentation.favourites.FavouritesUiAction
+import dev.hridaya.kubenexus.presentation.favourites.FavouritesViewModel
 import dev.hridaya.kubenexus.presentation.home.components.AddClusterBottomSheet
 import dev.hridaya.kubenexus.presentation.home.components.ClusterPill
 import dev.hridaya.kubenexus.presentation.home.components.ClusterSwitcherDrawer
@@ -46,8 +49,9 @@ import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import dev.hridaya.kubenexus.ui.theme.appBarColors
 
 @Composable
-fun HomeRoute(
+fun ResourcesRoute(
     viewModel: HomeViewModel,
+    favouritesViewModel: FavouritesViewModel,
     onNavigateToManageClusters: () -> Unit,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
@@ -56,32 +60,48 @@ fun HomeRoute(
     onOpenPortForwardSessions: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val favourites by favouritesViewModel.favourites.collectAsStateWithLifecycle()
+    val favouriteKeys = remember(favourites) { favourites.orEmpty().mapTo(HashSet()) { it.kind.type.key } }
 
     // Toasts are shown by MainScreen, the single collector of viewModel.effects.
 
     HomeScreen(
+        title = "Resources",
         uiState = uiState,
         onAction = viewModel::onAction,
         onNavigateToManageClusters = onNavigateToManageClusters,
-        onOpenResources = onOpenResources,
+        creatableResources = ResourceCatalog.all,
         onCreateResource = onCreateResource,
         activePortForwardCount = activePortForwardCount,
         onOpenPortForwardSessions = onOpenPortForwardSessions,
         modifier = modifier,
-    )
+    ) { listState ->
+        HomeWorkloadsList(
+            isRefreshing = uiState.isRefreshing,
+            lastRefreshedAt = uiState.lastRefreshedAt,
+            favouriteKeys = favouriteKeys,
+            onOpenResources = onOpenResources,
+            onToggleFavourite = { favouritesViewModel.onAction(FavouritesUiAction.ToggleFavourite(it)) },
+            onNoopAction = { viewModel.onAction(HomeUiAction.TriggerNoopAction(it)) },
+            listState = listState,
+        )
+    }
 }
 
+/** The frame shared by Favourites and Resources. [content] is shown once a cluster exists. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    title: String,
     uiState: HomeUiState,
     onAction: (HomeUiAction) -> Unit,
     onNavigateToManageClusters: () -> Unit,
-    onOpenResources: (ResourcePresentation<*>) -> Unit,
+    creatableResources: List<ResourcePresentation<*>>,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
     activePortForwardCount: Int = 0,
     onOpenPortForwardSessions: () -> Unit = {},
+    content: @Composable (LazyListState) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val listState = rememberLazyListState()
@@ -93,7 +113,7 @@ fun HomeScreen(
         containerColor = Color.Transparent,
         topBar = {
             LargeFlexibleTopAppBar(
-                title = { Text(text = "KubeNexus") },
+                title = { Text(text = title) },
                 subtitle = {
                     ClusterPill(
                         activeCluster = uiState.activeCluster,
@@ -157,15 +177,7 @@ fun HomeScreen(
                     )
                 }
 
-                else -> {
-                    HomeWorkloadsList(
-                        isRefreshing = uiState.isRefreshing,
-                        lastRefreshedAt = uiState.lastRefreshedAt,
-                        onOpenResources = onOpenResources,
-                        onNoopAction = { onAction(HomeUiAction.TriggerNoopAction(it)) },
-                        listState = listState,
-                    )
-                }
+                else -> content(listState)
             }
         }
 
@@ -192,7 +204,7 @@ fun HomeScreen(
                     onExpandedChange = { expanded ->
                         onAction(if (expanded) HomeUiAction.OpenFabMenu else HomeUiAction.DismissFabMenu)
                     },
-                    creatableResources = ResourceCatalog.all,
+                    creatableResources = creatableResources,
                     onAddResourceClick = onCreateResource,
                     onAddClusterClick = { onAction(HomeUiAction.OpenAddClusterSheet) },
                 )
@@ -236,6 +248,7 @@ fun HomeScreen(
 private fun HomeScreenPreview() {
     KubeNexusTheme {
         HomeScreen(
+            title = "Resources",
             uiState = HomeUiState(
                 clusters = listOf(
                     Cluster(
@@ -263,9 +276,19 @@ private fun HomeScreenPreview() {
             ),
             onAction = {},
             onNavigateToManageClusters = {},
-            onOpenResources = {},
+            creatableResources = ResourceCatalog.all,
             onCreateResource = {},
-        )
+        ) { listState ->
+            HomeWorkloadsList(
+                isRefreshing = false,
+                lastRefreshedAt = null,
+                favouriteKeys = emptySet(),
+                onOpenResources = {},
+                onToggleFavourite = {},
+                onNoopAction = {},
+                listState = listState,
+            )
+        }
     }
 }
 
@@ -274,14 +297,25 @@ private fun HomeScreenPreview() {
 private fun HomeScreenEmptyPreview() {
     KubeNexusTheme {
         HomeScreen(
+            title = "Favourites",
             uiState = HomeUiState(
                 clusters = emptyList(),
                 activeCluster = null,
             ),
             onAction = {},
             onNavigateToManageClusters = {},
-            onOpenResources = {},
+            creatableResources = ResourceCatalog.all,
             onCreateResource = {},
-        )
+        ) { listState ->
+            HomeWorkloadsList(
+                isRefreshing = false,
+                lastRefreshedAt = null,
+                favouriteKeys = emptySet(),
+                onOpenResources = {},
+                onToggleFavourite = {},
+                onNoopAction = {},
+                listState = listState,
+            )
+        }
     }
 }
