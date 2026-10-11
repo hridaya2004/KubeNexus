@@ -176,9 +176,11 @@ class LogcatViewModel @Inject constructor(
             val filtered = applyFilter(newLogs, currentQuery, currentLevel)
 
             _uiState.update { state ->
+                // The filter may have changed while this one was computed.
+                val filterUnchanged = state.searchQuery == currentQuery && state.selectedLogLevel == currentLevel
                 state.copy(
                     logs = newLogs,
-                    filteredLogs = filtered,
+                    filteredLogs = if (filterUnchanged) filtered else applyFilter(newLogs, state.searchQuery, state.selectedLogLevel),
                     levelCounts = counts,
                     isLoading = false,
                 )
