@@ -98,9 +98,16 @@ fun GhosttyTerminalLogViewer(
 
     // Re-enable auto-scroll and jump to latest when streaming starts or logs are freshly fetched
     var previousLogsRef by remember { mutableStateOf<List<String>?>(null) }
+    var wasStreaming by remember { mutableStateOf(false) }
     LaunchedEffect(logs, isStreaming) {
-        if (previousLogsRef !== logs || isStreaming) {
-            previousLogsRef = logs
+        val resume = resumesFollowing(
+            wasStreaming = wasStreaming,
+            isStreaming = isStreaming,
+            logsChanged = previousLogsRef !== logs,
+        )
+        previousLogsRef = logs
+        wasStreaming = isStreaming
+        if (resume) {
             autoScrollEnabled = true
             if (filteredLogs.isNotEmpty()) {
                 listState.scrollToItem(filteredLogs.size - 1)
@@ -252,6 +259,10 @@ fun GhosttyTerminalLogViewer(
         }
     }
 }
+
+/** Following resumes when a stream starts or the logs are replaced, never on a streamed line. */
+internal fun resumesFollowing(wasStreaming: Boolean, isStreaming: Boolean, logsChanged: Boolean): Boolean =
+    if (isStreaming) !wasStreaming else logsChanged && !wasStreaming
 
 @Composable
 private fun BoxScope.ScrollToBottomFab(
