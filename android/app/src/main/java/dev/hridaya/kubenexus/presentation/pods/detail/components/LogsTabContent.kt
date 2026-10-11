@@ -189,7 +189,8 @@ fun LogsTabContent(
         }
 
         Text(
-            text = "Tip: Tap to fetch the last 250 lines. Long-press to fetch full un-truncated logs.",
+            text = uiState.tailLines?.let { "Tip: Tap to fetch the last $it lines. Long-press to fetch full un-truncated logs." }
+                ?: "Tip: Long-press to fetch full un-truncated logs.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 6.dp, start = 2.dp),
