@@ -434,7 +434,7 @@ class HomeViewModel @Inject constructor(
                             clusterConnectionStatus = ClusterConnectionStatus.DISCONNECTED,
                         )
                     }
-                    _effects.send(HomeUiEffect.ShowToast("Couldn't load your pods right now. Check that the cluster is reachable and try again."))
+                    _effects.send(HomeUiEffect.ShowToast("Couldn't refresh the cluster right now. Check that it is reachable and try again."))
                 }
 
                 is Result.Loading -> Unit

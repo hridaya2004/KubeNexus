@@ -452,7 +452,7 @@ class HomeViewModelTest {
 
         assertEquals("b", viewModel.uiState.value.activeCluster?.id)
         assertEquals(ClusterConnectionStatus.CONNECTED, viewModel.uiState.value.clusterConnectionStatus)
-        assertTrue(toasts.none { it.startsWith("Couldn't load your pods") })
+        assertTrue(toasts.none { it.startsWith("Couldn't refresh the cluster") })
         job.cancel()
     }
 
