@@ -16,6 +16,7 @@ import dev.hridaya.kubenexus.domain.usecase.DescribeResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.ObserveResourcesUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,6 +59,7 @@ class ServiceDetailViewModel @AssistedInject constructor(
     val uiState: StateFlow<ServiceDetailUiState> = _uiState.asStateFlow()
 
     private var wasOffline = false
+    private var loadJob: Job? = null
 
     init {
         observeNetwork()
@@ -100,7 +102,8 @@ class ServiceDetailViewModel @AssistedInject constructor(
             )
         }
         val dispatcher = dispatcherProvider?.main ?: Dispatchers.Main.immediate
-        viewModelScope.launch(dispatcher) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(dispatcher) {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
 
             // Instant offline load from Room cache

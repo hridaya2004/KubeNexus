@@ -19,6 +19,7 @@ import dev.hridaya.kubenexus.domain.usecase.ObserveResourcesUseCase
 import dev.hridaya.kubenexus.domain.usecase.RestartDeploymentUseCase
 import dev.hridaya.kubenexus.domain.usecase.ScaleDeploymentUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,6 +67,8 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         ),
     )
     val uiState: StateFlow<DeploymentDetailUiState> = _uiState.asStateFlow()
+
+    private var loadJob: Job? = null
 
     private val _effects = Channel<DeploymentDetailUiEffect>(Channel.BUFFERED)
     val effects: Flow<DeploymentDetailUiEffect> = _effects.receiveAsFlow()
@@ -136,7 +139,8 @@ class DeploymentDetailViewModel @AssistedInject constructor(
             )
         }
         val dispatcher = dispatcherProvider?.main ?: Dispatchers.Main.immediate
-        viewModelScope.launch(dispatcher) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(dispatcher) {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
             val summaryJob = launch { loadSummary(clusterId) }
             val detailsJob = launch { loadDetails(clusterId) }
