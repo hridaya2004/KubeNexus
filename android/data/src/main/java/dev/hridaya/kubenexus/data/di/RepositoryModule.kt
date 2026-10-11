@@ -1,4 +1,4 @@
-package dev.hridaya.kubenexus.core.di
+package dev.hridaya.kubenexus.data.di
 
 import dagger.Binds
 import dagger.Module

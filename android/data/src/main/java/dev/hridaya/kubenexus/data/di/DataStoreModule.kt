@@ -1,4 +1,4 @@
-package dev.hridaya.kubenexus.core.di
+package dev.hridaya.kubenexus.data.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
