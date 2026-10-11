@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -167,7 +168,7 @@ class PortForwardSessionManager @Inject constructor(
      * The native call returns a handle only once the local listener is accepting
      * connections, so a recorded session starts out READY.
      */
-    private fun startForward(
+    private suspend fun startForward(
         rawKubeconfig: String,
         namespace: String,
         podName: String,
@@ -178,14 +179,16 @@ class PortForwardSessionManager @Inject constructor(
         pendingStarts.update { it + 1 }
         try {
             requestForegroundService()
-            val result = repository.start(
-                rawKubeconfig = rawKubeconfig,
-                namespace = namespace,
-                podName = podName,
-                localPort = localPort,
-                remotePort = remotePort,
-                listener = internalListener,
-            )
+            val result = withContext(dispatcherProvider.io) {
+                repository.start(
+                    rawKubeconfig = rawKubeconfig,
+                    namespace = namespace,
+                    podName = podName,
+                    localPort = localPort,
+                    remotePort = remotePort,
+                    listener = internalListener,
+                )
+            }
             if (result is Result.Success) {
                 addSession(session(result.data))
             }
@@ -207,7 +210,7 @@ class PortForwardSessionManager @Inject constructor(
     }
 
     suspend fun stop(handleId: String): Result<Unit> {
-        val result = repository.stop(handleId)
+        val result = withContext(dispatcherProvider.io) { repository.stop(handleId) }
         updateSession(handleId) { it.copy(status = PortForwardSessionStatus.STOPPED) }
         return result
     }
