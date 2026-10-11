@@ -82,7 +82,6 @@ internal fun MainTopLevelScaffold(
                             onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
                             onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
                             onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },
-                            onBrowseResources = { onSelectDestination(Destination.Resources) },
                             activePortForwardCount = activeForwardCount,
                             onOpenPortForwardSessions = onOpenPortForwardSessions,
                         )
@@ -91,7 +90,6 @@ internal fun MainTopLevelScaffold(
                     Destination.Resources -> {
                         ResourcesRoute(
                             viewModel = homeViewModel,
-                            favouritesViewModel = favouritesViewModel,
                             onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
                             onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
                             onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },

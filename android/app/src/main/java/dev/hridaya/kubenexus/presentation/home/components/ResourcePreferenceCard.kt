@@ -1,19 +1,13 @@
 package dev.hridaya.kubenexus.presentation.home.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,9 +27,9 @@ fun ResourcePreferenceCard(
     onClick: () -> Unit,
     shapes: ListItemShapes,
     modifier: Modifier = Modifier,
-    /** Null hides the favourite toggle. */
-    isFavourite: Boolean? = null,
-    onToggleFavourite: () -> Unit = {},
+    trailingIcon: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
 ) {
     SegmentedListItem(
         onClick = onClick,
@@ -45,35 +39,9 @@ fun ResourcePreferenceCard(
         verticalAlignment = Alignment.CenterVertically,
         leadingContent = { Icon(imageVector = icon, contentDescription = null) },
         supportingContent = { Text(text = subtitle) },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isFavourite != null) {
-                    IconToggleButton(
-                        checked = isFavourite,
-                        onCheckedChange = { onToggleFavourite() },
-                        shapes = IconButtonDefaults.toggleableShapes(),
-                    ) {
-                        Icon(
-                            imageVector = if (isFavourite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = if (isFavourite) {
-                                "Remove $title from favourites"
-                            } else {
-                                "Add $title to favourites"
-                            },
-                            tint = if (isFavourite) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
-                }
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                )
-            }
-        },
+        trailingContent = { Icon(imageVector = trailingIcon, contentDescription = null) },
+        onLongClick = onLongClick,
+        onLongClickLabel = onLongClickLabel,
     ) {
         Text(text = title)
     }
@@ -90,7 +58,6 @@ private fun ResourcePreferenceCardPreview() {
                 icon = Icons.Outlined.Layers,
                 onClick = {},
                 shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
-                isFavourite = true,
             )
         }
     }

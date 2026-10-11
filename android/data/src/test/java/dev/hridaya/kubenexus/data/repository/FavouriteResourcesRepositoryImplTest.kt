@@ -2,7 +2,6 @@ package dev.hridaya.kubenexus.data.repository
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
-import dev.hridaya.kubenexus.domain.model.FavouriteToggle
 import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -72,20 +71,9 @@ class FavouriteResourcesRepositoryImplTest {
         assertEquals(listOf(pods, deployments, services), repository.getFavouritesStream().first())
     }
 
-    @Test
-    fun `toggling removes a favourite, adds it back, and refuses one past the maximum`() = testScope.runTest {
-        assertEquals(FavouriteToggle.REMOVED, repository.toggleFavourite(pods))
-        assertEquals(FavouriteToggle.ADDED, repository.toggleFavourite(pods))
-        assertEquals(listOf(deployments, services, pods), repository.getFavouritesStream().first())
-
-        (1..MAX_FAVOURITE_RESOURCES - 3).forEach { repository.addFavourite("example.com/v1/kind$it") }
-        assertEquals(FavouriteToggle.FULL, repository.toggleFavourite("example.com/v1/onemore"))
-        assertEquals(MAX_FAVOURITE_RESOURCES, repository.getFavouritesStream().first().size)
-    }
-
     @Test(expected = IllegalArgumentException::class)
     fun `a key that cannot be stored is refused`() = testScope.runTest {
-        repository.toggleFavourite("apps/v1/deployments,v1/pods")
+        repository.addFavourite("apps/v1/deployments,v1/pods")
     }
 
     @Test

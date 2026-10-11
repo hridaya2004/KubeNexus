@@ -1,10 +1,10 @@
 package dev.hridaya.kubenexus.presentation.favourites
 
-import dev.hridaya.kubenexus.domain.model.FavouriteToggle
 import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository
+import dev.hridaya.kubenexus.domain.usecase.AddFavouriteResourceUseCase
 import dev.hridaya.kubenexus.domain.usecase.ObserveFavouriteResourcesUseCase
-import dev.hridaya.kubenexus.domain.usecase.ToggleFavouriteResourceUseCase
+import dev.hridaya.kubenexus.domain.usecase.RemoveFavouriteResourceUseCase
 import dev.hridaya.kubenexus.presentation.resources.kinds.DeploymentsPresentation
 import dev.hridaya.kubenexus.presentation.resources.kinds.PodsPresentation
 import dev.hridaya.kubenexus.presentation.resources.kinds.ServicesPresentation
@@ -46,7 +46,8 @@ class FavouritesViewModelTest {
 
     private fun favouritesViewModel(repository: FavouriteResourcesRepository) = FavouritesViewModel(
         ObserveFavouriteResourcesUseCase(repository),
-        ToggleFavouriteResourceUseCase(repository),
+        AddFavouriteResourceUseCase(repository),
+        RemoveFavouriteResourceUseCase(repository),
         TestDispatcherProvider(testDispatcher),
     )
 
@@ -79,14 +80,14 @@ class FavouritesViewModelTest {
     }
 
     @Test
-    fun `toggling a kind adds it and toggling again removes it`() = runTest(testDispatcher) {
+    fun `adding a kind keeps it and removing it drops it`() = runTest(testDispatcher) {
         advanceUntilIdle()
 
-        viewModel.onAction(FavouritesUiAction.ToggleFavourite(DeploymentsPresentation))
+        viewModel.onAction(FavouritesUiAction.AddFavourite(DeploymentsPresentation))
         advanceUntilIdle()
         assertEquals(listOf(DeploymentsPresentation), viewModel.favourites.value)
 
-        viewModel.onAction(FavouritesUiAction.ToggleFavourite(DeploymentsPresentation))
+        viewModel.onAction(FavouritesUiAction.RemoveFavourite(DeploymentsPresentation))
         advanceUntilIdle()
         assertEquals(emptyList<Any>(), viewModel.favourites.value)
     }
@@ -96,7 +97,7 @@ class FavouritesViewModelTest {
         repository.keys.value = (1..MAX_FAVOURITE_RESOURCES).map { "example.com/v1/kind$it" }
         advanceUntilIdle()
 
-        viewModel.onAction(FavouritesUiAction.ToggleFavourite(PodsPresentation))
+        viewModel.onAction(FavouritesUiAction.AddFavourite(PodsPresentation))
         advanceUntilIdle()
 
         assertEquals(MAX_FAVOURITE_RESOURCES, repository.keys.value.size)
@@ -118,12 +119,6 @@ class FavouritesViewModelTest {
 
         override suspend fun removeFavourite(typeKey: String) {
             keys.value -= typeKey
-        }
-
-        override suspend fun toggleFavourite(typeKey: String): FavouriteToggle = when {
-            typeKey in keys.value -> FavouriteToggle.REMOVED.also { keys.value -= typeKey }
-            keys.value.size >= MAX_FAVOURITE_RESOURCES -> FavouriteToggle.FULL
-            else -> FavouriteToggle.ADDED.also { keys.value += typeKey }
         }
     }
 }

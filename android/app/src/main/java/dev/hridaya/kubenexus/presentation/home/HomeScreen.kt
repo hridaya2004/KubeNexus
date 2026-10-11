@@ -34,8 +34,6 @@ import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.presentation.common.components.LoadingContent
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
-import dev.hridaya.kubenexus.presentation.favourites.FavouritesUiAction
-import dev.hridaya.kubenexus.presentation.favourites.FavouritesViewModel
 import dev.hridaya.kubenexus.presentation.home.components.AddClusterBottomSheet
 import dev.hridaya.kubenexus.presentation.home.components.ClusterPill
 import dev.hridaya.kubenexus.presentation.home.components.ClusterSwitcherDrawer
@@ -51,7 +49,6 @@ import dev.hridaya.kubenexus.ui.theme.appBarColors
 @Composable
 fun ResourcesRoute(
     viewModel: HomeViewModel,
-    favouritesViewModel: FavouritesViewModel,
     onNavigateToManageClusters: () -> Unit,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
@@ -60,8 +57,6 @@ fun ResourcesRoute(
     onOpenPortForwardSessions: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val favourites by favouritesViewModel.favourites.collectAsStateWithLifecycle()
-    val favouriteKeys = remember(favourites) { favourites.orEmpty().mapTo(HashSet()) { it.kind.type.key } }
 
     // Toasts are shown by MainScreen, the single collector of viewModel.effects.
 
@@ -79,9 +74,7 @@ fun ResourcesRoute(
         HomeWorkloadsList(
             isRefreshing = uiState.isRefreshing,
             lastRefreshedAt = uiState.lastRefreshedAt,
-            favouriteKeys = favouriteKeys,
             onOpenResources = onOpenResources,
-            onToggleFavourite = { favouritesViewModel.onAction(FavouritesUiAction.ToggleFavourite(it)) },
             onNoopAction = { viewModel.onAction(HomeUiAction.TriggerNoopAction(it)) },
             listState = listState,
         )
@@ -280,9 +273,7 @@ private fun HomeScreenPreview() {
             HomeWorkloadsList(
                 isRefreshing = false,
                 lastRefreshedAt = null,
-                favouriteKeys = emptySet(),
                 onOpenResources = {},
-                onToggleFavourite = {},
                 onNoopAction = {},
                 listState = listState,
             )
@@ -308,9 +299,7 @@ private fun HomeScreenEmptyPreview() {
             HomeWorkloadsList(
                 isRefreshing = false,
                 lastRefreshedAt = null,
-                favouriteKeys = emptySet(),
                 onOpenResources = {},
-                onToggleFavourite = {},
                 onNoopAction = {},
                 listState = listState,
             )

@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
-import dev.hridaya.kubenexus.domain.model.FavouriteToggle
 import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository
@@ -65,27 +64,6 @@ class FavouriteResourcesRepositoryImpl @Inject constructor(
             dataStore.edit { preferences ->
                 preferences[KEY_FAVOURITES] = (preferences.favourites() - typeKey).joinToString(SEPARATOR)
             }
-        }
-    }
-
-    override suspend fun toggleFavourite(typeKey: String): FavouriteToggle {
-        requireStorable(typeKey)
-        return withContext(dispatcherProvider.io) {
-            var outcome = FavouriteToggle.FULL
-            dataStore.edit { preferences ->
-                val current = preferences.favourites()
-                outcome = when {
-                    typeKey in current -> FavouriteToggle.REMOVED
-                    current.size >= MAX_FAVOURITE_RESOURCES -> FavouriteToggle.FULL
-                    else -> FavouriteToggle.ADDED
-                }
-                when (outcome) {
-                    FavouriteToggle.REMOVED -> preferences[KEY_FAVOURITES] = (current - typeKey).joinToString(SEPARATOR)
-                    FavouriteToggle.ADDED -> preferences[KEY_FAVOURITES] = (current + typeKey).joinToString(SEPARATOR)
-                    FavouriteToggle.FULL -> Unit
-                }
-            }
-            outcome
         }
     }
 

@@ -1,6 +1,6 @@
 package dev.hridaya.kubenexus.domain.repository
 
-import dev.hridaya.kubenexus.domain.model.FavouriteToggle
+import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -19,7 +19,4 @@ interface FavouriteResourcesRepository {
     suspend fun addFavourite(typeKey: String): Boolean
 
     suspend fun removeFavourite(typeKey: String)
-
-    /** Removes [typeKey] if it is a favourite and adds it otherwise, atomically. */
-    suspend fun toggleFavourite(typeKey: String): FavouriteToggle
 }

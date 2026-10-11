@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,15 +20,30 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -39,8 +56,10 @@ import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.home.components.ResourceGroupHeader
 import dev.hridaya.kubenexus.presentation.home.components.ResourcePreferenceCard
 import dev.hridaya.kubenexus.presentation.resources.ResourceCatalog
+import dev.hridaya.kubenexus.presentation.resources.ResourceGroup
 import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun FavouritesRoute(
@@ -49,7 +68,6 @@ fun FavouritesRoute(
     onNavigateToManageClusters: () -> Unit,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
-    onBrowseResources: () -> Unit,
     modifier: Modifier = Modifier,
     activePortForwardCount: Int = 0,
     onOpenPortForwardSessions: () -> Unit = {},
@@ -73,8 +91,8 @@ fun FavouritesRoute(
             isRefreshing = uiState.isRefreshing,
             lastRefreshedAt = uiState.lastRefreshedAt,
             onOpenResources = onOpenResources,
-            onToggleFavourite = { favouritesViewModel.onAction(FavouritesUiAction.ToggleFavourite(it)) },
-            onBrowseResources = onBrowseResources,
+            onAddFavourite = { favouritesViewModel.onAction(FavouritesUiAction.AddFavourite(it)) },
+            onRemoveFavourite = { favouritesViewModel.onAction(FavouritesUiAction.RemoveFavourite(it)) },
             listState = listState,
         )
     }
@@ -87,14 +105,24 @@ fun FavouritesList(
     isRefreshing: Boolean,
     lastRefreshedAt: Long?,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
-    onToggleFavourite: (ResourcePresentation<*>) -> Unit,
-    onBrowseResources: () -> Unit,
+    onAddFavourite: (ResourcePresentation<*>) -> Unit,
+    onRemoveFavourite: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
     if (favourites == null) return
+    var showAddSheet by rememberSaveable { mutableStateOf(false) }
+
+    if (showAddSheet) {
+        AddFavouriteSheet(
+            favourites = favourites,
+            onAddFavourite = onAddFavourite,
+            onDismiss = { showAddSheet = false },
+        )
+    }
+
     if (favourites.isEmpty()) {
-        EmptyFavouritesView(onBrowseResources = onBrowseResources, modifier = modifier)
+        EmptyFavouritesView(onAdd = { showAddSheet = true }, modifier = modifier)
         return
     }
 
@@ -119,32 +147,162 @@ fun FavouritesList(
             }
         }
 
-        item(key = "header") {
-            ResourceGroupHeader(
-                title = "Favourites · ${favourites.size} of $MAX_FAVOURITE_RESOURCES",
-                lastRefreshedAt = lastRefreshedAt,
-            )
+        if (lastRefreshedAt != null) {
+            item(key = "header") {
+                ResourceGroupHeader(title = null, lastRefreshedAt = lastRefreshedAt)
+            }
         }
         item(key = "favourites") {
+            val count = favourites.size + 1
             Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                 favourites.forEachIndexed { index, presentation ->
-                    ResourcePreferenceCard(
-                        title = presentation.title,
-                        subtitle = presentation.description,
-                        icon = presentation.icon,
-                        onClick = { onOpenResources(presentation) },
-                        shapes = ListItemDefaults.segmentedShapes(index = index, count = favourites.size),
-                        isFavourite = true,
-                        onToggleFavourite = { onToggleFavourite(presentation) },
-                    )
+                    key(presentation.kind.type.key) {
+                        FavouriteEntry(
+                            presentation = presentation,
+                            shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+                            onOpen = { onOpenResources(presentation) },
+                            onRemove = { onRemoveFavourite(presentation) },
+                        )
+                    }
                 }
+                ResourcePreferenceCard(
+                    title = "Add",
+                    subtitle = "Keep another resource here",
+                    icon = Icons.Filled.Add,
+                    onClick = { showAddSheet = true },
+                    shapes = ListItemDefaults.segmentedShapes(index = favourites.size, count = count),
+                )
             }
         }
     }
 }
 
+/** Long-pressing a favourite offers to remove it. */
 @Composable
-private fun EmptyFavouritesView(onBrowseResources: () -> Unit, modifier: Modifier = Modifier) {
+private fun FavouriteEntry(
+    presentation: ResourcePresentation<*>,
+    shapes: ListItemShapes,
+    onOpen: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
+    Box {
+        ResourcePreferenceCard(
+            title = presentation.title,
+            subtitle = presentation.description,
+            icon = presentation.icon,
+            onClick = onOpen,
+            shapes = shapes,
+            onLongClick = { menuExpanded = true },
+            onLongClickLabel = "Show options",
+        )
+        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Remove from favourites") },
+                leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
+                onClick = {
+                    menuExpanded = false
+                    onRemove()
+                },
+            )
+        }
+    }
+}
+
+/** Lists the resource kinds that are not favourites yet; picking one adds it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddFavouriteSheet(
+    favourites: List<ResourcePresentation<*>>,
+    onAddFavourite: (ResourcePresentation<*>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
+    val scope = rememberCoroutineScope()
+    val hideThen: (() -> Unit) -> Unit = { action ->
+        scope.launch { sheetState.hide() }.invokeOnCompletion { action() }
+    }
+    val favouriteKeys = favourites.mapTo(HashSet()) { it.kind.type.key }
+    val groups = ResourceCatalog.groups
+        .map { group -> group.copy(resources = group.resources.filterNot { it.kind.type.key in favouriteKeys }) }
+        .filter { it.resources.isNotEmpty() }
+
+    ModalBottomSheet(
+        onDismissRequest = { hideThen(onDismiss) },
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Add to favourites",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+            when {
+                favourites.size >= MAX_FAVOURITE_RESOURCES -> SheetMessage(
+                    "You can keep up to $MAX_FAVOURITE_RESOURCES favourites. " +
+                        "Long-press one to remove it before adding another.",
+                )
+
+                groups.isEmpty() -> SheetMessage("Every resource is already a favourite.")
+
+                else -> groups.forEach { group ->
+                    AddableGroup(
+                        group = group,
+                        onAdd = { presentation ->
+                            hideThen {
+                                onAddFavourite(presentation)
+                                onDismiss()
+                            }
+                        },
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun AddableGroup(group: ResourceGroup, onAdd: (ResourcePresentation<*>) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        ResourceGroupHeader(title = group.title, lastRefreshedAt = null)
+        group.resources.forEachIndexed { index, presentation ->
+            ResourcePreferenceCard(
+                title = presentation.title,
+                subtitle = presentation.description,
+                icon = presentation.icon,
+                onClick = { onAdd(presentation) },
+                shapes = ListItemDefaults.segmentedShapes(index = index, count = group.resources.size),
+                trailingIcon = Icons.Filled.Add,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SheetMessage(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 8.dp),
+    )
+}
+
+@Composable
+private fun EmptyFavouritesView(onAdd: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -185,7 +343,7 @@ private fun EmptyFavouritesView(onBrowseResources: () -> Unit, modifier: Modifie
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Star the resources you use most to keep up to $MAX_FAVOURITE_RESOURCES of them here.",
+                text = "Add the resources you use most to keep them here.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -193,8 +351,14 @@ private fun EmptyFavouritesView(onBrowseResources: () -> Unit, modifier: Modifie
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(onClick = onBrowseResources) {
-                Text(text = "Browse resources")
+            Button(onClick = onAdd, shapes = ButtonDefaults.shapes()) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Add")
             }
         }
     }
@@ -209,8 +373,8 @@ private fun FavouritesListPreview() {
             isRefreshing = false,
             lastRefreshedAt = System.currentTimeMillis(),
             onOpenResources = {},
-            onToggleFavourite = {},
-            onBrowseResources = {},
+            onAddFavourite = {},
+            onRemoveFavourite = {},
         )
     }
 }
@@ -224,8 +388,8 @@ private fun FavouritesListEmptyPreview() {
             isRefreshing = false,
             lastRefreshedAt = null,
             onOpenResources = {},
-            onToggleFavourite = {},
-            onBrowseResources = {},
+            onAddFavourite = {},
+            onRemoveFavourite = {},
         )
     }
 }
