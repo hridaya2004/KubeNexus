@@ -87,6 +87,8 @@ class PodDetailViewModel @AssistedInject constructor(
     private var activeClusterId: String? = null
     private var streamJob: Job? = null
     private var logsJob: Job? = null
+    private var clusterJob: Job? = null
+    private var describeJob: Job? = null
     private var metricsJob: Job? = null
 
     /** Container the current log lines belong to, so the Logs tab never shows another's. */
@@ -215,7 +217,8 @@ class PodDetailViewModel @AssistedInject constructor(
     }
 
     private fun loadClusterAndDescribe() {
-        viewModelScope.launch(dispatcherProvider.main) {
+        if (clusterJob?.isActive == true) return
+        clusterJob = viewModelScope.launch(dispatcherProvider.main) {
             getActiveClusterUseCase().collect { cluster ->
                 activeClusterId = cluster?.id
                 _uiState.update { it.copy(clusterId = cluster?.id) }
@@ -265,6 +268,7 @@ class PodDetailViewModel @AssistedInject constructor(
 
             is PodDetailUiAction.RefreshDescribe -> {
                 if (activeClusterId == null) {
+                    _uiState.update { it.copy(isRefreshing = false) }
                     loadClusterAndDescribe()
                 } else {
                     fetchDescribe(isRefresh = true)
@@ -376,7 +380,8 @@ class PodDetailViewModel @AssistedInject constructor(
             }
         }
 
-        viewModelScope.launch(dispatcherProvider.main) {
+        describeJob?.cancel()
+        describeJob = viewModelScope.launch(dispatcherProvider.main) {
             when (val result = describeResource(cid, ResourceKinds.Pods, namespace, podName)) {
                 is Result.Success -> {
                     val details = result.data
