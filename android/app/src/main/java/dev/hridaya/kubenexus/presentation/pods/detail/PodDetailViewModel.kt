@@ -404,6 +404,7 @@ class PodDetailViewModel @AssistedInject constructor(
                             isLoading = false,
                             isRefreshing = false,
                             errorMessage = result.error.message,
+                            isLoadingMetrics = it.isLoadingMetrics && it.podDetails != null,
                         )
                     }
                     _effects.send(PodDetailUiEffect.ShowToast("Failed to describe pod: ${result.error.message}"))
