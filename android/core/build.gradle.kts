@@ -1,39 +1,25 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+// Plain Kotlin: shared by every layer, so it must not depend on Android.
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.jvm)
 }
 
-android {
-    namespace = "dev.hridaya.kubenexus.core"
-    compileSdk = libs.versions.compileSdk.get().toInt()
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 
-    defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    testOptions {
-        unitTests {
-            isReturnDefaultValues = true
-        }
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
     }
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    implementation(libs.javax.inject)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

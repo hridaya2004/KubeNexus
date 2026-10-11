@@ -1,26 +1,18 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+// Plain Kotlin: business rules and the contracts the data layer fulfils, with no Android.
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.jvm)
 }
 
-android {
-    namespace = "dev.hridaya.kubenexus.domain"
-    compileSdk = libs.versions.compileSdk.get().toInt()
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 
-    defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    testOptions {
-        unitTests {
-            isReturnDefaultValues = true
-        }
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
     }
 }
 
@@ -28,7 +20,6 @@ dependencies {
     implementation(project(":core"))
 
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.android)
 
     compileOnly(libs.javax.inject)
 
