@@ -404,6 +404,27 @@ class HomeViewModelTest {
         job.cancel()
     }
 
+    @Test
+    fun `switching clusters resets the namespace filter`() = runTest(testDispatcher) {
+        fakeClusterRepository.clustersFlow.value = listOf(
+            Cluster(id = "a", name = "a", serverUrl = "https://a:6443", rawKubeconfig = "x", contextName = "a", isActive = true),
+            Cluster(id = "b", name = "b", serverUrl = "https://b:6443", rawKubeconfig = "x", contextName = "b"),
+        )
+        advanceUntilIdle()
+        viewModel.onAction(HomeUiAction.SelectNamespace("kube-system"))
+        advanceUntilIdle()
+        assertEquals("kube-system", viewModel.uiState.value.selectedNamespace)
+
+        fakeClusterRepository.setActiveCluster("b")
+        advanceUntilIdle()
+
+        assertEquals("b", viewModel.uiState.value.activeCluster?.id)
+        assertEquals("All Namespaces", viewModel.uiState.value.selectedNamespace)
+        val lastSyncOfB = resources.syncCalls.last { it.clusterId == "b" && it.kind == ResourceKinds.Pods }
+        assertEquals(NamespaceScope.All, lastSyncOfB.scope)
+        assertTrue(resources.syncCalls.none { it.clusterId == "b" && it.scope == NamespaceScope.Only("kube-system") })
+    }
+
     // Switch from an unreachable cluster to a healthy one: the old cluster's slow failure must
     // not mark the new one disconnected or raise a toast about it.
     @Test

@@ -25,6 +25,8 @@ import dev.hridaya.kubenexus.domain.usecase.RefreshWorkloadsUseCase
 import dev.hridaya.kubenexus.domain.usecase.SetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.TestClusterConnectionUseCase
 import dev.hridaya.kubenexus.domain.usecase.UpdateClusterNameUseCase
+import dev.hridaya.kubenexus.presentation.common.ALL_NAMESPACES_FILTER
+import dev.hridaya.kubenexus.presentation.common.isAllNamespaces
 import dev.hridaya.kubenexus.presentation.common.namespaceFilterOptions
 import dev.hridaya.kubenexus.presentation.common.namespaceOrNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -162,12 +164,21 @@ class HomeViewModel @Inject constructor(
                     else -> ClusterConnectionStatus.CONNECTED
                 }
 
+                // A namespace picked on the previous cluster may not exist on this one.
+                val switchedCluster = data.activeCluster != null &&
+                    lastSyncedClusterId != null &&
+                    lastSyncedClusterId != data.activeCluster.id
+                if (switchedCluster && !isAllNamespaces(data.selectedNamespace)) {
+                    _selectedNamespace.value = ALL_NAMESPACES_FILTER
+                    return@collect
+                }
+
                 _uiState.update { state ->
                     state.copy(
                         isLoading = false,
                         clusters = data.clusters,
                         activeCluster = data.activeCluster,
-                        availableNamespaces = if (data.namespaces.isNotEmpty()) {
+                        availableNamespaces = if (data.namespaces.isNotEmpty() || switchedCluster) {
                             namespaceFilterOptions(data.namespaces)
                         } else {
                             state.availableNamespaces
