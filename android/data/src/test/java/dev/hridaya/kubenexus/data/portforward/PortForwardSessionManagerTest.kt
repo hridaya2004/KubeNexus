@@ -94,6 +94,19 @@ class PortForwardSessionManagerTest {
         }
 
     @Test
+    fun `events for a handle no start recorded are not kept`() = runTest(testDispatcher) {
+        fakeRepository.onStart = { listener -> listener.onPortForwardStopped("pf-2", "gone") }
+        manager.startPodForward("cfg", "default", "nginx", 8080, 80)
+
+        fakeRepository.onStart = {}
+        fakeRepository.nextHandleId = "pf-2"
+        manager.startPodForward("cfg", "default", "nginx", 8081, 80)
+
+        val second = manager.sessions.value.single { it.handleId == "pf-2" }
+        assertEquals(PortForwardSessionStatus.READY, second.status)
+    }
+
+    @Test
     fun `the foreground service is needed while a forward is still dialing`() =
         runTest(testDispatcher) {
             var neededWhileDialing = false

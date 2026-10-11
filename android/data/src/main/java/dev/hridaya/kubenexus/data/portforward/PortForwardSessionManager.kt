@@ -194,7 +194,10 @@ class PortForwardSessionManager @Inject constructor(
             }
             return result
         } finally {
-            pendingStarts.update { it - 1 }
+            synchronized(lock) {
+                pendingStarts.update { it - 1 }
+                if (pendingStarts.value == 0) earlyUpdates.clear()
+            }
         }
     }
 
@@ -255,7 +258,7 @@ class PortForwardSessionManager @Inject constructor(
             val index = list.indexOfFirst { it.handleId == handleId }
             if (index >= 0) {
                 _sessions.value = list.toMutableList().apply { this[index] = transform(this[index]) }
-            } else if (recordIfUnknown) {
+            } else if (recordIfUnknown && pendingStarts.value > 0) {
                 val previous = earlyUpdates[handleId]
                 earlyUpdates[handleId] = if (previous == null) transform else { s -> transform(previous(s)) }
             }
