@@ -28,7 +28,7 @@ object ResourceCatalog {
     val groups: List<ResourceGroup> = listOf(
         ResourceGroup(
             title = "Workloads",
-            resources = listOf(PodsPresentation, DeploymentsPresentation, ServicesPresentation),
+            resources = listOf(PodsPresentation, DeploymentsPresentation),
             upcoming = listOf(
                 UpcomingResource(
                     title = "ReplicaSets",
@@ -36,6 +36,10 @@ object ResourceCatalog {
                     icon = Icons.Outlined.Widgets,
                 ),
             ),
+        ),
+        ResourceGroup(
+            title = "Networking",
+            resources = listOf(ServicesPresentation),
         ),
     )
 
