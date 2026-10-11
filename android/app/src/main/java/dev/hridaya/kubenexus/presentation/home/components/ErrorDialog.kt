@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.hridaya.kubenexus.core.common.util.ClipboardHelper
+import dev.hridaya.kubenexus.presentation.common.share.ClipboardHelper
 import dev.hridaya.kubenexus.presentation.home.ErrorDialogData
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 

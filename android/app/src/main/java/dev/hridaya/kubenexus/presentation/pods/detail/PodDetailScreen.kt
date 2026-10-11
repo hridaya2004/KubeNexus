@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.presentation.pods.detail
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,7 @@ import dev.hridaya.kubenexus.domain.model.PodConditionDetail
 import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodStatus
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
+import dev.hridaya.kubenexus.presentation.common.share.LogExportHelper
 import dev.hridaya.kubenexus.presentation.pods.components.terminal.GhosttyTerminalEngine
 import dev.hridaya.kubenexus.presentation.pods.components.terminal.GhosttyTerminalView
 import dev.hridaya.kubenexus.presentation.pods.detail.components.DeletePodConfirmDialog
@@ -63,6 +65,21 @@ fun PodDetailRoute(
                 }
 
                 is PodDetailUiEffect.NavigateBack -> onNavigateBack()
+
+                is PodDetailUiEffect.LogsUploaded -> {
+                    LogExportHelper.copyToClipboard(context, effect.url, "Pastebin URL", sensitive = false)
+                    Toast.makeText(
+                        context,
+                        "Logs uploaded! URL copied to clipboard: ${effect.url}",
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, uiState.podName)
+                        putExtra(Intent.EXTRA_TEXT, effect.url)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Log Link"))
+                }
             }
         }
     }

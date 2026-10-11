@@ -1,6 +1,5 @@
 package dev.hridaya.kubenexus.presentation.pods.components
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -28,8 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -41,8 +40,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.common.util.LogExportHelper
+import dev.hridaya.kubenexus.domain.model.LogPasteDestination
+import dev.hridaya.kubenexus.presentation.common.share.LogExportHelper
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -58,6 +57,8 @@ fun GhosttyTerminalLogViewer(
     modifier: Modifier = Modifier,
     title: String? = null,
     firstLineNumber: Int = 1,
+    pasteDestination: LogPasteDestination? = null,
+    onUploadLogs: () -> Unit = {},
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
@@ -134,46 +135,15 @@ fun GhosttyTerminalLogViewer(
         }
     }
 
-    if (confirmUpload) {
-        val provider = LogExportHelper.pasteProvider
+    if (confirmUpload && pasteDestination != null) {
         LogUploadConfirmDialog(
             lineCount = logs.size,
-            serviceName = provider.name,
-            retention = provider.retention,
+            serviceName = pasteDestination.name,
+            retention = pasteDestination.retention,
             onDismiss = { confirmUpload = false },
             onConfirm = {
                 confirmUpload = false
-                val text = logs.joinToString("\n")
-                Toast.makeText(context, "Uploading logs to ${provider.name}...", Toast.LENGTH_SHORT).show()
-                scope.launch {
-                    when (val result = LogExportHelper.uploadToPastebin(text, provider)) {
-                        is Result.Success -> {
-                            val pasteUrl = result.data
-                            LogExportHelper.copyToClipboard(context, pasteUrl, "Pastebin URL", sensitive = false)
-                            Toast.makeText(
-                                context,
-                                "Logs uploaded! URL copied to clipboard: $pasteUrl",
-                                Toast.LENGTH_LONG,
-                            ).show()
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, title ?: "Pod logs")
-                                putExtra(Intent.EXTRA_TEXT, pasteUrl)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Log Link"))
-                        }
-
-                        is Result.Error -> {
-                            Toast.makeText(
-                                context,
-                                "Export failed: ${result.error.message}",
-                                Toast.LENGTH_LONG,
-                            ).show()
-                        }
-
-                        Result.Loading -> Unit
-                    }
-                }
+                onUploadLogs()
             },
         )
     }

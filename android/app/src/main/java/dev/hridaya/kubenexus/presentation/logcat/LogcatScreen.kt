@@ -27,10 +27,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.hridaya.kubenexus.core.common.util.ClipboardHelper
-import dev.hridaya.kubenexus.core.common.util.LogExportHelper
 import dev.hridaya.kubenexus.domain.model.LogLevel
 import dev.hridaya.kubenexus.domain.model.LogcatEntry
+import dev.hridaya.kubenexus.presentation.common.share.ClipboardHelper
+import dev.hridaya.kubenexus.presentation.common.share.LogExportHelper
 import dev.hridaya.kubenexus.presentation.logcat.components.LogcatEmptyState
 import dev.hridaya.kubenexus.presentation.logcat.components.LogcatLogList
 import dev.hridaya.kubenexus.presentation.logcat.components.LogcatScrollToLatestButton

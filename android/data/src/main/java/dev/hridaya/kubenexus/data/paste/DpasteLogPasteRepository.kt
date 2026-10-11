@@ -1,28 +1,25 @@
-package dev.hridaya.kubenexus.core.common.paste
+package dev.hridaya.kubenexus.data.paste
 
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
+import dev.hridaya.kubenexus.domain.model.LogPasteDestination
+import dev.hridaya.kubenexus.domain.repository.LogPasteRepository
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import javax.inject.Inject
 
 /**
- * [LogPasteProvider] backed by dpaste.org's public API.
+ * [LogPasteRepository] backed by dpaste.org's public API.
  *
  * See https://docs.dpaste.org/api/. Pastes are public to anyone with the link and expire
  * after [EXPIRES_SECONDS]; dpaste.org only accepts a fixed set of lifetimes, and its default
  * when none is sent is one month.
  */
-class DpasteLogPasteProvider(
-    private val endpointUrl: String = "https://dpaste.org/api/",
-    private val connectTimeoutMs: Int = 10000,
-    private val readTimeoutMs: Int = 30000,
-) : LogPasteProvider {
+class DpasteLogPasteRepository @Inject constructor() : LogPasteRepository {
 
-    override val name: String = "dpaste.org"
-
-    override val retention: String = "7 days"
+    override val destination = LogPasteDestination(name = "dpaste.org", retention = "7 days")
 
     override suspend fun upload(content: String): Result<String> {
         if (content.isBlank()) {
@@ -31,11 +28,11 @@ class DpasteLogPasteProvider(
 
         var connection: HttpURLConnection? = null
         return try {
-            connection = (URL(endpointUrl).openConnection() as HttpURLConnection).apply {
+            connection = (URL(ENDPOINT_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 doOutput = true
-                connectTimeout = connectTimeoutMs
-                readTimeout = readTimeoutMs
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
                 setRequestProperty(
                     "Content-Type",
                     "application/x-www-form-urlencoded; charset=utf-8",
@@ -65,6 +62,10 @@ class DpasteLogPasteProvider(
     }
 
     internal companion object {
+        const val ENDPOINT_URL = "https://dpaste.org/api/"
+        const val CONNECT_TIMEOUT_MS = 10_000
+        const val READ_TIMEOUT_MS = 30_000
+
         /** 7 days, one of the lifetimes dpaste.org accepts (3600, 604800, 2592000). */
         const val EXPIRES_SECONDS = 604800
 

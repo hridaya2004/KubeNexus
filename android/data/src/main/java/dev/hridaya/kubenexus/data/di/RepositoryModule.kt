@@ -9,6 +9,7 @@ import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridgeImpl
 import dev.hridaya.kubenexus.data.network.ConnectivityNetworkMonitor
+import dev.hridaya.kubenexus.data.paste.DpasteLogPasteRepository
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.ClusterRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.DeploymentRepositoryImpl
@@ -29,6 +30,7 @@ import dev.hridaya.kubenexus.domain.repository.ClusterRepository
 import dev.hridaya.kubenexus.domain.repository.DeploymentRepository
 import dev.hridaya.kubenexus.domain.repository.ExploreRepository
 import dev.hridaya.kubenexus.domain.repository.FavouriteResourcesRepository
+import dev.hridaya.kubenexus.domain.repository.LogPasteRepository
 import dev.hridaya.kubenexus.domain.repository.LogcatRepository
 import dev.hridaya.kubenexus.domain.repository.NamespaceRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
@@ -105,6 +107,12 @@ abstract class RepositoryModule {
     abstract fun bindThemePreferencesRepository(
         impl: ThemePreferencesRepositoryImpl
     ): ThemePreferencesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLogPasteRepository(
+        impl: DpasteLogPasteRepository
+    ): LogPasteRepository
 
     @Binds
     @Singleton

@@ -21,6 +21,7 @@ import dev.hridaya.kubenexus.domain.usecase.GetPodLogsUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodMetricsUseCase
 import dev.hridaya.kubenexus.domain.usecase.StartExecSessionUseCase
 import dev.hridaya.kubenexus.domain.usecase.StreamPodLogsUseCase
+import dev.hridaya.kubenexus.domain.usecase.UploadLogsUseCase
 import dev.hridaya.kubenexus.presentation.pods.components.terminal.GhosttyTerminalEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -59,6 +60,7 @@ class PodDetailViewModel @AssistedInject constructor(
     private val deleteResource: DeleteResourceUseCase,
     private val startExecSessionUseCase: StartExecSessionUseCase,
     private val checkClusterHealthUseCase: CheckClusterHealthUseCase,
+    private val uploadLogsUseCase: UploadLogsUseCase,
     private val networkMonitor: NetworkMonitor,
     private val dispatcherProvider: DispatcherProvider,
 ) : ViewModel() {
@@ -77,6 +79,7 @@ class PodDetailViewModel @AssistedInject constructor(
         PodDetailUiState(
             podName = podName,
             namespace = namespace,
+            logPasteDestination = uploadLogsUseCase.destination,
         ),
     )
     val uiState: StateFlow<PodDetailUiState> = _uiState.asStateFlow()
@@ -333,6 +336,8 @@ class PodDetailViewModel @AssistedInject constructor(
                 _uiState.update { it.copy(logs = emptyList(), firstLogLineNumber = 1) }
             }
 
+            is PodDetailUiAction.UploadLogs -> uploadLogs()
+
             is PodDetailUiAction.StartInteractiveTerminal -> {
                 startTerminal(action.shell)
             }
@@ -503,6 +508,18 @@ class PodDetailViewModel @AssistedInject constructor(
         streamJob?.cancel()
         streamJob = null
         _uiState.update { it.copy(isStreamingLogs = false) }
+    }
+
+    private fun uploadLogs() {
+        val logs = _uiState.value.logs.joinToString("\n")
+        viewModelScope.launch(dispatcherProvider.main) {
+            _effects.send(PodDetailUiEffect.ShowToast("Uploading logs to ${uploadLogsUseCase.destination.name}..."))
+            when (val result = uploadLogsUseCase(logs)) {
+                is Result.Success -> _effects.send(PodDetailUiEffect.LogsUploaded(result.data))
+                is Result.Error -> _effects.send(PodDetailUiEffect.ShowToast("Export failed: ${result.error.message}"))
+                is Result.Loading -> Unit
+            }
+        }
     }
 
     private fun startTerminal(preferredShell: String? = null) {

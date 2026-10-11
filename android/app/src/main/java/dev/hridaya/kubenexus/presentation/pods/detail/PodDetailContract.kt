@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.presentation.pods.detail
 
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
+import dev.hridaya.kubenexus.domain.model.LogPasteDestination
 import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 
@@ -47,6 +48,7 @@ data class PodDetailUiState(
     val logs: List<String> = emptyList(),
     /** The line number of `logs[0]`; it grows as the line cap drops the oldest lines. */
     val firstLogLineNumber: Int = 1,
+    val logPasteDestination: LogPasteDestination? = null,
     val isStreamingLogs: Boolean = false,
     val isLoadingLogs: Boolean = false,
     val tailLines: Long? = 250L,
@@ -88,6 +90,7 @@ sealed interface PodDetailUiAction {
     data object StartStreamingLogs : PodDetailUiAction
     data object StopStreamingLogs : PodDetailUiAction
     data object ClearLogs : PodDetailUiAction
+    data object UploadLogs : PodDetailUiAction
 
     data class StartInteractiveTerminal(val shell: String? = null) : PodDetailUiAction
     data object StopInteractiveTerminal : PodDetailUiAction
@@ -101,4 +104,5 @@ sealed interface PodDetailUiAction {
 sealed interface PodDetailUiEffect {
     data class ShowToast(val message: String) : PodDetailUiEffect
     data object NavigateBack : PodDetailUiEffect
+    data class LogsUploaded(val url: String) : PodDetailUiEffect
 }

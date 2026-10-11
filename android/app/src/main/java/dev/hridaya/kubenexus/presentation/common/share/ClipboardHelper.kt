@@ -1,4 +1,4 @@
-package dev.hridaya.kubenexus.core.common.util
+package dev.hridaya.kubenexus.presentation.common.share
 
 import android.content.ClipData
 import android.content.ClipDescription

@@ -46,8 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.hridaya.kubenexus.core.common.util.ClipboardHelper
 import dev.hridaya.kubenexus.core.common.util.JsonFormatter
+import dev.hridaya.kubenexus.presentation.common.share.ClipboardHelper
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 
 /**

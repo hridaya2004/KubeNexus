@@ -9,9 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.hridaya.kubenexus.core.common.util.ClipboardHelper
 import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.Cluster
+import dev.hridaya.kubenexus.presentation.common.share.ClipboardHelper
 import dev.hridaya.kubenexus.presentation.explore.components.ExploreExplainDetailView
 import dev.hridaya.kubenexus.presentation.explore.components.ExploreListView
 import dev.hridaya.kubenexus.presentation.explore.components.ExploreSearchScreen

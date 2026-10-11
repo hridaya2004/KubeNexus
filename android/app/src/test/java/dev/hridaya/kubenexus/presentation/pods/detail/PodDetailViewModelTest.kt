@@ -11,6 +11,7 @@ import dev.hridaya.kubenexus.domain.model.ClusterHealth
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
 import dev.hridaya.kubenexus.domain.model.CommandExecResult
 import dev.hridaya.kubenexus.domain.model.ContainerDetail
+import dev.hridaya.kubenexus.domain.model.LogPasteDestination
 import dev.hridaya.kubenexus.domain.model.PodConditionDetail
 import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.PodEventDetail
@@ -19,6 +20,7 @@ import dev.hridaya.kubenexus.domain.model.PodStatus
 import dev.hridaya.kubenexus.domain.model.TerminalSession
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 import dev.hridaya.kubenexus.domain.repository.ClusterRepository
+import dev.hridaya.kubenexus.domain.repository.LogPasteRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
 import dev.hridaya.kubenexus.domain.usecase.CheckClusterHealthUseCase
 import dev.hridaya.kubenexus.domain.usecase.DeleteResourceUseCase
@@ -28,6 +30,7 @@ import dev.hridaya.kubenexus.domain.usecase.GetPodLogsUseCase
 import dev.hridaya.kubenexus.domain.usecase.GetPodMetricsUseCase
 import dev.hridaya.kubenexus.domain.usecase.StartExecSessionUseCase
 import dev.hridaya.kubenexus.domain.usecase.StreamPodLogsUseCase
+import dev.hridaya.kubenexus.domain.usecase.UploadLogsUseCase
 import dev.hridaya.kubenexus.presentation.testing.FakeResourceRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -112,6 +115,7 @@ class PodDetailViewModelTest {
                 fakeClusterRepository,
                 testDispatcherProvider,
             ),
+            uploadLogsUseCase = UploadLogsUseCase(FakeLogPasteRepository(), testDispatcherProvider),
             networkMonitor = fakeNetworkMonitor,
             dispatcherProvider = testDispatcherProvider,
         )
@@ -746,3 +750,8 @@ private fun podDetails(podName: String, namespace: String) = PodDetails(
         ),
     ),
 )
+
+private class FakeLogPasteRepository : LogPasteRepository {
+    override val destination = LogPasteDestination(name = "paste.test", retention = "1 day")
+    override suspend fun upload(content: String): Result<String> = Result.Success("https://paste.test/1")
+}
