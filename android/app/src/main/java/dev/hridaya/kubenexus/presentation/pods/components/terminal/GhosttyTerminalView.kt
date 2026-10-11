@@ -23,11 +23,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,9 +59,9 @@ fun GhosttyTerminalView(
     val isImeVisible = WindowInsets.isImeVisible
 
     var terminalSelection by remember { mutableStateOf<TerminalSelection?>(null) }
-    var localInput by remember { mutableStateOf("") }
-    var commandHistory by remember { mutableStateOf(listOf<String>()) }
-    var historyIndex by remember { mutableIntStateOf(-1) }
+    var localInput by rememberSaveable { mutableStateOf("") }
+    var commandHistory by rememberSaveable(saver = stringListStateSaver) { mutableStateOf(listOf<String>()) }
+    var historyIndex by rememberSaveable { mutableIntStateOf(-1) }
     var modifiers by remember { mutableStateOf(TerminalModifiers()) }
 
     // When soft keyboard is visible and user presses back, forcefully clear focus and hide keyboard so layout expands to full screen
@@ -299,3 +302,8 @@ fun GhosttyTerminalView(
         )
     }
 }
+
+private val stringListStateSaver = listSaver<MutableState<List<String>>, String>(
+    save = { it.value },
+    restore = { mutableStateOf(it) },
+)
