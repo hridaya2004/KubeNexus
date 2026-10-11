@@ -253,6 +253,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     }
 
     private fun performScale() {
+        if (_uiState.value.isMutating) return
         val targetReplicas = _uiState.value.scaleInput
         _uiState.update {
             it.copy(
@@ -288,6 +289,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     }
 
     private fun performRestart() {
+        if (_uiState.value.isMutating) return
         _uiState.update {
             it.copy(
                 showRestartDialog = false,
@@ -322,6 +324,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     }
 
     private fun performDelete() {
+        if (_uiState.value.isMutating) return
         _uiState.update {
             it.copy(
                 showDeleteDialog = false,

@@ -166,6 +166,21 @@ class DeploymentDetailViewModelTest {
         }
 
     @Test
+    fun `confirming delete twice sends one request`() = runTest(testDispatcher) {
+        givenDeployments(sampleSummary)
+        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onAction(DeploymentDetailUiAction.ConfirmDelete)
+        viewModel.onAction(DeploymentDetailUiAction.ConfirmDelete)
+        advanceUntilIdle()
+
+        assertEquals(1, resources.deleteCalls.size)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
     fun `performScale scales deployment and reloads on success`() = runTest(testDispatcher) {
         givenDeployments(sampleSummary)
         resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
