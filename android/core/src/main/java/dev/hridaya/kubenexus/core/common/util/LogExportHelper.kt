@@ -54,7 +54,7 @@ object LogExportHelper {
             val logFile = withContext(ioDispatcher) {
                 val logsDir = File(context.cacheDir, "logs").apply { mkdirs() }
                 pruneExports(logsDir, System.currentTimeMillis())
-                File(logsDir, safeName).apply { writeText(content, Charsets.UTF_8) }
+                File(logsDir, safeName).apply { writeText(LogSanitizer.sanitize(content), Charsets.UTF_8) }
             }
 
             val fileUri: Uri = FileProvider.getUriForFile(
