@@ -10,6 +10,7 @@ data class ServiceDetailUiState(
     val lastRefreshedAt: Long? = null,
     val service: ServiceDetails? = null,
     val errorMessage: String? = null,
+    val staleNotice: String? = null,
     val showPortForwardDialog: Boolean = false,
 )
 

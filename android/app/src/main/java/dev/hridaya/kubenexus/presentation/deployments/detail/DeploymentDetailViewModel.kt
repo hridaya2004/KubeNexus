@@ -191,11 +191,16 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                 }
             }
 
-            is Result.Error -> _uiState.update { state ->
-                state.copy(
-                    isLoading = false,
-                    errorMessage = if (state.deployment == null) LOAD_ERROR_MESSAGE else null,
-                )
+            is Result.Error -> {
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        errorMessage = if (state.deployment == null) LOAD_ERROR_MESSAGE else null,
+                    )
+                }
+                if (_uiState.value.deployment != null) {
+                    _effects.send(DeploymentDetailUiEffect.ShowSnackbar(STALE_REFRESH_MESSAGE))
+                }
             }
 
             is Result.Loading -> Unit
@@ -361,6 +366,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     private companion object {
         const val LOAD_ERROR_MESSAGE =
             "Couldn't load this deployment right now. Check that the cluster is reachable and try again."
+        const val STALE_REFRESH_MESSAGE = "Couldn't refresh. Showing the last known state."
 
         const val DETAILS_ERROR_MESSAGE =
             "Couldn't load the describe details for this deployment."

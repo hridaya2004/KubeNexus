@@ -131,6 +131,7 @@ class ServiceDetailViewModel @AssistedInject constructor(
                         state.copy(
                             isLoading = false,
                             service = state.service ?: initialDetails,
+                            staleNotice = if (state.service == null) CACHED_NOTICE else state.staleNotice,
                             errorMessage = null,
                         )
                     }
@@ -145,6 +146,7 @@ class ServiceDetailViewModel @AssistedInject constructor(
                         service = result.data,
                         lastRefreshedAt = System.currentTimeMillis(),
                         errorMessage = null,
+                        staleNotice = null,
                     )
                 }
 
@@ -153,6 +155,11 @@ class ServiceDetailViewModel @AssistedInject constructor(
                         isLoading = false,
                         isRefreshing = false,
                         errorMessage = if (state.service == null) LOAD_ERROR_MESSAGE else null,
+                        staleNotice = when {
+                            state.service == null -> null
+                            state.staleNotice == CACHED_NOTICE -> CACHED_NOTICE
+                            else -> STALE_REFRESH_NOTICE
+                        },
                     )
                 }
 
@@ -168,8 +175,11 @@ class ServiceDetailViewModel @AssistedInject constructor(
         name: String,
     ): Result<ServiceDetails> = describeResource(clusterId, ResourceKinds.Services, namespace, name)
 
-    private companion object {
+    internal companion object {
         const val LOAD_ERROR_MESSAGE =
             "Couldn't load this service right now. Check that the cluster is reachable and try again."
+        const val CACHED_NOTICE =
+            "Showing cached data. The selector, labels and events appear once the cluster responds."
+        const val STALE_REFRESH_NOTICE = "Couldn't refresh. Showing the last known state."
     }
 }

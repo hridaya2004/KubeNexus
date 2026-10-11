@@ -138,6 +138,22 @@ class ServiceDetailViewModelTest {
     }
 
     @Test
+    fun `a cached service the cluster cannot describe is marked as cached`() = runTest(testDispatcher) {
+        resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
+        resources.givenDescribe(ResourceKinds.Services, Result.Error(AppError.Network("timeout")))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.service)
+        assertNull(state.errorMessage)
+        assertEquals(ServiceDetailViewModel.CACHED_NOTICE, state.staleNotice)
+
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
     fun `refresh action reloads service details and updates lastRefreshedAt`() = runTest(testDispatcher) {
         resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
         resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))

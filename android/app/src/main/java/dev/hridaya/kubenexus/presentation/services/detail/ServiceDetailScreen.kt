@@ -197,6 +197,7 @@ fun ServiceDetailScreen(
                         ServiceDetailContent(
                             service = service,
                             lastRefreshedAt = uiState.lastRefreshedAt,
+                            staleNotice = uiState.staleNotice,
                             onPortForwardClick = {
                                 onAction(
                                     ServiceDetailUiAction.ShowPortForwardDialog(
@@ -230,6 +231,7 @@ private fun ServiceDetailContent(
     onPortForwardClick: () -> Unit,
     modifier: Modifier = Modifier,
     lastRefreshedAt: Long? = null,
+    staleNotice: String? = null,
 ) {
     Column(
         modifier = modifier
@@ -238,6 +240,14 @@ private fun ServiceDetailContent(
             .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        staleNotice?.let { notice ->
+            Text(
+                text = notice,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         ServiceOverviewCard(
             service = service,
             lastRefreshedAt = lastRefreshedAt,
