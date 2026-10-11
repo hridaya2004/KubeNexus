@@ -264,6 +264,9 @@ class CreatePodViewModel @AssistedInject constructor(
             if (state.containerPort.isNotBlank() && parsedContainerPort == null) {
                 put("containerPort", "Container port must be a whole number")
             }
+            if (parsedContainerPort == 0) {
+                put("containerPort", "Container port must be between 1 and 65535")
+            }
             putAll(draft.validate())
         }
         val errors = if (includeRequired) {

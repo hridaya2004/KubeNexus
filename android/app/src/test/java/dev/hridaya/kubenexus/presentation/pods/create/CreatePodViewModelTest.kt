@@ -93,6 +93,17 @@ class CreatePodViewModelTest {
         }
 
     @Test
+    fun `the port is optional, but an explicit 0 is rejected`() = vmTest { viewModel ->
+        fillValidForm(viewModel)
+        viewModel.onAction(CreatePodUiAction.ContainerPortChanged(""))
+        assertFalse(viewModel.uiState.value.fieldErrors.containsKey("containerPort"))
+
+        viewModel.onAction(CreatePodUiAction.ContainerPortChanged("0"))
+
+        assertTrue(viewModel.uiState.value.fieldErrors.containsKey("containerPort"))
+    }
+
+    @Test
     fun `preview success moves to review step with generated yaml`() = vmTest { viewModel ->
         fillValidForm(viewModel)
         assertTrue(viewModel.uiState.value.fieldErrors.isEmpty())

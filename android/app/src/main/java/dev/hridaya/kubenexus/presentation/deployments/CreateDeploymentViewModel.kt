@@ -270,15 +270,20 @@ class CreateDeploymentViewModel @AssistedInject constructor(
             serviceType = state.serviceType,
             servicePort = parsedServicePort ?: DeploymentDraft.DEFAULT_SERVICE_PORT,
         )
+        val needsServicePort = state.serviceType != DeploymentDraft.SERVICE_TYPE_NONE
         val allErrors = buildMap {
-            if (state.replicas.isNotBlank() && parsedReplicas == null) {
-                put("replicas", "Replicas must be a whole number")
+            when {
+                state.replicas.isBlank() -> put("replicas", "Replicas is required")
+                parsedReplicas == null -> put("replicas", "Replicas must be a whole number")
             }
-            if (state.containerPort.isNotBlank() && parsedContainerPort == null) {
-                put("containerPort", "Port must be a whole number")
+            when {
+                state.containerPort.isBlank() -> put("containerPort", "Port is required")
+                parsedContainerPort == null -> put("containerPort", "Port must be a whole number")
             }
-            if (state.serviceType != DeploymentDraft.SERVICE_TYPE_NONE && state.servicePort.isNotBlank() && parsedServicePort == null) {
-                put("servicePort", "Service port must be a whole number")
+            when {
+                !needsServicePort -> Unit
+                state.servicePort.isBlank() -> put("servicePort", "Service port is required")
+                parsedServicePort == null -> put("servicePort", "Service port must be a whole number")
             }
             putAll(draft.validate())
         }
@@ -290,6 +295,9 @@ class CreateDeploymentViewModel @AssistedInject constructor(
                     "name" -> state.name.isNotBlank()
                     "image" -> state.image.isNotBlank()
                     "namespace" -> state.namespace.isNotBlank()
+                    "replicas" -> state.replicas.isNotBlank()
+                    "containerPort" -> state.containerPort.isNotBlank()
+                    "servicePort" -> state.servicePort.isNotBlank()
                     else -> true
                 }
             }

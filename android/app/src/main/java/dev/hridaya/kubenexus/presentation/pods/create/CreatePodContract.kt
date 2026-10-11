@@ -1,7 +1,5 @@
 package dev.hridaya.kubenexus.presentation.pods.create
 
-import dev.hridaya.kubenexus.domain.model.PodDraft
-
 enum class CreatePodStep {
     FORM,
     REVIEW,
@@ -11,7 +9,8 @@ data class CreatePodUiState(
     val name: String = "",
     val namespace: String = "",
     val image: String = "",
-    val containerPort: String = PodDraft.DEFAULT_CONTAINER_PORT.toString(),
+    /** Blank means no port. */
+    val containerPort: String = "",
     val fieldErrors: Map<String, String> = emptyMap(),
     val availableNamespaces: List<String> = emptyList(),
     val showCreateNamespaceDialog: Boolean = false,
