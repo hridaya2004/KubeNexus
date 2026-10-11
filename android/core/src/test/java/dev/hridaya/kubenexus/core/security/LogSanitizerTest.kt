@@ -185,4 +185,31 @@ class LogSanitizerTest {
         assertFalse(output.contains("cause-secret"))
         assertFalse(output.contains("abc.def.ghi"))
     }
+
+    @Test
+    fun `sanitize redacts secrets whose names carry a prefix`() {
+        val input = """
+            DB_PASSWORD=hunter2
+            GITHUB_TOKEN=ghp_abcdef123456
+            MYSQL_ROOT_PASSWORD: rootpass
+            dbPassword=camelcase
+            x-api-key: abc123
+            "stripe_secret": "sk_live_42"
+        """.trimIndent()
+
+        val output = LogSanitizer.sanitize(input)
+
+        listOf("hunter2", "ghp_abcdef123456", "rootpass", "camelcase", "abc123", "sk_live_42").forEach {
+            assertFalse("'$it' was not redacted in:\n$output", output.contains(it))
+        }
+        assertTrue(output.contains("DB_PASSWORD=[REDACTED]"))
+        assertTrue(output.contains("\"stripe_secret\": \"[REDACTED]\""))
+    }
+
+    @Test
+    fun `sanitize leaves names that only contain a secret word alone`() {
+        val input = "secretName: app-credentials passwordless=true max_tokens=100 PASSWORD_FILE=/run/pw"
+
+        assertEquals(input, LogSanitizer.sanitize(input))
+    }
 }

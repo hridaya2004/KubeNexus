@@ -36,8 +36,9 @@ object LogSanitizer {
         "certificate-authority-data",
     ).joinToString("|")
 
-    private const val KEY_PREFIX = """(["']?\b(?:"""
-    private const val KEY_SUFFIX = """)\b["']?\s*[:=]\s*)"""
+    // Keys may carry a prefix (`DB_PASSWORD`, `x-api-key`). `\b` cannot be used: `_` is a word character.
+    private const val KEY_PREFIX = """(["']?(?<![A-Za-z0-9])[A-Za-z0-9_.-]*?(?:"""
+    private const val KEY_SUFFIX = """)(?![A-Za-z0-9])["']?\s*[:=]\s*)"""
 
     private val QUOTED_SECRET_VALUE_REGEX =
         Regex("""(?i)$KEY_PREFIX$SECRET_KEYS$KEY_SUFFIX(["'])(.*?)\2""")
