@@ -574,7 +574,6 @@ class PodDetailViewModelTest {
 
         override suspend fun clearCachedData(): Result<Unit> = Result.Success(Unit)
 
-        override suspend fun migratePlaintextClusters(): Result<Int> = Result.Success(0)
     }
 
     private class FakePodRepository : PodRepository {

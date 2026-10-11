@@ -31,6 +31,4 @@ interface ClusterRepository {
         status: ClusterStatus,
         lastConnectedAt: Long?
     ): Result<Unit>
-
-    suspend fun migratePlaintextClusters(): Result<Int>
 }

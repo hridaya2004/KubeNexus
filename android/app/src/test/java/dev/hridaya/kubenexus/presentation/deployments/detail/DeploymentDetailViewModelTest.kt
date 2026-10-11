@@ -360,7 +360,6 @@ class DeploymentDetailViewModelTest {
         override suspend fun checkClusterHealthByKubeconfig(kubeconfigRaw: String): Result<ClusterHealth> =
             Result.Error(AppError.NotFound("not found"))
         override suspend fun updateClusterStatus(id: String, status: ClusterStatus, lastConnectedAt: Long?): Result<Unit> = Result.Success(Unit)
-        override suspend fun migratePlaintextClusters(): Result<Int> = Result.Success(0)
         override suspend fun getClusterById(id: String): Cluster? = activeClusterFlow.value
     }
 

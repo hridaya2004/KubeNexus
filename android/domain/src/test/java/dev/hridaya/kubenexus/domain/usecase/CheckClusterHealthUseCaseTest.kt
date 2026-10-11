@@ -104,6 +104,5 @@ class CheckClusterHealthUseCaseTest {
             lastConnectedAt: Long?
         ): Result<Unit> = Result.Success(Unit)
 
-        override suspend fun migratePlaintextClusters(): Result<Int> = Result.Success(0)
     }
 }

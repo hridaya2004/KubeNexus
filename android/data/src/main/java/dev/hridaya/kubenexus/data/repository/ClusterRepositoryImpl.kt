@@ -234,7 +234,8 @@ class ClusterRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun migratePlaintextClusters(): Result<Int> =
+    /** Encrypts kubeconfigs stored by versions that kept them in plain text. */
+    suspend fun migratePlaintextClusters(): Result<Int> =
         withContext(dispatcherProvider.io) {
             try {
                 val clusters = clusterDao.getAllClusters()
