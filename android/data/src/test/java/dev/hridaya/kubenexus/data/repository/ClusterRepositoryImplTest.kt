@@ -4,10 +4,10 @@ import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.kubeconfig.ClusterConnectionTester
+import dev.hridaya.kubenexus.data.kubeconfig.ParsedKubeconfig
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.source.local.dao.ClusterDao
 import dev.hridaya.kubenexus.data.source.local.entity.ClusterEntity
-import dev.hridaya.kubenexus.domain.model.ParsedKubeconfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,14 +95,13 @@ class ClusterRepositoryImplTest {
         assertTrue(result is Result.Success)
         val addedCluster = (result as Result.Success).data
         assertEquals("Encrypted Cluster", addedCluster.name)
-        // Domain model holds decrypted plaintext for immediate consumption
-        assertEquals(sampleKubeconfig, addedCluster.rawKubeconfig)
 
         // Verify the persisted entity in DAO is encrypted
         val persistedEntity = fakeDao.getClusterById(addedCluster.id)
         assertNotNull(persistedEntity)
         assertTrue(persistedEntity!!.rawKubeconfig.startsWith("enc:v1:"))
         assertFalse(persistedEntity.rawKubeconfig.contains("secret-token-12345"))
+        assertEquals(sampleKubeconfig, encryptor.decrypt(persistedEntity.rawKubeconfig))
     }
 
     @Test
@@ -139,11 +138,11 @@ class ClusterRepositoryImplTest {
 
             val cluster = repository.getClusterById("c-100")
             assertNotNull(cluster)
-            assertEquals(sampleKubeconfig, cluster!!.rawKubeconfig)
+            assertFalse(cluster!!.credentialsUnavailable)
 
             val streamList = repository.getClustersStream().first()
             assertEquals(1, streamList.size)
-            assertEquals(sampleKubeconfig, streamList[0].rawKubeconfig)
+            assertFalse(streamList[0].credentialsUnavailable)
         }
 
     @Test
@@ -193,11 +192,8 @@ class ClusterRepositoryImplTest {
             assertTrue(entity1.rawKubeconfig.startsWith("enc:v1:"))
             assertTrue(entity2.rawKubeconfig.startsWith("enc:v1:"))
 
-            // Verify repository reading still decrypts both properly
-            val domain1 = repository.getClusterById("c-legacy-1")!!
-            val domain2 = repository.getClusterById("c-legacy-2")!!
-            assertEquals(sampleKubeconfig, domain1.rawKubeconfig)
-            assertEquals(sampleKubeconfig, domain2.rawKubeconfig)
+            assertEquals(sampleKubeconfig, encryptor.decrypt(entity1.rawKubeconfig))
+            assertEquals(sampleKubeconfig, encryptor.decrypt(entity2.rawKubeconfig))
 
             // Running migration again is idempotent (0 records migrated)
             val secondMigration = repository.migratePlaintextClusters()

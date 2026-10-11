@@ -283,7 +283,6 @@ private fun ExploreListViewPreview() {
                     contextName = "prod",
                     userName = "admin",
                     namespace = "default",
-                    rawKubeconfig = "",
                 ),
                 resources = listOf(sampleResource),
                 filteredResources = listOf(sampleResource),

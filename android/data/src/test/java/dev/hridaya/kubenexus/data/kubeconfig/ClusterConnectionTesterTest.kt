@@ -3,7 +3,6 @@ package dev.hridaya.kubenexus.data.kubeconfig
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
-import dev.hridaya.kubenexus.domain.model.ParsedKubeconfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue

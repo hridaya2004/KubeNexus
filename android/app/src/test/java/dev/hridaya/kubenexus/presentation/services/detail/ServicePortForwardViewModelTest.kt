@@ -2,15 +2,15 @@ package dev.hridaya.kubenexus.presentation.services.detail
 
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.Result
+import dev.hridaya.kubenexus.data.portforward.PortForwardListener
+import dev.hridaya.kubenexus.data.portforward.PortForwardRepository
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionManager
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
 import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodStatus
-import dev.hridaya.kubenexus.domain.model.PortForwardListener
 import dev.hridaya.kubenexus.domain.model.ServiceDetails
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
-import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
 import dev.hridaya.kubenexus.domain.usecase.GetActiveClusterUseCase
 import dev.hridaya.kubenexus.domain.usecase.ResolveServiceForwardTargetUseCase
 import dev.hridaya.kubenexus.presentation.testing.FakeClusterRepository
@@ -61,7 +61,7 @@ class ServicePortForwardViewModelTest {
         viewModel = ServicePortForwardViewModel(
             serviceName = "web-svc",
             namespace = "default",
-            sessionRepository = PortForwardSessionRepositoryImpl(sessionManager, fakeClusterRepository),
+            sessionRepository = PortForwardSessionRepositoryImpl(sessionManager) { "fake-kubeconfig" },
             resolveServiceForwardTargetUseCase = ResolveServiceForwardTargetUseCase(resources),
             getActiveClusterUseCase = GetActiveClusterUseCase(
                 fakeClusterRepository,

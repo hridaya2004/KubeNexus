@@ -6,7 +6,6 @@ import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridge
-import dev.hridaya.kubenexus.domain.model.ParsedKubeconfig
 import javax.inject.Inject
 
 open class ClusterConnectionTester @Inject constructor(

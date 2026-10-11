@@ -66,7 +66,6 @@ private fun DeleteClusterDialogPreview() {
                 contextName = "prod-context",
                 userName = "admin",
                 namespace = "default",
-                rawKubeconfig = "",
             ),
             onDismiss = {},
             onConfirmDelete = {},

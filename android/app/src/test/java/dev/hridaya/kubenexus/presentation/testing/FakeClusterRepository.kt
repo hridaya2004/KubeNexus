@@ -14,7 +14,6 @@ class FakeClusterRepository : ClusterRepository {
         id = "c-1",
         name = "prod-cluster",
         serverUrl = "https://127.0.0.1:6443",
-        rawKubeconfig = "fake-kubeconfig",
         contextName = "prod",
         isActive = true,
         status = ClusterStatus.CONNECTED,

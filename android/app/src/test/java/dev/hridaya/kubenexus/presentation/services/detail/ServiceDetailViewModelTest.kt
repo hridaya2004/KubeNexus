@@ -97,7 +97,6 @@ class ServiceDetailViewModelTest {
             contextName = "default",
             userName = "admin",
             namespace = "default",
-            rawKubeconfig = "",
             status = ClusterStatus.CONNECTED,
             isActive = true,
         )

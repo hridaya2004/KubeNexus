@@ -13,13 +13,11 @@ fun ClusterEntity.toDomain(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryp
         ClusterStatus.DISCONNECTED
     }
 
-    val decrypted = encryptor.decryptOrEmpty(rawKubeconfig)
     return Cluster(
         id = id,
         name = name,
         serverUrl = serverUrl,
-        rawKubeconfig = decrypted,
-        credentialsUnavailable = rawKubeconfig.isNotBlank() && decrypted.isBlank(),
+        credentialsUnavailable = rawKubeconfig.isNotBlank() && encryptor.decryptOrEmpty(rawKubeconfig).isBlank(),
         contextName = contextName,
         userName = userName,
         namespace = namespace,
@@ -30,7 +28,8 @@ fun ClusterEntity.toDomain(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryp
     )
 }
 
-fun Cluster.toEntity(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryptor): ClusterEntity {
+/** The kubeconfig is not part of the domain model, so it is passed in to be stored encrypted. */
+fun Cluster.toEntity(rawKubeconfig: String, encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryptor): ClusterEntity {
     return ClusterEntity(
         id = id,
         name = name,

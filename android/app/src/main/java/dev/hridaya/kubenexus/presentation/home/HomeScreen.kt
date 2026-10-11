@@ -258,7 +258,6 @@ private fun HomeScreenPreview() {
                         contextName = "prod",
                         userName = "admin",
                         namespace = "default",
-                        rawKubeconfig = "",
                         isActive = true,
                     )
                 ),
@@ -269,7 +268,6 @@ private fun HomeScreenPreview() {
                     contextName = "prod",
                     userName = "admin",
                     namespace = "default",
-                    rawKubeconfig = "",
                     isActive = true,
                 ),
                 clusterConnectionStatus = ClusterConnectionStatus.CONNECTED,

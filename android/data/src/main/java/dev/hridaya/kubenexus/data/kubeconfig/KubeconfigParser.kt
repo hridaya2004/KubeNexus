@@ -1,7 +1,6 @@
 package dev.hridaya.kubenexus.data.kubeconfig
 
 import dev.hridaya.kubenexus.domain.model.Cluster
-import dev.hridaya.kubenexus.domain.model.ParsedKubeconfig
 import org.snakeyaml.engine.v2.api.Load
 import org.snakeyaml.engine.v2.api.LoadSettings
 

@@ -196,7 +196,6 @@ private fun ManageClustersScreenPreview() {
                         contextName = "prod-context",
                         userName = "admin",
                         namespace = "default",
-                        rawKubeconfig = "",
                         isActive = true,
                     ),
                     Cluster(
@@ -206,7 +205,6 @@ private fun ManageClustersScreenPreview() {
                         contextName = "staging-context",
                         userName = "developer",
                         namespace = "staging",
-                        rawKubeconfig = "",
                         isActive = false,
                     ),
                 ),

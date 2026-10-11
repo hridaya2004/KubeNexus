@@ -10,7 +10,6 @@ data class Cluster(
     val id: String,
     val name: String,
     val serverUrl: String,
-    val rawKubeconfig: String,
     val contextName: String,
     val userName: String = "",
     val namespace: String = "default",
@@ -20,17 +19,10 @@ data class Cluster(
     val status: ClusterStatus = ClusterStatus.DISCONNECTED,
     /**
      * The stored credentials exist but can no longer be decrypted on this device, e.g. the
-     * Keystore key was lost. [rawKubeconfig] is empty; the cluster has to be added again.
+     * Keystore key was lost. The cluster has to be added again.
      */
     val credentialsUnavailable: Boolean = false,
 ) {
-    // The generated toString would print the decrypted kubeconfig into any log or crash
-    // report that includes a Cluster.
-    override fun toString(): String =
-        "Cluster(id=$id, name=$name, serverUrl=$serverUrl, contextName=$contextName, " +
-            "isActive=$isActive, status=$status, credentialsUnavailable=$credentialsUnavailable, " +
-            "rawKubeconfig=<redacted>)"
-
     companion object {
         /**
          * Largest kubeconfig accepted, in UTF-8 bytes. Real kubeconfigs are kilobytes even with
@@ -40,21 +32,3 @@ data class Cluster(
         const val MAX_KUBECONFIG_BYTES = 1024 * 1024
     }
 }
-
-data class ParsedKubeconfig(
-    val clusterName: String,
-    val serverUrl: String,
-    val contextName: String,
-    val userName: String,
-    val namespace: String,
-    val rawKubeconfig: String,
-    val certificateAuthorityData: String? = null,
-    val insecureSkipTlsVerify: Boolean = false,
-) {
-    // Like Cluster's, the generated toString would print the kubeconfig's credentials.
-    override fun toString(): String =
-        "ParsedKubeconfig(clusterName=$clusterName, serverUrl=$serverUrl, contextName=$contextName, " +
-            "userName=$userName, namespace=$namespace, insecureSkipTlsVerify=$insecureSkipTlsVerify, " +
-            "rawKubeconfig=<redacted>)"
-}
-

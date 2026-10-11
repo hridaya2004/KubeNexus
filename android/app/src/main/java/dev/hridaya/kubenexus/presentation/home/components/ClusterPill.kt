@@ -131,7 +131,6 @@ private fun ClusterPillPreview() {
                     contextName = "minikube",
                     userName = "minikube",
                     namespace = "default",
-                    rawKubeconfig = "",
                 ),
                 totalClusters = 2,
                 onClick = {},

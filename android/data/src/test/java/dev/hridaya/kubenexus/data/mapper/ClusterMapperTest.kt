@@ -36,7 +36,7 @@ class ClusterMapperTest {
         assertEquals("https://k8s.example.com:6443", domain.serverUrl)
         assertEquals(true, domain.isActive)
         assertEquals(ClusterStatus.CONNECTED, domain.status)
-        assertEquals("apiVersion: v1...", domain.rawKubeconfig)
+        assertFalse(domain.credentialsUnavailable)
     }
 
     @Test
@@ -45,7 +45,6 @@ class ClusterMapperTest {
             id = "c-2",
             name = "Staging",
             serverUrl = "https://staging.k8s.example.com",
-            rawKubeconfig = "apiVersion: v1...",
             contextName = "staging-ctx",
             userName = "developer",
             namespace = "kube-system",
@@ -55,7 +54,7 @@ class ClusterMapperTest {
             status = ClusterStatus.DISCONNECTED,
         )
 
-        val entity = domain.toEntity()
+        val entity = domain.toEntity("apiVersion: v1...")
 
         assertEquals("c-2", entity.id)
         assertEquals("Staging", entity.name)
@@ -65,7 +64,7 @@ class ClusterMapperTest {
     }
 
     @Test
-    fun `toEntity with encryptor encrypts rawKubeconfig and toDomain decrypts it`() {
+    fun `toEntity encrypts the kubeconfig and toDomain can still read it`() {
         val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
         val plainKubeconfig =
             "apiVersion: v1\nkind: Config\nusers:\n- name: admin\n  user:\n    token: test-token"
@@ -74,15 +73,14 @@ class ClusterMapperTest {
             id = "c-3",
             name = "Secure Cluster",
             serverUrl = "https://secure.k8s.example.com",
-            rawKubeconfig = plainKubeconfig,
             contextName = "secure-ctx",
         )
 
-        val entity = domain.toEntity(encryptor)
+        val entity = domain.toEntity(plainKubeconfig, encryptor)
         assertTrue(entity.rawKubeconfig.startsWith("enc:v1:"))
+        assertEquals(plainKubeconfig, encryptor.decrypt(entity.rawKubeconfig))
 
-        val restoredDomain = entity.toDomain(encryptor)
-        assertEquals(plainKubeconfig, restoredDomain.rawKubeconfig)
+        assertFalse(entity.toDomain(encryptor).credentialsUnavailable)
     }
 
     // One unreadable row must not break the cluster list: it maps with the flag set.
@@ -111,20 +109,6 @@ class ClusterMapperTest {
         val cluster = entity.toDomain(unreadable)
 
         assertTrue(cluster.credentialsUnavailable)
-        assertEquals("", cluster.rawKubeconfig)
         assertEquals("prod", cluster.name)
-    }
-
-    @Test
-    fun `Cluster toString never prints the kubeconfig`() {
-        val cluster = Cluster(
-            id = "c1",
-            name = "prod",
-            serverUrl = "https://prod.example:6443",
-            rawKubeconfig = "users:\n- user:\n    token: super-secret",
-            contextName = "prod",
-        )
-
-        assertFalse(cluster.toString().contains("super-secret"))
     }
 }

@@ -1,4 +1,4 @@
-package dev.hridaya.kubenexus.domain.model
+package dev.hridaya.kubenexus.data.portforward
 
 /**
  * Progress callbacks for a port-forward tunnel.

@@ -2,15 +2,15 @@ package dev.hridaya.kubenexus.data.portforward
 
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
+import dev.hridaya.kubenexus.data.repository.KubeconfigProvider
 import dev.hridaya.kubenexus.domain.model.ActivePortForwardSession
-import dev.hridaya.kubenexus.domain.repository.ClusterRepository
 import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 class PortForwardSessionRepositoryImpl @Inject constructor(
     private val sessionManager: PortForwardSessionManager,
-    private val clusterRepository: ClusterRepository,
+    private val kubeconfigs: KubeconfigProvider,
 ) : PortForwardSessionRepository {
 
     override val sessions: StateFlow<List<ActivePortForwardSession>> = sessionManager.sessions
@@ -22,7 +22,7 @@ class PortForwardSessionRepositoryImpl @Inject constructor(
         localPort: Int,
         remotePort: Int,
     ): Result<String> {
-        val kubeconfig = kubeconfigOf(clusterId) ?: return noCluster()
+        val kubeconfig = kubeconfigs.kubeconfigOf(clusterId) ?: return noCluster()
         return sessionManager.startPodForward(kubeconfig, namespace, podName, localPort, remotePort, clusterId)
     }
 
@@ -35,7 +35,7 @@ class PortForwardSessionRepositoryImpl @Inject constructor(
         targetPodName: String,
         targetPodPort: Int,
     ): Result<String> {
-        val kubeconfig = kubeconfigOf(clusterId) ?: return noCluster()
+        val kubeconfig = kubeconfigs.kubeconfigOf(clusterId) ?: return noCluster()
         return sessionManager.startServiceForward(
             rawKubeconfig = kubeconfig,
             namespace = namespace,
@@ -49,9 +49,6 @@ class PortForwardSessionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun stop(handleId: String): Result<Unit> = sessionManager.stop(handleId)
-
-    private suspend fun kubeconfigOf(clusterId: String): String? =
-        clusterRepository.getClusterById(clusterId)?.rawKubeconfig?.takeIf { it.isNotBlank() }
 
     private fun noCluster(): Result<String> =
         Result.Error(AppError.Validation("No active Kubernetes cluster configured."))

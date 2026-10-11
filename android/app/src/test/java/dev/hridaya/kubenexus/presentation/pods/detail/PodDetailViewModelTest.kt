@@ -531,7 +531,6 @@ class PodDetailViewModelTest {
             id = "c-1",
             name = "prod-cluster",
             serverUrl = "https://127.0.0.1:6443",
-            rawKubeconfig = "...",
             contextName = "prod",
             isActive = true,
             status = ClusterStatus.CONNECTED,

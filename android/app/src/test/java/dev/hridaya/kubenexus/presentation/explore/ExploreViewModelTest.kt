@@ -70,7 +70,6 @@ class ExploreViewModelTest {
             serverUrl = "https://127.0.0.1:6443",
             contextName = "prod",
             namespace = "default",
-            rawKubeconfig = "yaml",
             isActive = true,
             status = ClusterStatus.CONNECTED,
         )
@@ -176,7 +175,6 @@ class ExploreViewModelTest {
                 serverUrl = "https://127.0.0.1:6443",
                 contextName = "prod",
                 namespace = "default",
-                rawKubeconfig = "yaml",
                 isActive = true,
                 status = ClusterStatus.CONNECTED,
             )
@@ -201,7 +199,6 @@ class ExploreViewModelTest {
                 serverUrl = "https://127.0.0.1:6443",
                 contextName = "prod",
                 namespace = "default",
-                rawKubeconfig = "yaml",
                 isActive = true,
                 status = ClusterStatus.CONNECTED,
             )
@@ -222,7 +219,6 @@ class ExploreViewModelTest {
                 serverUrl = "https://127.0.0.1:6443",
                 contextName = "prod",
                 namespace = "default",
-                rawKubeconfig = "yaml",
                 isActive = true,
                 status = ClusterStatus.CONNECTED,
             )
@@ -283,7 +279,6 @@ class ExploreViewModelTest {
                 serverUrl = "https://127.0.0.1:6443",
                 contextName = "prod",
                 namespace = "default",
-                rawKubeconfig = "yaml",
                 isActive = true,
                 status = ClusterStatus.CONNECTED,
             )
@@ -329,7 +324,6 @@ class ExploreViewModelTest {
                 name = "prod-cluster",
                 serverUrl = "https://127.0.0.1:6443",
                 contextName = "prod",
-                rawKubeconfig = "yaml",
                 isActive = true,
             )
             val second = first.copy(id = "c2", name = "staging-cluster", contextName = "staging")
@@ -382,7 +376,6 @@ class ExploreViewModelTest {
                 serverUrl = "url",
                 contextName = "ctx",
                 namespace = "ns",
-                rawKubeconfig = kubeconfigRaw,
                 isActive = setAsActive,
                 status = ClusterStatus.CONNECTED,
             )

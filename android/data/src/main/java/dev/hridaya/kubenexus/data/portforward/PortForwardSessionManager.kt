@@ -11,10 +11,8 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.di.ApplicationScope
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import dev.hridaya.kubenexus.domain.model.ActivePortForwardSession
-import dev.hridaya.kubenexus.domain.model.PortForwardListener
 import dev.hridaya.kubenexus.domain.model.PortForwardSessionStatus
 import dev.hridaya.kubenexus.domain.model.PortForwardTargetKind
-import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

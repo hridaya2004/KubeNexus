@@ -426,8 +426,8 @@ class HomeViewModelTest {
     @Test
     fun `switching clusters resets the namespace filter`() = runTest(testDispatcher) {
         fakeClusterRepository.clustersFlow.value = listOf(
-            Cluster(id = "a", name = "a", serverUrl = "https://a:6443", rawKubeconfig = "x", contextName = "a", isActive = true),
-            Cluster(id = "b", name = "b", serverUrl = "https://b:6443", rawKubeconfig = "x", contextName = "b"),
+            Cluster(id = "a", name = "a", serverUrl = "https://a:6443", contextName = "a", isActive = true),
+            Cluster(id = "b", name = "b", serverUrl = "https://b:6443", contextName = "b"),
         )
         advanceUntilIdle()
         viewModel.onAction(HomeUiAction.SelectNamespace("kube-system"))
@@ -461,8 +461,8 @@ class HomeViewModelTest {
             }
         }
         fakeClusterRepository.clustersFlow.value = listOf(
-            Cluster(id = "a", name = "a", serverUrl = "https://a:6443", rawKubeconfig = "x", contextName = "a", isActive = true),
-            Cluster(id = "b", name = "b", serverUrl = "https://b:6443", rawKubeconfig = "x", contextName = "b"),
+            Cluster(id = "a", name = "a", serverUrl = "https://a:6443", contextName = "a", isActive = true),
+            Cluster(id = "b", name = "b", serverUrl = "https://b:6443", contextName = "b"),
         )
         runCurrent()
 
@@ -495,7 +495,6 @@ class HomeViewModelTest {
                 id = "cluster-${System.currentTimeMillis()}",
                 name = customName ?: "test-cluster",
                 serverUrl = "https://127.0.0.1:6443",
-                rawKubeconfig = kubeconfigRaw,
                 contextName = "test-cluster",
                 isActive = setAsActive,
                 status = ClusterStatus.CONNECTED,

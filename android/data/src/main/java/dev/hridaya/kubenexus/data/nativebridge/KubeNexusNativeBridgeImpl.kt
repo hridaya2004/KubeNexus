@@ -18,6 +18,7 @@ import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.common.util.K8sNames
 import dev.hridaya.kubenexus.core.security.LogSanitizer
 import dev.hridaya.kubenexus.data.mapper.toDomain
+import dev.hridaya.kubenexus.data.portforward.PortForwardListener
 import dev.hridaya.kubenexus.data.source.remote.dto.K8sJson
 import dev.hridaya.kubenexus.data.source.remote.dto.NamespaceListDto
 import dev.hridaya.kubenexus.data.source.remote.dto.PodMetricsDto
@@ -27,7 +28,6 @@ import dev.hridaya.kubenexus.domain.model.APIResource
 import dev.hridaya.kubenexus.domain.model.ClusterHealth
 import dev.hridaya.kubenexus.domain.model.Namespace
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
-import dev.hridaya.kubenexus.domain.model.PortForwardListener
 import dev.hridaya.kubenexus.domain.model.resource.ResourceType
 import go.Seq
 import java.security.MessageDigest

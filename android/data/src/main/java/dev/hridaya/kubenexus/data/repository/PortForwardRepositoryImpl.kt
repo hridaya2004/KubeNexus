@@ -2,8 +2,8 @@ package dev.hridaya.kubenexus.data.repository
 
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridge
-import dev.hridaya.kubenexus.domain.model.PortForwardListener
-import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
+import dev.hridaya.kubenexus.data.portforward.PortForwardListener
+import dev.hridaya.kubenexus.data.portforward.PortForwardRepository
 import javax.inject.Inject
 
 /**

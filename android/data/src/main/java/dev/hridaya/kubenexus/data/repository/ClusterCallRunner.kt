@@ -23,7 +23,11 @@ class ClusterCallRunner @Inject constructor(
     private val clusterDao: ClusterDao,
     private val encryptor: KubeconfigEncryptor,
     private val dispatcherProvider: DispatcherProvider,
-) {
+) : KubeconfigProvider {
+
+    override suspend fun kubeconfigOf(clusterId: String): String? =
+        (resolve(clusterId) as? Result.Success)?.data?.kubeconfig?.takeIf { it.isNotBlank() }
+
 
     /**
      * Resolves [clusterId] and runs [call] against it on the IO dispatcher.

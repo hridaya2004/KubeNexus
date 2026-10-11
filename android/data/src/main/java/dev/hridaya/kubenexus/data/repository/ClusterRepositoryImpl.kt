@@ -61,7 +61,6 @@ class ClusterRepositoryImpl @Inject constructor(
                 id = clusterId,
                 name = parsed.clusterName,
                 serverUrl = parsed.serverUrl,
-                rawKubeconfig = parsed.rawKubeconfig,
                 contextName = parsed.contextName,
                 userName = parsed.userName,
                 namespace = parsed.namespace,
@@ -71,7 +70,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 status = ClusterStatus.CONNECTED,
             )
 
-            clusterDao.addCluster(newCluster.toEntity(encryptor))
+            clusterDao.addCluster(newCluster.toEntity(parsed.rawKubeconfig, encryptor))
 
             Result.Success(newCluster)
         } catch (t: Throwable) {

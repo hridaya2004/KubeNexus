@@ -10,11 +10,14 @@ import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridgeImpl
 import dev.hridaya.kubenexus.data.network.ConnectivityNetworkMonitor
 import dev.hridaya.kubenexus.data.paste.DpasteLogPasteRepository
+import dev.hridaya.kubenexus.data.portforward.PortForwardRepository
 import dev.hridaya.kubenexus.data.portforward.PortForwardSessionRepositoryImpl
+import dev.hridaya.kubenexus.data.repository.ClusterCallRunner
 import dev.hridaya.kubenexus.data.repository.ClusterRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.DeploymentRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.ExploreRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.FavouriteResourcesRepositoryImpl
+import dev.hridaya.kubenexus.data.repository.KubeconfigProvider
 import dev.hridaya.kubenexus.data.repository.LogcatRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.NamespaceRepositoryImpl
 import dev.hridaya.kubenexus.data.repository.PodRepositoryImpl
@@ -34,7 +37,6 @@ import dev.hridaya.kubenexus.domain.repository.LogPasteRepository
 import dev.hridaya.kubenexus.domain.repository.LogcatRepository
 import dev.hridaya.kubenexus.domain.repository.NamespaceRepository
 import dev.hridaya.kubenexus.domain.repository.PodRepository
-import dev.hridaya.kubenexus.domain.repository.PortForwardRepository
 import dev.hridaya.kubenexus.domain.repository.PortForwardSessionRepository
 import dev.hridaya.kubenexus.domain.repository.ResourceRepository
 import dev.hridaya.kubenexus.domain.repository.ThemePreferencesRepository
@@ -83,6 +85,11 @@ abstract class RepositoryModule {
     abstract fun bindPortForwardRepository(
         impl: PortForwardRepositoryImpl
     ): PortForwardRepository
+
+    @Binds
+    abstract fun bindKubeconfigProvider(
+        impl: ClusterCallRunner
+    ): KubeconfigProvider
 
     @Binds
     @Singleton

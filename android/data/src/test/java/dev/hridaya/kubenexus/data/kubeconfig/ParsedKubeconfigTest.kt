@@ -1,27 +1,12 @@
-package dev.hridaya.kubenexus.domain.model
+package dev.hridaya.kubenexus.data.kubeconfig
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ClusterTest {
+class ParsedKubeconfigTest {
 
     private val kubeconfig = "users:\n- name: admin\n  user:\n    token: secret-token-12345\n"
-
-    @Test
-    fun `cluster toString never includes the kubeconfig`() {
-        val text = Cluster(
-            id = "id-1",
-            name = "prod",
-            serverUrl = "https://10.0.0.1:6443",
-            rawKubeconfig = kubeconfig,
-            contextName = "prod",
-        ).toString()
-
-        assertFalse(text.contains("secret-token-12345"))
-        assertTrue(text.contains("name=prod"))
-        assertTrue(text.contains("rawKubeconfig=<redacted>"))
-    }
 
     @Test
     fun `parsed kubeconfig toString never includes the kubeconfig or its CA`() {

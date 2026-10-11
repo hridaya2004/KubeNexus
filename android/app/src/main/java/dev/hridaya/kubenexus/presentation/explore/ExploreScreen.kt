@@ -104,7 +104,6 @@ private fun ExploreScreenPreview() {
                     contextName = "prod",
                     userName = "admin",
                     namespace = "default",
-                    rawKubeconfig = "",
                 ),
                 resources = listOf(
                     APIResource(

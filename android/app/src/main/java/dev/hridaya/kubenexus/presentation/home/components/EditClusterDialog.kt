@@ -93,7 +93,6 @@ private fun EditClusterDialogPreview() {
                 contextName = "prod-context",
                 userName = "admin",
                 namespace = "default",
-                rawKubeconfig = "",
             ),
             onDismiss = {},
             onSaveName = { _, _ -> },

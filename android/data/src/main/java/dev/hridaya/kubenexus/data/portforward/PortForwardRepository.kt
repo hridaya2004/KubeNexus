@@ -1,7 +1,6 @@
-package dev.hridaya.kubenexus.domain.repository
+package dev.hridaya.kubenexus.data.portforward
 
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.domain.model.PortForwardListener
 
 /**
  * Lifecycle owner for port-forwards into a pod.
