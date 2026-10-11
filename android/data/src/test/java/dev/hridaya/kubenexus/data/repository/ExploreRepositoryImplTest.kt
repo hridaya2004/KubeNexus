@@ -425,6 +425,18 @@ class ExploreRepositoryImplTest {
     }
 
     @Test
+    fun `a resource missing from a fresh schema does not download it again`() = runTest(testDispatcher) {
+        insertTestCluster("cluster-1")
+
+        val first = repository.explainResource("cluster-1", "widgets", "example.com/v1")
+        val second = repository.explainResource("cluster-1", "widgets", "example.com/v1")
+
+        assertTrue(first is Result.Success)
+        assertTrue(second is Result.Success)
+        assertEquals(1, fakeNativeBridge.schemaFetches)
+    }
+
+    @Test
     fun `a schema that cannot be parsed is an error, not a crash`() = runTest(testDispatcher) {
         insertTestCluster("cluster-1")
         fakeNativeBridge.mockSchemaJson = "{ this is not json"
@@ -460,7 +472,10 @@ class ExploreRepositoryImplTest {
         override fun listAPIResources(rawKubeconfig: String): Result<List<APIResource>> =
             Result.Success(mockResources)
 
+        var schemaFetches = 0
+
         override fun openAPISchemaJSON(rawKubeconfig: String): Result<String> {
+            schemaFetches++
             if (shouldFailSchema) {
                 return Result.Error(AppError.Network("Network error"))
             }

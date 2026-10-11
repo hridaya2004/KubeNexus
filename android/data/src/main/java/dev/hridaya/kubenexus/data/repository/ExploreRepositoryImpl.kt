@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
@@ -41,11 +42,16 @@ class ExploreRepositoryImpl @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
 ) : ExploreRepository {
 
+    /** Last schema download per cluster, so a CRD without a published definition does not refetch it. */
+    private val schemaFetchedAt = ConcurrentHashMap<String, Long>()
+
     /** A schema too large to store, kept for the current session: (clusterId, json). */
     @Volatile
     private var oversizedSchema: Pair<String, String>? = null
 
     companion object {
+        private const val SCHEMA_REFETCH_INTERVAL_MS = 10 * 60 * 1000L
+
         /** Leaves headroom under Android's 2 MB CursorWindow for the rest of the row. */
         private const val MAX_STORED_SCHEMA_BYTES = 1_800_000
 
@@ -200,8 +206,10 @@ class ExploreRepositoryImpl @Inject constructor(
             hadStoredSchema = schemaJson != null
         }
         var explain = locate(schemaJson)
+        val fetchedRecently = hadStoredSchema &&
+            schemaFetchedAt[resolvedClusterId]?.let { System.currentTimeMillis() - it < SCHEMA_REFETCH_INTERVAL_MS } == true
 
-        if (explain == null) {
+        if (explain == null && !fetchedRecently) {
             when (val fetched = fetchFreshSchema(clusterId, resolvedClusterId)) {
                 is Result.Success -> {
                     schemaJson = fetched.data
@@ -249,6 +257,7 @@ class ExploreRepositoryImpl @Inject constructor(
 
         when (val nativeResult = nativeBridge.openAPISchemaJSON(decryptedKubeconfig)) {
             is Result.Success -> {
+                schemaFetchedAt[resolvedClusterId] = System.currentTimeMillis()
                 val compressed = gzip(nativeResult.data)
                 if (compressed.size <= MAX_STORED_SCHEMA_BYTES) {
                     openApiSchemaDao.upsert(
