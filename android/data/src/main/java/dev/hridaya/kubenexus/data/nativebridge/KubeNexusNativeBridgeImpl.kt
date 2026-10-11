@@ -67,7 +67,9 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
                 "Delete the cluster and add it again."
     }
 
+    @Volatile
     private var initialized = false
+    private val initLock = Any()
 
     /**
      * Most recently started port-forward client. Tunnels live in a process-wide
@@ -108,14 +110,16 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
         }
 
     override fun initialize() {
-        try {
-            Seq.setContext(context)
-            Client.touch()
-            initialized = true
-            Log.d(TAG, "Successfully initialized Go runtime Seq context and Client package")
-        } catch (t: Throwable) {
-            initialized = false
-            Log.e(TAG, LogSanitizer.withStackTrace("Failed to initialize native Go runtime", t))
+        synchronized(initLock) {
+            try {
+                Seq.setContext(context)
+                Client.touch()
+                initialized = true
+                Log.d(TAG, "Successfully initialized Go runtime Seq context and Client package")
+            } catch (t: Throwable) {
+                initialized = false
+                Log.e(TAG, LogSanitizer.withStackTrace("Failed to initialize native Go runtime", t))
+            }
         }
     }
 
@@ -132,8 +136,9 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
     }
 
     private fun ensureInitialized() {
-        if (!initialized) {
-            initialize()
+        if (initialized) return
+        synchronized(initLock) {
+            if (!initialized) initialize()
         }
     }
 
