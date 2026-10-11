@@ -1,5 +1,6 @@
 package dev.hridaya.kubenexus.data.repository
 
+import dev.hridaya.kubenexus.core.security.NoOpKubeconfigEncryptor
 import android.database.sqlite.SQLiteBlobTooBigException
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.AppError
@@ -63,6 +64,7 @@ class ExploreRepositoryImplTest {
             openApiSchemaDao = fakeOpenApiSchemaDao,
             nativeBridge = fakeNativeBridge,
             jsonParser = NativeBridgeJsonParser(),
+            encryptor = NoOpKubeconfigEncryptor,
             dispatcherProvider = testDispatcherProvider,
         )
     }

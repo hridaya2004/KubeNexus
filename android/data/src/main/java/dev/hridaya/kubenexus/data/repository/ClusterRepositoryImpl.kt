@@ -5,7 +5,6 @@ import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
 import dev.hridaya.kubenexus.core.security.LogSanitizer
-import dev.hridaya.kubenexus.core.security.NoOpKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.kubeconfig.ClusterConnectionTester
 import dev.hridaya.kubenexus.data.kubeconfig.KubeconfigParser
 import dev.hridaya.kubenexus.data.mapper.toDomain
@@ -28,7 +27,7 @@ class ClusterRepositoryImpl @Inject constructor(
     private val clusterDao: ClusterDao,
     private val connectionTester: ClusterConnectionTester,
     private val nativeBridge: KubeNexusNativeBridge,
-    private val encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryptor,
+    private val encryptor: KubeconfigEncryptor,
     private val dispatcherProvider: DispatcherProvider,
 ) : ClusterRepository {
 

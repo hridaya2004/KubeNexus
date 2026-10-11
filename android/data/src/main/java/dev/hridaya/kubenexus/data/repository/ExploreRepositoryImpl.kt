@@ -8,7 +8,6 @@ import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
 import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
 import dev.hridaya.kubenexus.core.security.LogSanitizer
-import dev.hridaya.kubenexus.core.security.NoOpKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.mapper.toDomain
 import dev.hridaya.kubenexus.data.mapper.toEntity
 import dev.hridaya.kubenexus.data.nativebridge.KubeNexusNativeBridge
@@ -38,7 +37,7 @@ class ExploreRepositoryImpl @Inject constructor(
     private val openApiSchemaDao: OpenApiSchemaDao,
     private val nativeBridge: KubeNexusNativeBridge,
     private val jsonParser: NativeBridgeJsonParser,
-    private val encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryptor,
+    private val encryptor: KubeconfigEncryptor,
     private val dispatcherProvider: DispatcherProvider,
 ) : ExploreRepository {
 
