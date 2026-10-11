@@ -10,6 +10,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,6 +34,7 @@ internal fun MainTopLevelScaffold(
     onOpen: (Screen) -> Unit,
     activeForwardCount: Int,
     onOpenPortForwardSessions: () -> Unit,
+    tabStateHolder: SaveableStateHolder,
     modifier: Modifier = Modifier,
 ) {
     val favouritesViewModel: FavouritesViewModel = hiltViewModel()
@@ -71,45 +73,47 @@ internal fun MainTopLevelScaffold(
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            when (currentDestination) {
-                Destination.Favourites -> {
-                    FavouritesRoute(
-                        homeViewModel = homeViewModel,
-                        favouritesViewModel = favouritesViewModel,
-                        onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
-                        onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
-                        onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },
-                        onBrowseResources = { onSelectDestination(Destination.Resources) },
-                        activePortForwardCount = activeForwardCount,
-                        onOpenPortForwardSessions = onOpenPortForwardSessions,
-                    )
-                }
+            tabStateHolder.SaveableStateProvider(currentDestination.name) {
+                when (currentDestination) {
+                    Destination.Favourites -> {
+                        FavouritesRoute(
+                            homeViewModel = homeViewModel,
+                            favouritesViewModel = favouritesViewModel,
+                            onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
+                            onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
+                            onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },
+                            onBrowseResources = { onSelectDestination(Destination.Resources) },
+                            activePortForwardCount = activeForwardCount,
+                            onOpenPortForwardSessions = onOpenPortForwardSessions,
+                        )
+                    }
 
-                Destination.Resources -> {
-                    ResourcesRoute(
-                        viewModel = homeViewModel,
-                        favouritesViewModel = favouritesViewModel,
-                        onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
-                        onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
-                        onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },
-                        activePortForwardCount = activeForwardCount,
-                        onOpenPortForwardSessions = onOpenPortForwardSessions,
-                    )
-                }
+                    Destination.Resources -> {
+                        ResourcesRoute(
+                            viewModel = homeViewModel,
+                            favouritesViewModel = favouritesViewModel,
+                            onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
+                            onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
+                            onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },
+                            activePortForwardCount = activeForwardCount,
+                            onOpenPortForwardSessions = onOpenPortForwardSessions,
+                        )
+                    }
 
-                Destination.Explore -> {
-                    val exploreViewModel: ExploreViewModel = hiltViewModel()
-                    ExploreRoute(
-                        viewModel = exploreViewModel,
-                    )
-                }
+                    Destination.Explore -> {
+                        val exploreViewModel: ExploreViewModel = hiltViewModel()
+                        ExploreRoute(
+                            viewModel = exploreViewModel,
+                        )
+                    }
 
-                Destination.Settings -> {
-                    SettingsScreen(
-                        onNavigateToLogcat = { onOpen(Screen.Logcat) },
-                        onNavigateToOpenSourceLicenses = { onOpen(Screen.OpenSourceLicenses) },
-                        onClearCachedData = { homeViewModel.onAction(HomeUiAction.ClearCachedData) },
-                    )
+                    Destination.Settings -> {
+                        SettingsScreen(
+                            onNavigateToLogcat = { onOpen(Screen.Logcat) },
+                            onNavigateToOpenSourceLicenses = { onOpen(Screen.OpenSourceLicenses) },
+                            onClearCachedData = { homeViewModel.onAction(HomeUiAction.ClearCachedData) },
+                        )
+                    }
                 }
             }
         }

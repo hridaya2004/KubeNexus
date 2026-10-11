@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +39,7 @@ fun MainScreen(
     val portForwardSessionsViewModel: PortForwardSessionsViewModel = hiltViewModel()
     val portForwardSessionsState by rememberPortForwardSessionsState(portForwardSessionsViewModel)
     var showPortForwardSessions by rememberSaveable { mutableStateOf(false) }
+    val tabStateHolder = rememberSaveableStateHolder()
 
     // Every screen on the stack gets its own ViewModel store, keyed by everything its
     // ViewModels are bound to. The active cluster is part of every key, so a screen opened
@@ -81,6 +83,7 @@ fun MainScreen(
             onOpen = backStack::push,
             activeForwardCount = portForwardSessionsState.activeCount,
             onOpenPortForwardSessions = { showPortForwardSessions = true },
+            tabStateHolder = tabStateHolder,
             modifier = modifier,
         )
     } else {
