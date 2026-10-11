@@ -266,6 +266,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":domain"))
     implementation(project(":data"))
+    implementation(project(":terminal"))
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
