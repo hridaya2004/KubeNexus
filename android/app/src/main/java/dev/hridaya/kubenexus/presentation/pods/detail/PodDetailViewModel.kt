@@ -463,6 +463,7 @@ class PodDetailViewModel @AssistedInject constructor(
 
         streamJob = viewModelScope.launch(dispatcherProvider.main) {
             streamPodLogsUseCase(cid, namespace, podName, container, tail)
+                .batched(LOG_BATCH_WINDOW_MS)
                 .onStart {
                     val tailDesc = if (tail != null && tail > 0) " (tail $tail lines)" else ""
                     _uiState.update { it.copy(logs = listOf("[Streaming logs initiated for container '${container ?: "default"}'$tailDesc]...")) }
@@ -484,9 +485,9 @@ class PodDetailViewModel @AssistedInject constructor(
                         )
                     }
                 }
-                .collect { line ->
+                .collect { lines ->
                     _uiState.update {
-                        it.copy(logs = it.logs.appendCapped(line))
+                        it.copy(logs = it.logs.appendCapped(lines))
                     }
                 }
         }
@@ -678,6 +679,8 @@ class PodDetailViewModel @AssistedInject constructor(
         /** How long to wait for the runtime to report that a shell does not exist. */
         private const val SHELL_PROBE_MS = 500L
 
+        private const val LOG_BATCH_WINDOW_MS = 100L
+
         /** Upper bound for the log view, so a long stream cannot grow without limit. */
         const val MAX_LOG_LINES = 5_000
 
@@ -702,5 +705,14 @@ class PodDetailViewModel @AssistedInject constructor(
 }
 
 /** Appends [line], dropping the oldest lines beyond [PodDetailViewModel.MAX_LOG_LINES]. */
-private fun List<String>.appendCapped(line: String): List<String> =
-    if (size < PodDetailViewModel.MAX_LOG_LINES) this + line else drop(size - PodDetailViewModel.MAX_LOG_LINES + 1) + line
+private fun List<String>.appendCapped(line: String): List<String> = appendCapped(listOf(line))
+
+/** Appends [lines], dropping the oldest lines beyond [PodDetailViewModel.MAX_LOG_LINES]. */
+private fun List<String>.appendCapped(lines: List<String>): List<String> {
+    val overflow = size + lines.size - PodDetailViewModel.MAX_LOG_LINES
+    return when {
+        overflow <= 0 -> this + lines
+        overflow >= size -> lines.takeLast(PodDetailViewModel.MAX_LOG_LINES)
+        else -> drop(overflow) + lines
+    }
+}
