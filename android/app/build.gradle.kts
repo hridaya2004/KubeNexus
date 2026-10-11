@@ -97,10 +97,11 @@ android {
             keyPassword = "android"
         }
 
-        create("release") {
-            val keystorePath = project.findProperty("KEYSTORE_PATH") as? String
-                ?: System.getenv("KEYSTORE_PATH")
-            if (keystorePath != null && file(keystorePath).exists()) {
+        // Without a release keystore, release builds stay unsigned instead of using the debug key.
+        val keystorePath = project.findProperty("KEYSTORE_PATH") as? String
+            ?: System.getenv("KEYSTORE_PATH")
+        if (keystorePath != null && file(keystorePath).exists()) {
+            create("release") {
                 storeFile = file(keystorePath)
                 storePassword = project.findProperty("KEYSTORE_PASSWORD") as? String
                     ?: System.getenv("KEYSTORE_PASSWORD") ?: ""
@@ -108,8 +109,6 @@ android {
                     ?: System.getenv("KEY_ALIAS") ?: ""
                 keyPassword = project.findProperty("KEY_PASSWORD") as? String
                     ?: System.getenv("KEY_PASSWORD") ?: ""
-            } else {
-                initWith(getByName("debug"))
             }
         }
     }
@@ -130,7 +129,7 @@ android {
                 debugSymbolLevel = "FULL"
             }
             isDebuggable = false
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
