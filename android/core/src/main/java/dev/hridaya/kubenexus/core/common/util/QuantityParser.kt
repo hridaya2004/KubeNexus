@@ -31,6 +31,8 @@ object QuantityParser {
     private val QUANTITY =
         Regex("""^([+-]?(?:\d+(?:\.\d+)?|\.\d+))([eE][+-]?\d+)?([A-Za-z]*)$""")
 
+    private const val MAX_EXPONENT = 30
+
     /** Powers of ten, keyed by decimal SI suffix. */
     private val DECIMAL_SI = mapOf(
         "n" to -9,
@@ -78,6 +80,7 @@ object QuantityParser {
 
         if (exponentPart.isNotEmpty()) {
             val exponent = exponentPart.drop(1).toIntOrNull() ?: return null
+            if (exponent !in -MAX_EXPONENT..MAX_EXPONENT) return null
             value = value.scaleByPowerOfTen(exponent)
         }
 

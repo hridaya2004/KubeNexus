@@ -100,4 +100,11 @@ class QuantityParserTest {
         assertEquals(1536L, QuantityParser.parseBytes("1.5Ki"))
         assertEquals(1L, QuantityParser.parseBytes("1.9"))
     }
+
+    @Test(timeout = 2_000)
+    fun `rejects exponents no real quantity uses`() {
+        assertNull(QuantityParser.parseBytes("1e999999999"))
+        assertNull(QuantityParser.parseCores("1e-999999999"))
+        assertEquals(1_000_000_000_000_000_000L, QuantityParser.parseBytes("1e18"))
+    }
 }
