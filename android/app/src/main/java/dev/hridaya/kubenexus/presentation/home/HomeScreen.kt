@@ -286,7 +286,7 @@ private fun HomeScreenPreview() {
 private fun HomeScreenEmptyPreview() {
     KubeNexusTheme {
         HomeScreen(
-            title = "Favourites",
+            title = "Home",
             uiState = HomeUiState(
                 clusters = emptyList(),
                 activeCluster = null,

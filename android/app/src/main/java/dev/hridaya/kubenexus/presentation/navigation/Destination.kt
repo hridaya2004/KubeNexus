@@ -3,12 +3,12 @@ package dev.hridaya.kubenexus.presentation.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class Destination(
@@ -18,11 +18,11 @@ enum class Destination(
     val unselectedIcon: ImageVector,
     val badgeCount: Int? = null,
 ) {
-    Favourites(
-        route = "favourites",
-        title = "Favourites",
-        selectedIcon = Icons.Filled.Star,
-        unselectedIcon = Icons.Outlined.StarBorder,
+    Home(
+        route = "home",
+        title = "Home",
+        selectedIcon = Icons.Filled.Home,
+        unselectedIcon = Icons.Outlined.Home,
     ),
     Resources(
         route = "resources",
@@ -45,16 +45,18 @@ enum class Destination(
     ;
 
     companion object {
+        val Favourites: Destination get() = Home
+
         val topLevelDestinations: List<Destination>
             get() = entries
 
         fun fromRoute(route: String?): Destination {
             return when (route?.substringBefore("/")) {
-                Favourites.route -> Favourites
+                Home.route, "favourites" -> Home
                 Resources.route -> Resources
                 Explore.route -> Explore
                 Settings.route -> Settings
-                else -> Favourites
+                else -> Home
             }
         }
     }

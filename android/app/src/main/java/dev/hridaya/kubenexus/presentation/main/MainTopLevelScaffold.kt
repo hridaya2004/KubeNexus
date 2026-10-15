@@ -75,7 +75,7 @@ internal fun MainTopLevelScaffold(
         ) {
             tabStateHolder.SaveableStateProvider(currentDestination.name) {
                 when (currentDestination) {
-                    Destination.Favourites -> {
+                    Destination.Home -> {
                         FavouritesRoute(
                             homeViewModel = homeViewModel,
                             favouritesViewModel = favouritesViewModel,
