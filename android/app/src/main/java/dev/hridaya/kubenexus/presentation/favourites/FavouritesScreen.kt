@@ -1,9 +1,11 @@
 package dev.hridaya.kubenexus.presentation.favourites
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,10 +30,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
@@ -41,12 +44,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,7 +83,7 @@ fun FavouritesRoute(
     val favourites by favouritesViewModel.favourites.collectAsStateWithLifecycle()
 
     HomeScreen(
-        title = "Favourites",
+        title = "Home",
         uiState = uiState,
         onAction = homeViewModel::onAction,
         onNavigateToManageClusters = onNavigateToManageClusters,
@@ -134,7 +141,7 @@ fun FavouritesList(
             top = 8.dp,
             bottom = 96.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier.fillMaxSize(),
     ) {
         if (isRefreshing) {
@@ -147,55 +154,109 @@ fun FavouritesList(
             }
         }
 
-        if (lastRefreshedAt != null) {
-            item(key = "header") {
-                ResourceGroupHeader(title = null, lastRefreshedAt = lastRefreshedAt)
-            }
-        }
-        item(key = "favourites") {
-            val count = favourites.size + 1
-            Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                favourites.forEachIndexed { index, presentation ->
-                    key(presentation.kind.type.key) {
-                        FavouriteEntry(
-                            presentation = presentation,
-                            shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-                            onOpen = { onOpenResources(presentation) },
-                            onRemove = { onRemoveFavourite(presentation) },
-                        )
-                    }
-                }
-                ResourcePreferenceCard(
-                    title = "Add",
-                    subtitle = "Keep another resource here",
-                    icon = Icons.Filled.Add,
-                    onClick = { showAddSheet = true },
-                    shapes = ListItemDefaults.segmentedShapes(index = favourites.size, count = count),
-                )
-            }
+        item(key = "category/Favourite") {
+            FavouriteCategorySection(
+                title = "Favourite",
+                lastRefreshedAt = lastRefreshedAt,
+                favourites = favourites,
+                onOpen = onOpenResources,
+                onRemove = onRemoveFavourite,
+                onAdd = { showAddSheet = true },
+            )
         }
     }
 }
 
-/** Long-pressing a favourite offers to remove it. */
 @Composable
-private fun FavouriteEntry(
+private fun FavouriteCategorySection(
+    title: String,
+    lastRefreshedAt: Long?,
+    favourites: List<ResourcePresentation<*>>,
+    onOpen: (ResourcePresentation<*>) -> Unit,
+    onRemove: (ResourcePresentation<*>) -> Unit,
+    onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ResourceGroupHeader(title = title, lastRefreshedAt = lastRefreshedAt)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+        ) {
+            favourites.forEach { presentation ->
+                key(presentation.kind.type.key) {
+                    FavouriteRoundButton(
+                        presentation = presentation,
+                        onOpen = { onOpen(presentation) },
+                        onRemove = { onRemove(presentation) },
+                    )
+                }
+            }
+            AddRoundButton(onClick = onAdd)
+        }
+    }
+}
+
+/** Round button with icon inside and title label below. Long-pressing offers to remove it. */
+@Composable
+private fun FavouriteRoundButton(
     presentation: ResourcePresentation<*>,
-    shapes: ListItemShapes,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
-    Box {
-        ResourcePreferenceCard(
-            title = presentation.title,
-            subtitle = presentation.description,
-            icon = presentation.icon,
-            onClick = onOpen,
-            shapes = shapes,
-            onLongClick = { menuExpanded = true },
-            onLongClickLabel = "Show options",
-        )
+    val haptic = LocalHapticFeedback.current
+
+    Box(modifier = modifier) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .width(72.dp)
+                .combinedClickable(
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        menuExpanded = true
+                    },
+                    onLongClickLabel = "Show options",
+                    onClick = {
+                        //noop
+                    },
+                )
+                .padding(vertical = 4.dp),
+        ) {
+            FilledTonalIconButton(
+                modifier = Modifier.size(56.dp),
+                shapes = IconButtonDefaults.shapes(),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
+                onClick = onOpen,
+            ) {
+                Icon(
+                    imageVector = presentation.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = presentation.title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
                 text = { Text("Remove from favourites") },
@@ -204,6 +265,50 @@ private fun FavouriteEntry(
                     menuExpanded = false
                     onRemove()
                 },
+            )
+        }
+    }
+}
+
+/** Round Add button with plus icon inside, matching the user sketch. */
+@Composable
+private fun AddRoundButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.width(72.dp),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier = Modifier
+                .width(72.dp)
+                .padding(vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            FilledTonalIconButton(
+                modifier = Modifier.size(56.dp),
+                shapes = IconButtonDefaults.shapes(),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
+                onClick = onClick,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add favourite",
+                    modifier = Modifier.size(26.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Add more",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -252,7 +357,7 @@ private fun AddFavouriteSheet(
             when {
                 favourites.size >= MAX_FAVOURITE_RESOURCES -> SheetMessage(
                     "You can keep up to $MAX_FAVOURITE_RESOURCES favourites. " +
-                        "Long-press one to remove it before adding another.",
+                            "Long-press one to remove it before adding another.",
                 )
 
                 groups.isEmpty() -> SheetMessage("Every resource is already a favourite.")
@@ -284,7 +389,10 @@ private fun AddableGroup(group: ResourceGroup, onAdd: (ResourcePresentation<*>) 
                 subtitle = presentation.description,
                 icon = presentation.icon,
                 onClick = { onAdd(presentation) },
-                shapes = ListItemDefaults.segmentedShapes(index = index, count = group.resources.size),
+                shapes = ListItemDefaults.segmentedShapes(
+                    index = index,
+                    count = group.resources.size
+                ),
                 trailingIcon = Icons.Filled.Add,
             )
         }
