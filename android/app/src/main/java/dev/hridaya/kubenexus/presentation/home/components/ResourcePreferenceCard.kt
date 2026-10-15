@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,12 +39,20 @@ fun ResourcePreferenceCard(
         colors = segmentedListItemColors(),
         verticalAlignment = Alignment.CenterVertically,
         leadingContent = { Icon(imageVector = icon, contentDescription = null) },
-        supportingContent = { Text(text = subtitle) },
+        supportingContent = {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
         trailingContent = { Icon(imageVector = trailingIcon, contentDescription = null) },
         onLongClick = onLongClick,
         onLongClickLabel = onLongClickLabel,
     ) {
-        Text(text = title)
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+        )
     }
 }
 
