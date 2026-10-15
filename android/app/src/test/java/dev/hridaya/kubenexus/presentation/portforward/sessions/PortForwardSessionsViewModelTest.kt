@@ -48,7 +48,10 @@ class PortForwardSessionsViewModelTest {
             dispatcherProvider = testDispatcherProvider,
         )
         val sessions = PortForwardSessionRepositoryImpl(sessionManager) { "fake-kubeconfig" }
-        viewModel = PortForwardSessionsViewModel(ObservePortForwardSessionsUseCase(sessions), StopPortForwardUseCase(sessions))
+        viewModel = PortForwardSessionsViewModel(
+            ObservePortForwardSessionsUseCase(sessions),
+            StopPortForwardUseCase(sessions)
+        )
     }
 
     @After

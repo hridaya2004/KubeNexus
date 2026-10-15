@@ -71,7 +71,12 @@ class ResolveServiceForwardTargetUseCaseTest {
         assertEquals("web-pod-abc", target.podName)
         assertEquals(8080, target.podPort)
         assertEquals(
-            FakeResourceRepository.ListCall("c1", ResourceKinds.Pods, NamespaceScope.Only("default"), "app=web"),
+            FakeResourceRepository.ListCall(
+                "c1",
+                ResourceKinds.Pods,
+                NamespaceScope.Only("default"),
+                "app=web"
+            ),
             fakeResourceRepository.listCalls.single(),
         )
     }
@@ -96,10 +101,22 @@ class ResolveServiceForwardTargetUseCaseTest {
     @Test
     fun `resolves a named targetPort to the pod's container port`() = runTest {
         val service = serviceWithPort(
-            ServicePortDetail(port = 80, targetPort = -1, nodePort = null, protocol = "TCP", name = "web", targetPortName = "http"),
+            ServicePortDetail(
+                port = 80,
+                targetPort = -1,
+                nodePort = null,
+                protocol = "TCP",
+                name = "web",
+                targetPortName = "http"
+            ),
         )
         givenPods(
-            Pod(id = "1", name = "web-1", namespace = "default", namedContainerPorts = mapOf("http" to 8080)),
+            Pod(
+                id = "1",
+                name = "web-1",
+                namespace = "default",
+                namedContainerPorts = mapOf("http" to 8080)
+            ),
         )
 
         val target = (useCase("c1", service, 80) as Result.Success).data
@@ -111,10 +128,22 @@ class ResolveServiceForwardTargetUseCaseTest {
     @Test
     fun `a named targetPort no running pod defines is an error, not a guess`() = runTest {
         val service = serviceWithPort(
-            ServicePortDetail(port = 80, targetPort = -1, nodePort = null, protocol = "TCP", name = "web", targetPortName = "http"),
+            ServicePortDetail(
+                port = 80,
+                targetPort = -1,
+                nodePort = null,
+                protocol = "TCP",
+                name = "web",
+                targetPortName = "http"
+            ),
         )
         givenPods(
-            Pod(id = "1", name = "web-1", namespace = "default", namedContainerPorts = mapOf("metrics" to 9090)),
+            Pod(
+                id = "1",
+                name = "web-1",
+                namespace = "default",
+                namedContainerPorts = mapOf("metrics" to 9090)
+            ),
         )
 
         val result = useCase("c1", service, 80)
@@ -126,11 +155,29 @@ class ResolveServiceForwardTargetUseCaseTest {
     @Test
     fun `pods that are not running are never chosen`() = runTest {
         val service = serviceWithPort(
-            ServicePortDetail(port = 80, targetPort = 8080, nodePort = null, protocol = "TCP", name = "web"),
+            ServicePortDetail(
+                port = 80,
+                targetPort = 8080,
+                nodePort = null,
+                protocol = "TCP",
+                name = "web"
+            ),
         )
         givenPods(
-            Pod(id = "1", name = "done", namespace = "default", status = PodStatus.COMPLETED, readyContainers = "0/1"),
-            Pod(id = "2", name = "pending", namespace = "default", status = PodStatus.PENDING, readyContainers = "0/1"),
+            Pod(
+                id = "1",
+                name = "done",
+                namespace = "default",
+                status = PodStatus.COMPLETED,
+                readyContainers = "0/1"
+            ),
+            Pod(
+                id = "2",
+                name = "pending",
+                namespace = "default",
+                status = PodStatus.PENDING,
+                readyContainers = "0/1"
+            ),
         )
 
         val result = useCase("c1", service, 80)

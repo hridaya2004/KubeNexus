@@ -20,11 +20,16 @@ object TimeFormatter {
             diffMs < 5_000 -> "Refreshed just now"
             diffMs < 60_000 -> "Refreshed ${diffMs / 1000}s ago"
             diffMs < 3600_000 -> "Refreshed ${diffMs / 60000}m ago"
-            instant.atZone(zone).toLocalDate() == Instant.ofEpochMilli(now).atZone(zone).toLocalDate() ->
-                "Refreshed at ${DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault()).withZone(zone).format(instant)}"
+            instant.atZone(zone).toLocalDate() == Instant.ofEpochMilli(now).atZone(zone)
+                .toLocalDate() ->
+                "Refreshed at ${
+                    DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault()).withZone(zone)
+                        .format(instant)
+                }"
             // Cached data can be days old; a bare time of day would read as today.
             else -> "Refreshed on ${
-                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withZone(zone).format(instant)
+                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+                    .withZone(zone).format(instant)
             }"
         }
     }

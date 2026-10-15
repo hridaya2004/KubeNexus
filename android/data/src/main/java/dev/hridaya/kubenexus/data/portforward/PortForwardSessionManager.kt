@@ -53,7 +53,10 @@ class PortForwardSessionManager @Inject constructor(
      * process alive exactly as long as this holds.
      */
     val needsForegroundService: StateFlow<Boolean> =
-        combine(_sessions, pendingStarts) { list, pending -> pending > 0 || list.any { it.isActive } }
+        combine(
+            _sessions,
+            pendingStarts
+        ) { list, pending -> pending > 0 || list.any { it.isActive } }
             .distinctUntilChanged()
             .stateIn(externalScope, SharingStarted.Eagerly, false)
 
@@ -255,10 +258,12 @@ class PortForwardSessionManager @Inject constructor(
             val list = _sessions.value
             val index = list.indexOfFirst { it.handleId == handleId }
             if (index >= 0) {
-                _sessions.value = list.toMutableList().apply { this[index] = transform(this[index]) }
+                _sessions.value =
+                    list.toMutableList().apply { this[index] = transform(this[index]) }
             } else if (recordIfUnknown && pendingStarts.value > 0) {
                 val previous = earlyUpdates[handleId]
-                earlyUpdates[handleId] = if (previous == null) transform else { s -> transform(previous(s)) }
+                earlyUpdates[handleId] =
+                    if (previous == null) transform else { s -> transform(previous(s)) }
             }
         }
     }

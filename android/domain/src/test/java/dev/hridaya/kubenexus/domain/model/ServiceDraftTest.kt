@@ -78,7 +78,11 @@ class ServiceDraftTest {
     @Test
     fun `selector accepts label values that are not dns labels`() {
         listOf("Web.Frontend", "MyApp", "my_app", "web.v2", "a".repeat(63)).forEach { value ->
-            assertEquals(value, emptyMap<String, String>(), validDraft().copy(selectorApp = value).validate())
+            assertEquals(
+                value,
+                emptyMap<String, String>(),
+                validDraft().copy(selectorApp = value).validate()
+            )
         }
     }
 

@@ -92,7 +92,10 @@ class PodDetailViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeClusterRepository = FakeClusterRepository()
         fakePodRepository = FakePodRepository()
-        resources.givenDescribe(ResourceKinds.Pods, Result.Success(podDetails("test-pod-1", "default")))
+        resources.givenDescribe(
+            ResourceKinds.Pods,
+            Result.Success(podDetails("test-pod-1", "default"))
+        )
         onlineFlow = MutableStateFlow(true)
         val fakeNetworkMonitor = object : NetworkMonitor {
             override val isOnline: Flow<Boolean> = onlineFlow
@@ -467,7 +470,10 @@ class PodDetailViewModelTest {
     fun `refreshDescribe when describe fails sets error and resets flags`() = vmTest {
         idleNow()
 
-        resources.givenDescribe(ResourceKinds.Pods, Result.Error(AppError.Network("Connection refused: cannot reach cluster")))
+        resources.givenDescribe(
+            ResourceKinds.Pods,
+            Result.Error(AppError.Network("Connection refused: cannot reach cluster"))
+        )
         viewModel.onAction(PodDetailUiAction.RefreshDescribe)
         idleNow()
 
@@ -607,9 +613,6 @@ class PodDetailViewModelTest {
         }
 
 
-
-
-
         override suspend fun getPodMetrics(
             clusterId: String?,
             namespace: String?,
@@ -620,12 +623,6 @@ class PodDetailViewModelTest {
             namespace: String,
             podName: String,
         ): Result<PodMetricSample?> = Result.Success(null)
-
-
-
-
-
-
 
 
         override suspend fun getPodLogs(
@@ -751,5 +748,6 @@ private fun podDetails(podName: String, namespace: String) = PodDetails(
 
 private class FakeLogPasteRepository : LogPasteRepository {
     override val destination = LogPasteDestination(name = "paste.test", retention = "1 day")
-    override suspend fun upload(content: String): Result<String> = Result.Success("https://paste.test/1")
+    override suspend fun upload(content: String): Result<String> =
+        Result.Success("https://paste.test/1")
 }

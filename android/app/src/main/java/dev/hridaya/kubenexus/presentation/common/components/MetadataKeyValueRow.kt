@@ -197,9 +197,9 @@ private fun CollapsibleJsonMetadataRow(
         AnimatedVisibility(
             visible = isExpanded,
             enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
             exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
+                    fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
         ) {
             Surface(
                 shape = MaterialTheme.shapes.small,

@@ -20,7 +20,10 @@ class DpasteLogPasteRepositoryTest {
         val body = DpasteLogPasteRepository.formBody("line one\nline two")
 
         assertTrue(body.contains("expires=604800"))
-        assertFalse("expiry_days is dpaste.com's field and is ignored by dpaste.org", body.contains("expiry_days"))
+        assertFalse(
+            "expiry_days is dpaste.com's field and is ignored by dpaste.org",
+            body.contains("expiry_days")
+        )
         assertTrue(body.contains("format=url"))
         assertTrue(body.contains("content=line+one%0Aline+two"))
     }

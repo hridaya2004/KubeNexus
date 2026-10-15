@@ -90,6 +90,7 @@ class ClusterMapperTest {
             override fun encrypt(plainText: String) = plainText
             override fun decrypt(cipherText: String): String =
                 throw KubeconfigDecryptionException("key lost")
+
             override fun isEncrypted(text: String) = true
         }
         val entity = ClusterEntity(

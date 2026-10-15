@@ -33,7 +33,11 @@ class RestartDeploymentUseCaseTest {
         useCase(clusterId = "c1", namespace = "prod", name = "nginx")
 
         assertEquals(
-            FakeResourceRepository.SyncCall("c1", ResourceKinds.Deployments, NamespaceScope.Only("prod")),
+            FakeResourceRepository.SyncCall(
+                "c1",
+                ResourceKinds.Deployments,
+                NamespaceScope.Only("prod")
+            ),
             resources.syncCalls.single(),
         )
     }

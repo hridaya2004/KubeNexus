@@ -58,7 +58,10 @@ fun LogcatSearchBar(
             },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }, shapes = IconButtonDefaults.shapes()) {
+                    IconButton(
+                        onClick = { onQueryChange("") },
+                        shapes = IconButtonDefaults.shapes()
+                    ) {
                         Icon(
                             Icons.Outlined.Clear,
                             contentDescription = "Clear query",

@@ -15,11 +15,20 @@ class DeploymentRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
-    private val clusterDao = InMemoryClusterDao().apply { seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG)) }
+    private val clusterDao = InMemoryClusterDao().apply {
+        seed(
+            id = CLUSTER,
+            rawKubeconfig = encryptor.encrypt(KUBECONFIG)
+        )
+    }
     private val bridge = RecordingRolloutBridge()
 
     private val repository = DeploymentRepositoryImpl(
-        clusterCalls = ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher)),
+        clusterCalls = ClusterCallRunner(
+            clusterDao,
+            encryptor,
+            TestDispatcherProvider(testDispatcher)
+        ),
         nativeBridge = bridge,
     )
 
@@ -52,12 +61,21 @@ class DeploymentRepositoryImplTest {
         var lastCall: List<String>? = null
         var result: Result<Unit> = Result.Success(Unit)
 
-        override fun scaleDeployment(rawKubeconfig: String, namespace: String, name: String, replicas: Int): Result<Unit> {
+        override fun scaleDeployment(
+            rawKubeconfig: String,
+            namespace: String,
+            name: String,
+            replicas: Int
+        ): Result<Unit> {
             lastCall = listOf("scale", rawKubeconfig, namespace, name, replicas.toString())
             return result
         }
 
-        override fun restartDeployment(rawKubeconfig: String, namespace: String, name: String): Result<Unit> {
+        override fun restartDeployment(
+            rawKubeconfig: String,
+            namespace: String,
+            name: String
+        ): Result<Unit> {
             lastCall = listOf("restart", rawKubeconfig, namespace, name)
             return result
         }

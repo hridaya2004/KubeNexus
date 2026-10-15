@@ -81,7 +81,9 @@ fun OpenSourceLicensesScreen(
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             MediumFlexibleTopAppBar(
@@ -189,8 +191,8 @@ private fun KubeNexusOwnLicenseHeader(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "The “KubeNexus” name and logo are not licensed under Apache-2.0. " +
-                "“Kubernetes” is a registered trademark of LF Projects, LLC, used here " +
-                "descriptively only.",
+                    "“Kubernetes” is a registered trademark of LF Projects, LLC, used here " +
+                    "descriptively only.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -215,9 +217,9 @@ private fun KubeNexusOwnLicenseHeader(modifier: Modifier = Modifier) {
         AnimatedVisibility(
             visible = expanded,
             enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
             exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
+                    fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
         ) {
             Column {
                 if (trademarkNotice.isNotBlank()) {
@@ -247,7 +249,7 @@ private fun KubeNexusOwnLicenseHeader(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = "Includes native code compiled into this app that is not visible to the " +
-                "Android build system, plus the Go client libraries.",
+                    "Android build system, plus the Go client libraries.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -277,7 +279,7 @@ private fun AttributionFooter(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Full texts, versions and pinned commit hashes are recorded in " +
-                    "THIRD-PARTY-NOTICES.md and NOTICE in the source repository.",
+                        "THIRD-PARTY-NOTICES.md and NOTICE in the source repository.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

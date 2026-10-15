@@ -37,9 +37,14 @@ class InMemoryResourceCacheDao : ResourceCacheDao {
         }
 
     override suspend fun getIds(clusterId: String, resourceKey: String): List<String> =
-        rows.value.values.filter { it.clusterId == clusterId && it.resourceKey == resourceKey }.map { it.id }
+        rows.value.values.filter { it.clusterId == clusterId && it.resourceKey == resourceKey }
+            .map { it.id }
 
-    override suspend fun getIdsInNamespace(clusterId: String, resourceKey: String, namespace: String): List<String> =
+    override suspend fun getIdsInNamespace(
+        clusterId: String,
+        resourceKey: String,
+        namespace: String
+    ): List<String> =
         rows.value.values
             .filter { it.clusterId == clusterId && it.resourceKey == resourceKey && it.namespace == namespace }
             .map { it.id }
@@ -57,10 +62,12 @@ class InMemoryResourceCacheDao : ResourceCacheDao {
     }
 
     override suspend fun deleteNamespace(clusterId: String, namespace: String) {
-        rows.value = rows.value.filterValues { !(it.clusterId == clusterId && it.namespace == namespace) }
+        rows.value =
+            rows.value.filterValues { !(it.clusterId == clusterId && it.namespace == namespace) }
     }
 
-    override fun observeLastSynced(key: String): Flow<Long?> = syncMetadata.map { it[key]?.lastRefreshedAt }
+    override fun observeLastSynced(key: String): Flow<Long?> =
+        syncMetadata.map { it[key]?.lastRefreshedAt }
 
     override suspend fun insertSyncMetadata(metadata: SyncMetadataEntity) {
         syncMetadata.value += metadata.key to metadata

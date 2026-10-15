@@ -154,7 +154,8 @@ class CreateDeploymentViewModel @AssistedInject constructor(
             }
 
             is Result.Error -> _uiState.update {
-                it.copy(errorMessage = result.error.message.takeIf { msg -> msg.isNotBlank() } ?: PREVIEW_ERROR_MESSAGE)
+                it.copy(errorMessage = result.error.message.takeIf { msg -> msg.isNotBlank() }
+                    ?: PREVIEW_ERROR_MESSAGE)
             }
 
             is Result.Loading -> Unit
@@ -189,7 +190,8 @@ class CreateDeploymentViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> _uiState.update {
-                    val errorMsg = result.error.message.takeIf { msg -> msg.isNotBlank() } ?: APPLY_ERROR_MESSAGE
+                    val errorMsg = result.error.message.takeIf { msg -> msg.isNotBlank() }
+                        ?: APPLY_ERROR_MESSAGE
                     it.copy(isSubmitting = false, errorMessage = errorMsg)
                 }
 
@@ -283,7 +285,10 @@ class CreateDeploymentViewModel @AssistedInject constructor(
             when {
                 !needsServicePort -> Unit
                 state.servicePort.isBlank() -> put("servicePort", "Service port is required")
-                parsedServicePort == null -> put("servicePort", "Service port must be a whole number")
+                parsedServicePort == null -> put(
+                    "servicePort",
+                    "Service port must be a whole number"
+                )
             }
             putAll(draft.validate())
         }

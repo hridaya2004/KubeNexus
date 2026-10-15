@@ -28,7 +28,12 @@ class ListResourcesUseCaseTest {
 
         assertEquals(Result.Success(listOf(pod)), result)
         assertEquals(
-            FakeResourceRepository.ListCall("c1", ResourceKinds.Pods, NamespaceScope.Only("web"), "app=nginx,tier=frontend"),
+            FakeResourceRepository.ListCall(
+                "c1",
+                ResourceKinds.Pods,
+                NamespaceScope.Only("web"),
+                "app=nginx,tier=frontend"
+            ),
             repository.listCalls.single(),
         )
     }

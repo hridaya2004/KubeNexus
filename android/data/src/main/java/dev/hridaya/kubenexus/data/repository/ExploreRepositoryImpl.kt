@@ -117,7 +117,10 @@ class ExploreRepositoryImpl @Inject constructor(
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
-                Log.e(TAG, LogSanitizer.withStackTrace("Failed to fetch API resources: $sanitizedMsg", t))
+                Log.e(
+                    TAG,
+                    LogSanitizer.withStackTrace("Failed to fetch API resources: $sanitizedMsg", t)
+                )
                 Result.Error(AppError.Network(sanitizedMsg.ifEmpty { "Failed to discover API resources" }))
             }
         }
@@ -165,7 +168,12 @@ class ExploreRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, LogSanitizer.withStackTrace("Explaining $resourceOrKind failed", e))
-            Result.Error(AppError.Unknown("Couldn't read the API documentation for $resourceOrKind.", e))
+            Result.Error(
+                AppError.Unknown(
+                    "Couldn't read the API documentation for $resourceOrKind.",
+                    e
+                )
+            )
         } catch (e: OutOfMemoryError) {
             Result.Error(AppError.Unknown("The cluster's API documentation is too large to load on this device."))
         }
@@ -207,7 +215,7 @@ class ExploreRepositoryImpl @Inject constructor(
         }
         var explain = locate(schemaJson)
         val fetchedRecently = hadStoredSchema &&
-            schemaFetchedAt[resolvedClusterId]?.let { System.currentTimeMillis() - it < SCHEMA_REFETCH_INTERVAL_MS } == true
+                schemaFetchedAt[resolvedClusterId]?.let { System.currentTimeMillis() - it < SCHEMA_REFETCH_INTERVAL_MS } == true
 
         if (explain == null && !fetchedRecently) {
             when (val fetched = fetchFreshSchema(clusterId, resolvedClusterId)) {
@@ -252,7 +260,8 @@ class ExploreRepositoryImpl @Inject constructor(
         resolvedClusterId: String,
     ): Result<String> = withContext(dispatcherProvider.io) {
         val decryptedKubeconfig = if (clusterId != null) {
-            clusterDao.getClusterById(clusterId)?.let { encryptor.decryptOrEmpty(it.rawKubeconfig) } ?: ""
+            clusterDao.getClusterById(clusterId)?.let { encryptor.decryptOrEmpty(it.rawKubeconfig) }
+                ?: ""
         } else ""
 
         when (val nativeResult = nativeBridge.openAPISchemaJSON(decryptedKubeconfig)) {
@@ -295,7 +304,10 @@ class ExploreRepositoryImpl @Inject constructor(
         return try {
             openApiSchemaDao.getForCluster(clusterId)?.let { gunzip(it.schemaGzip) }
         } catch (e: SQLiteException) {
-            Log.w(TAG, "Dropping an unreadable cached OpenAPI schema: ${LogSanitizer.sanitize(e.message)}")
+            Log.w(
+                TAG,
+                "Dropping an unreadable cached OpenAPI schema: ${LogSanitizer.sanitize(e.message)}"
+            )
             openApiSchemaDao.deleteForCluster(clusterId)
             null
         } catch (e: IOException) {

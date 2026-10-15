@@ -32,15 +32,25 @@ fun LogUploadConfirmDialog(
         text = {
             Text(
                 "${if (lineCount == 1) "This log line" else "These $lineCount log lines"} will be " +
-                    "sent to $serviceName, a public paste service that KubeNexus does not " +
-                    "operate. Anyone with the link can read them for $retention.\n\n" +
-                    "Tokens, passwords and keys that KubeNexus recognises are redacted first, " +
-                    "but logs can still contain personal or confidential data from your " +
-                    "workload. Only upload logs you are allowed to share.",
+                        "sent to $serviceName, a public paste service that KubeNexus does not " +
+                        "operate. Anyone with the link can read them for $retention.\n\n" +
+                        "Tokens, passwords and keys that KubeNexus recognises are redacted first, " +
+                        "but logs can still contain personal or confidential data from your " +
+                        "workload. Only upload logs you are allowed to share.",
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) { Text("Upload") } },
-        dismissButton = { TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) { Text("Cancel") } },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes()
+            ) { Text("Upload") }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shapes = ButtonDefaults.shapes()
+            ) { Text("Cancel") }
+        },
         modifier = modifier,
     )
 }

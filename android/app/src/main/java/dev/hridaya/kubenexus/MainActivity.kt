@@ -107,7 +107,7 @@ class MainActivity : ComponentActivity() {
             object : ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
                     val ready = (themeLoaded && !viewModel.uiState.value.isLoading) ||
-                        SystemClock.uptimeMillis() - startedAt > MAX_SPLASH_MS
+                            SystemClock.uptimeMillis() - startedAt > MAX_SPLASH_MS
                     if (ready) content.viewTreeObserver.removeOnPreDrawListener(this)
                     return ready
                 }

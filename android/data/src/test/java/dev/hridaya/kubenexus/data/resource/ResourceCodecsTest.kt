@@ -19,7 +19,8 @@ class ResourceCodecsTest {
             "fixture $name not found on the test classpath"
         }.bufferedReader().use { it.readText() }
 
-    private fun listOf(objectFixture: String): String = """{"items":[${loadFixture(objectFixture)}]}"""
+    private fun listOf(objectFixture: String): String =
+        """{"items":[${loadFixture(objectFixture)}]}"""
 
     private fun assertSurvivesCache(codec: ResourceCodec<*, *>, listJson: String) {
         val live = codec.decodeSummaries(listJson)
@@ -32,14 +33,16 @@ class ResourceCodecsTest {
     }
 
     @Test
-    fun `pods survive the cache round trip`() = assertSurvivesCache(PodCodec, loadFixture("pod-list.json"))
+    fun `pods survive the cache round trip`() =
+        assertSurvivesCache(PodCodec, loadFixture("pod-list.json"))
 
     @Test
     fun `deployments survive the cache round trip`() =
         assertSurvivesCache(DeploymentCodec, listOf("deployment-detail.json"))
 
     @Test
-    fun `services survive the cache round trip`() = assertSurvivesCache(ServiceCodec, listOf("service-detail.json"))
+    fun `services survive the cache round trip`() =
+        assertSurvivesCache(ServiceCodec, listOf("service-detail.json"))
 
     @Test
     fun `the cached payload keeps only the projection`() {

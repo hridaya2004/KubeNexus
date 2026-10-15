@@ -38,7 +38,8 @@ private val glyphCache = arrayOfNulls<String>(GLYPH_CACHE_SIZE)
 private fun glyphString(codepoint: Int): String {
     if (!Character.isValidCodePoint(codepoint)) return "\uFFFD"
     if (codepoint < GLYPH_CACHE_SIZE) {
-        return glyphCache[codepoint] ?: String(Character.toChars(codepoint)).also { glyphCache[codepoint] = it }
+        return glyphCache[codepoint]
+            ?: String(Character.toChars(codepoint)).also { glyphCache[codepoint] = it }
     }
     return String(Character.toChars(codepoint))
 }

@@ -19,9 +19,14 @@ class RefreshWorkloadsUseCaseTest {
         var syncResult: Result<Unit> = Result.Success(Unit)
 
         override fun observeNames(clusterId: String?): Flow<List<String>> = flowOf(emptyList())
-        override suspend fun sync(clusterId: String?): Result<Unit> = syncResult.also { synced += clusterId }
-        override suspend fun create(clusterId: String?, name: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun delete(clusterId: String?, name: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun sync(clusterId: String?): Result<Unit> =
+            syncResult.also { synced += clusterId }
+
+        override suspend fun create(clusterId: String?, name: String): Result<Unit> =
+            Result.Success(Unit)
+
+        override suspend fun delete(clusterId: String?, name: String): Result<Unit> =
+            Result.Success(Unit)
     }
     private val resources = FakeResourceRepository()
     private val useCase = RefreshWorkloadsUseCase(namespaces, resources)

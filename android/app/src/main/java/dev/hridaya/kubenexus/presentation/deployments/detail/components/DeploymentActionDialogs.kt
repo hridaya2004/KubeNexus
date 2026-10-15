@@ -79,7 +79,10 @@ internal fun ScaleDeploymentDialog(
                         ),
                         shapes = IconButtonDefaults.shapes(),
                     ) {
-                        Icon(imageVector = Icons.Default.Remove, contentDescription = "Decrease replicas")
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = "Decrease replicas"
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -105,7 +108,13 @@ internal fun ScaleDeploymentDialog(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     FilledIconButton(
-                        onClick = { onReplicasChanged((currentReplicas + 1).coerceAtMost(MAX_SCALE_REPLICAS)) },
+                        onClick = {
+                            onReplicasChanged(
+                                (currentReplicas + 1).coerceAtMost(
+                                    MAX_SCALE_REPLICAS
+                                )
+                            )
+                        },
                         enabled = currentReplicas < MAX_SCALE_REPLICAS,
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -113,7 +122,10 @@ internal fun ScaleDeploymentDialog(
                         ),
                         shapes = IconButtonDefaults.shapes(),
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Increase replicas")
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Increase replicas"
+                        )
                     }
                 }
 

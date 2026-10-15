@@ -65,7 +65,10 @@ class ClusterCallRunner @Inject constructor(
         val cluster = clusterDao.getClusterById(clusterId)
             ?: return Result.Error(AppError.NotFound("Cluster '$clusterId' not found"))
         return Result.Success(
-            ResolvedCluster(id = clusterId, kubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)),
+            ResolvedCluster(
+                id = clusterId,
+                kubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
+            ),
         )
     }
 

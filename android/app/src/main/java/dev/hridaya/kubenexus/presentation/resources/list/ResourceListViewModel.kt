@@ -68,7 +68,8 @@ class ResourceListViewModel @AssistedInject constructor(
         initialNamespace?.takeIf { it.isNotBlank() } ?: ALL_NAMESPACES_FILTER,
     )
 
-    private val _uiState = MutableStateFlow(ResourceListUiState(selectedNamespace = selectedNamespace.value))
+    private val _uiState =
+        MutableStateFlow(ResourceListUiState(selectedNamespace = selectedNamespace.value))
     val uiState: StateFlow<ResourceListUiState> = _uiState.asStateFlow()
 
     private var syncJob: Job? = null
@@ -145,7 +146,11 @@ class ResourceListViewModel @AssistedInject constructor(
         syncJob?.cancel()
         syncJob = viewModelScope.launch(dispatcherProvider.main) {
             _uiState.update { it.copy(isSyncing = true, syncFailed = false) }
-            val result = syncResources(clusterId, presentation.kind, namespaceScopeOf(selectedNamespace.value))
+            val result = syncResources(
+                clusterId,
+                presentation.kind,
+                namespaceScopeOf(selectedNamespace.value)
+            )
             _uiState.update { it.copy(isSyncing = false, syncFailed = result is Result.Error) }
         }
     }
@@ -154,7 +159,11 @@ class ResourceListViewModel @AssistedInject constructor(
         presentation: ResourcePresentation<S>,
         scope: NamespaceScope,
     ): Flow<List<ResourceRow>> =
-        observeResources(clusterId, presentation.kind, scope).map { items -> items.map(presentation::row) }
+        observeResources(
+            clusterId,
+            presentation.kind,
+            scope
+        ).map { items -> items.map(presentation::row) }
 
     private data class CachedRows(val rows: List<ResourceRow>, val lastSyncedAt: Long?)
 }

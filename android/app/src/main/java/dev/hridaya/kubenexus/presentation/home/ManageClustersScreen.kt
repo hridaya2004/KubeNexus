@@ -57,7 +57,9 @@ fun ManageClustersScreen(
         derivedStateOf { listState.firstVisibleItemIndex == 0 || !listState.canScrollForward }
     }
     Scaffold(
-        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = Color.Transparent,
         topBar = {
             MediumFlexibleTopAppBar(
@@ -113,7 +115,9 @@ fun ManageClustersScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
             ) {
-                itemsIndexed(uiState.clusters, key = { _, cluster -> cluster.id }) { index, cluster ->
+                itemsIndexed(
+                    uiState.clusters,
+                    key = { _, cluster -> cluster.id }) { index, cluster ->
                     ManageClusterCard(
                         shape = segmentedShape(index, uiState.clusters.size),
                         cluster = cluster,

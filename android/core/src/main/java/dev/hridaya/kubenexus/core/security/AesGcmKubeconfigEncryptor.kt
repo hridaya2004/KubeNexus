@@ -2,11 +2,11 @@ package dev.hridaya.kubenexus.core.security
 
 import java.security.GeneralSecurityException
 import java.security.SecureRandom
+import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import java.util.Base64
 
 /**
  * AES-256-GCM implementation of [KubeconfigEncryptor].
@@ -36,7 +36,8 @@ open class AesGcmKubeconfigEncryptor(private val keyProvider: () -> SecretKey) :
             return keyGen.generateKey()
         }
 
-        private fun encodeBase64(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
+        private fun encodeBase64(bytes: ByteArray): String =
+            Base64.getEncoder().encodeToString(bytes)
 
         private fun decodeBase64(input: String): ByteArray =
             Base64.getDecoder().decode(input.replace("\\s".toRegex(), ""))
@@ -105,11 +106,17 @@ open class AesGcmKubeconfigEncryptor(private val keyProvider: () -> SecretKey) :
         } catch (e: GeneralSecurityException) {
             // AEADBadTagException when the key was replaced (the Keystore entry was lost and
             // regenerated) or the payload was altered.
-            throw KubeconfigDecryptionException("Stored credentials cannot be decrypted with this device's key.", e)
+            throw KubeconfigDecryptionException(
+                "Stored credentials cannot be decrypted with this device's key.",
+                e
+            )
         } catch (e: KubeconfigDecryptionException) {
             throw e
         } catch (e: RuntimeException) {
-            throw KubeconfigDecryptionException("The device's key store could not decrypt the stored credentials.", e)
+            throw KubeconfigDecryptionException(
+                "The device's key store could not decrypt the stored credentials.",
+                e
+            )
         }
     }
 }

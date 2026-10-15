@@ -30,7 +30,8 @@ class ScaleDeploymentUseCaseTest {
 
     @Test
     fun `delegates valid replica scale to repository`() = runTest {
-        val result = useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
+        val result =
+            useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
 
         assertTrue(result is Result.Success)
         assertEquals(
@@ -44,7 +45,11 @@ class ScaleDeploymentUseCaseTest {
         useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
 
         assertEquals(
-            FakeResourceRepository.SyncCall("c1", ResourceKinds.Deployments, NamespaceScope.Only("prod")),
+            FakeResourceRepository.SyncCall(
+                "c1",
+                ResourceKinds.Deployments,
+                NamespaceScope.Only("prod")
+            ),
             resources.syncCalls.single(),
         )
     }
@@ -53,7 +58,8 @@ class ScaleDeploymentUseCaseTest {
     fun `a failed refresh does not fail the scale`() = runTest {
         resources.syncResult = Result.Error(AppError.Network("offline"))
 
-        val result = useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
+        val result =
+            useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
 
         assertEquals(Result.Success(Unit), result)
     }
@@ -62,7 +68,8 @@ class ScaleDeploymentUseCaseTest {
     fun `a failed scale skips the refresh`() = runTest {
         deployments.result = Result.Error(AppError.Network("forbidden"))
 
-        val result = useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
+        val result =
+            useCase(clusterId = "c1", namespace = "prod", name = "api-server", replicas = 3)
 
         assertTrue(result is Result.Error)
         assertTrue(resources.syncCalls.isEmpty())

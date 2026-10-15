@@ -64,7 +64,7 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
 
         const val CREDENTIALS_UNAVAILABLE_MESSAGE =
             "This cluster's saved credentials can no longer be read on this device. " +
-                "Delete the cluster and add it again."
+                    "Delete the cluster and add it again."
     }
 
     @Volatile
@@ -130,7 +130,14 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
             Client.touch()
             true
         } catch (t: Throwable) {
-            Log.e(TAG, LogSanitizer.withStackTrace("Failed to touch native Client: ${LogSanitizer.sanitize(t.message)}", t))
+            Log.e(
+                TAG,
+                LogSanitizer.withStackTrace(
+                    "Failed to touch native Client: ${
+                        LogSanitizer.sanitize(t.message)
+                    }", t
+                )
+            )
             false
         }
     }
@@ -147,7 +154,10 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
             ensureInitialized()
             Result.Success(block())
         } catch (t: Throwable) {
-            Log.e(TAG, LogSanitizer.withStackTrace("$errorMsg: ${LogSanitizer.sanitize(t.message)}", t))
+            Log.e(
+                TAG,
+                LogSanitizer.withStackTrace("$errorMsg: ${LogSanitizer.sanitize(t.message)}", t)
+            )
             Result.Error(AppError.Unknown(LogSanitizer.sanitize(t.message).ifEmpty { errorMsg }, t))
         }
     }
@@ -186,7 +196,11 @@ class KubeNexusNativeBridgeImpl @Inject constructor(
         labelSelector: String,
     ): Result<String> =
         nativeCatching("Failed to list ${type.plural} from native client") {
-            clientFor(rawKubeconfig).listJSON(identifierOf(type), namespace.trim(), listOptions(labelSelector))
+            clientFor(rawKubeconfig).listJSON(
+                identifierOf(type),
+                namespace.trim(),
+                listOptions(labelSelector)
+            )
         }
 
     override fun getResource(

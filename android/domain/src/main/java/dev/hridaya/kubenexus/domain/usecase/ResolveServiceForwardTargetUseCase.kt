@@ -60,14 +60,14 @@ class ResolveServiceForwardTargetUseCase @Inject constructor(
             running
         }
         val targetPod = candidates.firstOrNull { it.isFullyReady() } ?: candidates.firstOrNull()
-            ?: return Result.Error(
-                AppError.NotFound(
-                    when {
-                        running.isEmpty() -> "No running pods match service '${service.name}'."
-                        else -> "No running pod behind service '${service.name}' defines a container port named '$namedTarget'."
-                    },
-                ),
-            )
+        ?: return Result.Error(
+            AppError.NotFound(
+                when {
+                    running.isEmpty() -> "No running pods match service '${service.name}'."
+                    else -> "No running pod behind service '${service.name}' defines a container port named '$namedTarget'."
+                },
+            ),
+        )
 
         val targetPort = when {
             portDetail == null -> servicePort

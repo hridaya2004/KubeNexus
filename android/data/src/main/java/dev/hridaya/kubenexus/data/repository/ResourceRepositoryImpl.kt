@@ -81,7 +81,8 @@ class ResourceRepositoryImpl @Inject constructor(
 
     override fun observeLastSynced(clusterId: String?, kind: ResourceKind<*, *>): Flow<Long?> {
         if (clusterId == null) return flowOf(null)
-        return cacheDao.observeLastSynced(syncKey(clusterId, kind.type)).flowOn(dispatcherProvider.io)
+        return cacheDao.observeLastSynced(syncKey(clusterId, kind.type))
+            .flowOn(dispatcherProvider.io)
     }
 
     override suspend fun <S : KubeObjectSummary> list(
@@ -104,14 +105,15 @@ class ResourceRepositoryImpl @Inject constructor(
     ): Result<D> =
         clusterCalls.run(clusterId, "Failed to describe ${kind.type.kind} '$name'") { cluster ->
             val codec = codecs.codecFor(kind)
-            nativeBridge.getResource(cluster.kubeconfig, kind.type, namespace, name).map { objectJson ->
-                val events = if (codec.showsEvents) {
-                    eventsFor(cluster.kubeconfig, kind.type, namespace, name)
-                } else {
-                    emptyList()
+            nativeBridge.getResource(cluster.kubeconfig, kind.type, namespace, name)
+                .map { objectJson ->
+                    val events = if (codec.showsEvents) {
+                        eventsFor(cluster.kubeconfig, kind.type, namespace, name)
+                    } else {
+                        emptyList()
+                    }
+                    codec.toDetails(objectJson, events)
                 }
-                codec.toDetails(objectJson, events)
-            }
         }
 
     override suspend fun delete(
@@ -123,7 +125,14 @@ class ResourceRepositoryImpl @Inject constructor(
         clusterCalls.run(clusterId, "Failed to delete ${kind.type.kind} '$name'") { cluster ->
             nativeBridge.deleteResource(cluster.kubeconfig, kind.type, namespace, name).onSuccess {
                 val cachedNamespace = if (kind.type.namespaced) namespace else ""
-                cacheDao.deleteById(CachedResourceEntity.idOf(cluster.id, kind.type.key, cachedNamespace, name))
+                cacheDao.deleteById(
+                    CachedResourceEntity.idOf(
+                        cluster.id,
+                        kind.type.key,
+                        cachedNamespace,
+                        name
+                    )
+                )
             }
         }
 
@@ -138,12 +147,13 @@ class ResourceRepositoryImpl @Inject constructor(
             clusterCalls.run(clusterId, "Failed to create resources") { cluster ->
                 for ((index, pair) in documents.zip(types).withIndex()) {
                     val (document, type) = pair
-                    val created = nativeBridge.createResource(cluster.kubeconfig, type, document.text)
+                    val created =
+                        nativeBridge.createResource(cluster.kubeconfig, type, document.text)
                     if (created is Result.Error && index > 0) {
                         return@run Result.Error(
                             AppError.Unknown(
                                 "Created ${documents.take(index).joinToString { it.label }}, " +
-                                    "but ${document.label} failed: ${created.error.message}",
+                                        "but ${document.label} failed: ${created.error.message}",
                             ),
                         )
                     }
@@ -166,7 +176,12 @@ class ResourceRepositoryImpl @Inject constructor(
             namespace = namespace,
             rows = objects.map { cached ->
                 CachedResourceEntity(
-                    id = CachedResourceEntity.idOf(clusterId, type.key, cached.namespace, cached.name),
+                    id = CachedResourceEntity.idOf(
+                        clusterId,
+                        type.key,
+                        cached.namespace,
+                        cached.name
+                    ),
                     clusterId = clusterId,
                     resourceKey = type.key,
                     namespace = cached.namespace,
@@ -188,17 +203,28 @@ class ResourceRepositoryImpl @Inject constructor(
      * Events are a separate, field-selected list. Failing to load them must not
      * lose the object itself, which is the primary payload.
      */
-    private fun eventsFor(kubeconfig: String, type: ResourceType, namespace: String, name: String): List<EventDto> =
+    private fun eventsFor(
+        kubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String
+    ): List<EventDto> =
         when (val events = nativeBridge.listEvents(kubeconfig, namespace, type.kind, name)) {
             is Result.Success -> try {
                 K8sJson.decodeFromString(EventListDto.serializer(), events.data).items
             } catch (e: SerializationException) {
-                Log.w(TAG, "Unreadable events for ${type.kind} '$name': ${LogSanitizer.sanitize(e.message)}")
+                Log.w(
+                    TAG,
+                    "Unreadable events for ${type.kind} '$name': ${LogSanitizer.sanitize(e.message)}"
+                )
                 emptyList()
             }
 
             is Result.Error -> {
-                Log.w(TAG, "Failed to load events for ${type.kind} '$name': ${LogSanitizer.sanitize(events.error.message)}")
+                Log.w(
+                    TAG,
+                    "Failed to load events for ${type.kind} '$name': ${LogSanitizer.sanitize(events.error.message)}"
+                )
                 emptyList()
             }
 
@@ -213,7 +239,10 @@ class ResourceRepositoryImpl @Inject constructor(
         try {
             summaryFromCache(payload)
         } catch (e: SerializationException) {
-            Log.w(TAG, "Skipping unreadable cached ${kind.type.plural}: ${LogSanitizer.sanitize(e.message)}")
+            Log.w(
+                TAG,
+                "Skipping unreadable cached ${kind.type.plural}: ${LogSanitizer.sanitize(e.message)}"
+            )
             null
         }
 

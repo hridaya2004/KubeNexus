@@ -185,7 +185,9 @@ class CreatePodViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> _uiState.update {
-                    it.copy(isSubmitting = false, errorMessage = result.error.message.ifBlank { APPLY_ERROR_MESSAGE })
+                    it.copy(
+                        isSubmitting = false,
+                        errorMessage = result.error.message.ifBlank { APPLY_ERROR_MESSAGE })
                 }
 
                 is Result.Loading -> Unit

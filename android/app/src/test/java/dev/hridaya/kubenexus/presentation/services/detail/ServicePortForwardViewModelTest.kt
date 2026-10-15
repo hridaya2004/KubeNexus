@@ -108,15 +108,19 @@ class ServicePortForwardViewModelTest {
             annotations = emptyMap(),
             events = emptyList(),
         )
-        resources.givenList(ResourceKinds.Pods, Result.Success(listOf(
-            Pod(
-                id = "1",
-                name = "web-pod-1",
-                namespace = "default",
-                status = PodStatus.RUNNING,
-                readyContainers = "1/1",
-            ),
-        )))
+        resources.givenList(
+            ResourceKinds.Pods, Result.Success(
+                listOf(
+                    Pod(
+                        id = "1",
+                        name = "web-pod-1",
+                        namespace = "default",
+                        status = PodStatus.RUNNING,
+                        readyContainers = "1/1",
+                    ),
+                )
+            )
+        )
 
         viewModel.start(service, localPort = 3000, servicePort = 80)
         runCurrent()

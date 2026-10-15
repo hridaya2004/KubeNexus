@@ -45,7 +45,7 @@ android {
             ?: derive()
             ?: throw GradleException(
                 "Could not determine $what. Build from a git checkout with the submodules present, " +
-                    "or set $envVar explicitly."
+                        "or set $envVar explicitly."
             )
 
     val appCommitSha = resolved("the app commit SHA", "KUBENEXUS_APP_COMMIT_SHA") { gitCommitSha() }

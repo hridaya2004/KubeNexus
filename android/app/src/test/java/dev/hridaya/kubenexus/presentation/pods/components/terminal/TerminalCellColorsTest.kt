@@ -12,7 +12,12 @@ class TerminalCellColorsTest {
 
     @Test
     fun `reverse video swaps foreground and background`() {
-        val colors = cellColors(fg = white, bg = black, cellFlags = TerminalSnapshot.CELL_FLAG_INVERSE, defaultFg = white)
+        val colors = cellColors(
+            fg = white,
+            bg = black,
+            cellFlags = TerminalSnapshot.CELL_FLAG_INVERSE,
+            defaultFg = white
+        )
 
         assertEquals(CellColors(foreground = black, background = white), colors)
     }
@@ -26,13 +31,24 @@ class TerminalCellColorsTest {
 
     @Test
     fun `invisible or unset text falls back to the default foreground`() {
-        assertEquals(white, cellColors(fg = black, bg = black, cellFlags = 0, defaultFg = white).foreground)
-        assertEquals(white, cellColors(fg = 0, bg = black, cellFlags = 0, defaultFg = white).foreground)
+        assertEquals(
+            white,
+            cellColors(fg = black, bg = black, cellFlags = 0, defaultFg = white).foreground
+        )
+        assertEquals(
+            white,
+            cellColors(fg = 0, bg = black, cellFlags = 0, defaultFg = white).foreground
+        )
     }
 
     @Test
     fun `without a usable default the fallback contrasts with the background`() {
-        val onWhite = cellColors(fg = 0xFFFFFFFF.toInt(), bg = 0xFFFFFFFF.toInt(), cellFlags = 0, defaultFg = 0xFFFFFFFF.toInt())
+        val onWhite = cellColors(
+            fg = 0xFFFFFFFF.toInt(),
+            bg = 0xFFFFFFFF.toInt(),
+            cellFlags = 0,
+            defaultFg = 0xFFFFFFFF.toInt()
+        )
 
         assertEquals(black, onWhite.foreground)
     }

@@ -1,10 +1,10 @@
 package dev.hridaya.kubenexus.data.repository
 
-import dev.hridaya.kubenexus.core.security.NoOpKubeconfigEncryptor
 import android.database.sqlite.SQLiteBlobTooBigException
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
+import dev.hridaya.kubenexus.core.security.NoOpKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.nativebridge.NativeBridgeJsonParser
 import dev.hridaya.kubenexus.data.source.local.dao.APIResourceDao
@@ -425,16 +425,17 @@ class ExploreRepositoryImplTest {
     }
 
     @Test
-    fun `a resource missing from a fresh schema does not download it again`() = runTest(testDispatcher) {
-        insertTestCluster("cluster-1")
+    fun `a resource missing from a fresh schema does not download it again`() =
+        runTest(testDispatcher) {
+            insertTestCluster("cluster-1")
 
-        val first = repository.explainResource("cluster-1", "widgets", "example.com/v1")
-        val second = repository.explainResource("cluster-1", "widgets", "example.com/v1")
+            val first = repository.explainResource("cluster-1", "widgets", "example.com/v1")
+            val second = repository.explainResource("cluster-1", "widgets", "example.com/v1")
 
-        assertTrue(first is Result.Success)
-        assertTrue(second is Result.Success)
-        assertEquals(1, fakeNativeBridge.schemaFetches)
-    }
+            assertTrue(first is Result.Success)
+            assertTrue(second is Result.Success)
+            assertEquals(1, fakeNativeBridge.schemaFetches)
+        }
 
     @Test
     fun `a schema that cannot be parsed is an error, not a crash`() = runTest(testDispatcher) {

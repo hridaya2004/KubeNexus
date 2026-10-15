@@ -25,12 +25,12 @@ class KubeNexusDatabaseMigrationTest {
         helper.createDatabase(DB, 6).use { db ->
             db.execSQL(
                 "INSERT INTO clusters (id, name, serverUrl, rawKubeconfig, contextName, userName, namespace, " +
-                    "isActive, createdAt, lastConnectedAt, status) " +
-                    "VALUES ('c1', 'prod', 'https://prod:6443', 'enc:v1:abc', 'prod', 'admin', 'default', 1, 1, 1, 'CONNECTED')",
+                        "isActive, createdAt, lastConnectedAt, status) " +
+                        "VALUES ('c1', 'prod', 'https://prod:6443', 'enc:v1:abc', 'prod', 'admin', 'default', 1, 1, 1, 'CONNECTED')",
             )
             db.execSQL(
                 "INSERT INTO sync_metadata (`key`, clusterId, resourceType, lastRefreshedAt) " +
-                    "VALUES ('c1_pods', 'c1', 'pods', 5), ('c1_namespaces', 'c1', 'namespaces', 5)",
+                        "VALUES ('c1_pods', 'c1', 'pods', 5), ('c1_namespaces', 'c1', 'namespaces', 5)",
             )
         }
 

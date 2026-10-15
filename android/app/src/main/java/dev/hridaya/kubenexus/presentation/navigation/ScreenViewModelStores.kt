@@ -93,7 +93,9 @@ private class ScreenViewModelStoreOwner(
         }.defaultViewModelProviderFactory
 
     override val defaultViewModelCreationExtras: CreationExtras
-        get() = MutableCreationExtras(parentDefaults?.defaultViewModelCreationExtras ?: CreationExtras.Empty).apply {
+        get() = MutableCreationExtras(
+            parentDefaults?.defaultViewModelCreationExtras ?: CreationExtras.Empty
+        ).apply {
             // SavedStateHandles for these ViewModels belong to this store, not the Activity's.
             set(VIEW_MODEL_STORE_OWNER_KEY, this@ScreenViewModelStoreOwner)
         }

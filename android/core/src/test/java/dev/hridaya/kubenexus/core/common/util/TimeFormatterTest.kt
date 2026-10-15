@@ -31,7 +31,10 @@ class TimeFormatterTest {
     // Offline caches can be days old; "Refreshed at 23:30:00" would read as today.
     @Test
     fun `formatLastRefreshed includes the date for anything before today`() {
-        val lateLastNight = refreshed("2026-09-26T23:30:00Z", now = Instant.parse("2026-09-27T01:00:00Z").toEpochMilli())
+        val lateLastNight = refreshed(
+            "2026-09-26T23:30:00Z",
+            now = Instant.parse("2026-09-27T01:00:00Z").toEpochMilli()
+        )
         val lastWeek = refreshed("2026-09-20T09:00:00Z")
 
         listOf(lateLastNight, lastWeek).forEach { text ->

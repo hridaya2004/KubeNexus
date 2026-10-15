@@ -154,14 +154,23 @@ private fun PreferenceRow(
             .fillMaxWidth()
             .clip(shapes.shape)
             .background(colors.containerColor(enabled = enabled, selected = false, dragged = false))
-            .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) Modifier.clickable(
+                    enabled = enabled,
+                    onClick = onClick
+                ) else Modifier
+            )
             .padding(ListItemDefaults.ContentPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leadingContent != null) {
             CompositionLocalProvider(
                 LocalContentColor provides
-                    colors.leadingContentColor(enabled = enabled, selected = false, dragged = false),
+                        colors.leadingContentColor(
+                            enabled = enabled,
+                            selected = false,
+                            dragged = false
+                        ),
                 content = leadingContent,
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -176,7 +185,11 @@ private fun PreferenceRow(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = colors.supportingContentColor(enabled = enabled, selected = false, dragged = false),
+                    color = colors.supportingContentColor(
+                        enabled = enabled,
+                        selected = false,
+                        dragged = false
+                    ),
                 )
             }
         }
@@ -184,7 +197,11 @@ private fun PreferenceRow(
             Spacer(modifier = Modifier.width(16.dp))
             CompositionLocalProvider(
                 LocalContentColor provides
-                    colors.trailingContentColor(enabled = enabled, selected = false, dragged = false),
+                        colors.trailingContentColor(
+                            enabled = enabled,
+                            selected = false,
+                            dragged = false
+                        ),
                 content = trailingContent,
             )
         }

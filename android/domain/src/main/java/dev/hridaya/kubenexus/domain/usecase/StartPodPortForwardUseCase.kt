@@ -14,5 +14,6 @@ class StartPodPortForwardUseCase @Inject constructor(
         podName: String,
         localPort: Int,
         remotePort: Int,
-    ): Result<String> = repository.startPodForward(clusterId, namespace, podName, localPort, remotePort)
+    ): Result<String> =
+        repository.startPodForward(clusterId, namespace, podName, localPort, remotePort)
 }

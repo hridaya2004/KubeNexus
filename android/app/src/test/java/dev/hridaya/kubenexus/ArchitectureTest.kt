@@ -25,7 +25,10 @@ class ArchitectureTest {
 
     @Test
     fun `the UI goes through use cases instead of repositories`() {
-        assertEquals(emptyList<String>(), importsStartingWith("dev.hridaya.kubenexus.domain.repository."))
+        assertEquals(
+            emptyList<String>(),
+            importsStartingWith("dev.hridaya.kubenexus.domain.repository.")
+        )
     }
 
     private fun importsStartingWith(prefix: String): List<String> {

@@ -22,6 +22,7 @@ class InMemoryNamespaceDao : NamespaceDao {
     }
 
     override suspend fun deleteNamespace(clusterId: String, name: String) {
-        namespaces.value = namespaces.value.filterNot { it.clusterId == clusterId && it.name == name }
+        namespaces.value =
+            namespaces.value.filterNot { it.clusterId == clusterId && it.name == name }
     }
 }

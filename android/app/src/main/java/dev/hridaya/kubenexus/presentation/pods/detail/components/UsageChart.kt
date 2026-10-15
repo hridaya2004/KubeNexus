@@ -6,14 +6,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -39,7 +39,7 @@ internal fun UsageChart(samples: List<PodMetricSample>, range: MetricsRange) {
 
     val latest = samples.last()
     val description = "CPU and memory over the last ${range.label}. " +
-        "Now ${formatCores(latest.cpuCores)} CPU and ${formatBytes(latest.memoryBytes)} memory."
+            "Now ${formatCores(latest.cpuCores)} CPU and ${formatBytes(latest.memoryBytes)} memory."
     Canvas(
         modifier = Modifier
             .fillMaxWidth()

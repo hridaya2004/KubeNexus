@@ -10,7 +10,11 @@ class ScreenSaverTest {
     fun `every screen survives saving and restoring`() {
         val screens = listOf(
             Screen.ResourceList(typeKey = "apps/v1/deployments"),
-            Screen.ResourceDetail(typeKey = "v1/pods", namespace = "kube-system", name = "coredns-7db6d8ff4d-x2v9k"),
+            Screen.ResourceDetail(
+                typeKey = "v1/pods",
+                namespace = "kube-system",
+                name = "coredns-7db6d8ff4d-x2v9k"
+            ),
             Screen.CreateResource(typeKey = "v1/services"),
             Screen.ManageClusters,
             Screen.Logcat,

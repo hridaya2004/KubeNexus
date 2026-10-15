@@ -101,8 +101,9 @@ class LogSanitizerTest {
 
     @Test
     fun `sanitize redacts json and key=value credentials`() {
-        val input = "{\"token\":\"abc123\",\"user\":\"x\"} --token=t0ps3cret password=hunter2&next=1 " +
-            "\"client_secret\": \"s3\""
+        val input =
+            "{\"token\":\"abc123\",\"user\":\"x\"} --token=t0ps3cret password=hunter2&next=1 " +
+                    "\"client_secret\": \"s3\""
         val output = LogSanitizer.sanitize(input)
 
         assertEquals(
@@ -127,8 +128,10 @@ class LogSanitizerTest {
 
     @Test
     fun `sanitize redacts bare jwts aws key ids and base64 pem`() {
-        val jwt = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEifQ.eyJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQifQ.c2lnbmF0dXJl"
-        val input = "sa=$jwt key=AKIAIOSFODNN7EXAMPLE tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg=="
+        val jwt =
+            "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEifQ.eyJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQifQ.c2lnbmF0dXJl"
+        val input =
+            "sa=$jwt key=AKIAIOSFODNN7EXAMPLE tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg=="
         val output = LogSanitizer.sanitize(input)
 
         assertFalse(output.contains("eyJzdWIi"))
@@ -141,9 +144,13 @@ class LogSanitizerTest {
 
     @Test
     fun `sanitize redacts userinfo credentials for any url scheme`() {
-        val output = LogSanitizer.sanitize("dial postgres://app:pa55w0rd@db:5432/app and REDIS://u:p@cache:6379")
+        val output =
+            LogSanitizer.sanitize("dial postgres://app:pa55w0rd@db:5432/app and REDIS://u:p@cache:6379")
 
-        assertEquals("dial postgres://app:[REDACTED]@db:5432/app and REDIS://u:[REDACTED]@cache:6379", output)
+        assertEquals(
+            "dial postgres://app:[REDACTED]@db:5432/app and REDIS://u:[REDACTED]@cache:6379",
+            output
+        )
     }
 
     @Test
@@ -199,7 +206,14 @@ class LogSanitizerTest {
 
         val output = LogSanitizer.sanitize(input)
 
-        listOf("hunter2", "ghp_abcdef123456", "rootpass", "camelcase", "abc123", "sk_live_42").forEach {
+        listOf(
+            "hunter2",
+            "ghp_abcdef123456",
+            "rootpass",
+            "camelcase",
+            "abc123",
+            "sk_live_42"
+        ).forEach {
             assertFalse("'$it' was not redacted in:\n$output", output.contains(it))
         }
         assertTrue(output.contains("DB_PASSWORD=[REDACTED]"))
@@ -208,7 +222,8 @@ class LogSanitizerTest {
 
     @Test
     fun `sanitize leaves names that only contain a secret word alone`() {
-        val input = "secretName: app-credentials passwordless=true max_tokens=100 PASSWORD_FILE=/run/pw"
+        val input =
+            "secretName: app-credentials passwordless=true max_tokens=100 PASSWORD_FILE=/run/pw"
 
         assertEquals(input, LogSanitizer.sanitize(input))
     }

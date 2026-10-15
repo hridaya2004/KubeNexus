@@ -67,7 +67,12 @@ fun PodDetailRoute(
                 is PodDetailUiEffect.NavigateBack -> onNavigateBack()
 
                 is PodDetailUiEffect.LogsUploaded -> {
-                    LogExportHelper.copyToClipboard(context, effect.url, "Pastebin URL", sensitive = false)
+                    LogExportHelper.copyToClipboard(
+                        context,
+                        effect.url,
+                        "Pastebin URL",
+                        sensitive = false
+                    )
                     Toast.makeText(
                         context,
                         "Logs uploaded! URL copied to clipboard: ${effect.url}",

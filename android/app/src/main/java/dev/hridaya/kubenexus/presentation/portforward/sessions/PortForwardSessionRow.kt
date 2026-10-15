@@ -178,11 +178,17 @@ private fun RowControl(
     onAction: (PortForwardSessionsUiAction) -> Unit,
 ) {
     if (session.isStopped) {
-        TextButton(onClick = { onAction(PortForwardSessionsUiAction.DismissStopped(session.handleId)) }, shapes = ButtonDefaults.shapes()) {
+        TextButton(
+            onClick = { onAction(PortForwardSessionsUiAction.DismissStopped(session.handleId)) },
+            shapes = ButtonDefaults.shapes()
+        ) {
             Text(text = "Dismiss", style = MaterialTheme.typography.labelMedium)
         }
     } else {
-        IconButton(onClick = { onAction(PortForwardSessionsUiAction.Stop(session.handleId)) }, shapes = IconButtonDefaults.shapes()) {
+        IconButton(
+            onClick = { onAction(PortForwardSessionsUiAction.Stop(session.handleId)) },
+            shapes = IconButtonDefaults.shapes()
+        ) {
             Icon(
                 imageVector = Icons.Outlined.Stop,
                 contentDescription = "Stop forwarding ${session.title}",

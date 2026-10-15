@@ -73,6 +73,11 @@ class InMemoryClusterDao : ClusterDao() {
     }
 
     override suspend fun updateStatus(id: String, status: String, lastConnectedAt: Long?) {
-        clusters.value[id]?.let { clusters.value += id to it.copy(status = status, lastConnectedAt = lastConnectedAt) }
+        clusters.value[id]?.let {
+            clusters.value += id to it.copy(
+                status = status,
+                lastConnectedAt = lastConnectedAt
+            )
+        }
     }
 }

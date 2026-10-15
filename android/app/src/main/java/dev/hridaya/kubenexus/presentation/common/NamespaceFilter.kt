@@ -7,7 +7,8 @@ const val ALL_NAMESPACES_FILTER = "All Namespaces"
 
 /** The chips for a namespace filter: [ALL_NAMESPACES_FILTER] followed by [namespaces]. */
 fun namespaceFilterOptions(namespaces: List<String>): List<String> =
-    listOf(ALL_NAMESPACES_FILTER) + namespaces.filter { it.isNotBlank() && it != ALL_NAMESPACES_FILTER }.distinct()
+    listOf(ALL_NAMESPACES_FILTER) + namespaces.filter { it.isNotBlank() && it != ALL_NAMESPACES_FILTER }
+        .distinct()
 
 /** The scope a namespace filter chip selects. */
 fun namespaceScopeOf(filter: String): NamespaceScope =

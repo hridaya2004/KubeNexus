@@ -35,7 +35,8 @@ object ServicesPresentation : ResourcePresentation<ServiceSummary> {
     /** Compact one-line breakdown, e.g. "80:8080/TCP, 443/TCP". */
     private fun portsSummary(ports: List<ServicePortDetail>): String =
         ports.joinToString(separator = ", ") { port ->
-            val mapping = if (port.targetPort == port.port) "${port.port}" else "${port.port}:${port.targetPort}"
+            val mapping =
+                if (port.targetPort == port.port) "${port.port}" else "${port.port}:${port.targetPort}"
             "$mapping/${port.protocol}"
         }
 }

@@ -27,8 +27,13 @@ class ScaleDeploymentUseCase @Inject constructor(
         if (replicas < 0) {
             return Result.Error(AppError.Validation("Replica count cannot be negative"))
         }
-        return deploymentRepository.scaleDeployment(clusterId, namespace, name, replicas).onSuccess {
-            resourceRepository.sync(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))
-        }
+        return deploymentRepository.scaleDeployment(clusterId, namespace, name, replicas)
+            .onSuccess {
+                resourceRepository.sync(
+                    clusterId,
+                    ResourceKinds.Deployments,
+                    NamespaceScope.Only(namespace)
+                )
+            }
     }
 }

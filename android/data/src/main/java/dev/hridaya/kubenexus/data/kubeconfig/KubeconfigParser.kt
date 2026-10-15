@@ -30,8 +30,12 @@ object KubeconfigParser {
         val document = try {
             Load(LoadSettings.builder().setLabel("kubeconfig").build()).loadFromString(trimmed)
         } catch (e: Exception) {
-            throw IllegalArgumentException("This kubeconfig is not valid YAML or JSON: ${e.message}", e)
+            throw IllegalArgumentException(
+                "This kubeconfig is not valid YAML or JSON: ${e.message}",
+                e
+            )
         }
+
         @Suppress("UNCHECKED_CAST")
         val root = document as? Map<String?, Any?>
             ?: throw IllegalArgumentException("This kubeconfig is not a YAML or JSON object.")
@@ -66,8 +70,10 @@ object KubeconfigParser {
             userName = context.string("user"),
             namespace = context.string("namespace").ifBlank { "default" },
             rawKubeconfig = trimmed,
-            certificateAuthorityData = cluster.string("certificate-authority-data").ifBlank { null },
-            insecureSkipTlsVerify = cluster.string("insecure-skip-tls-verify").equals("true", ignoreCase = true),
+            certificateAuthorityData = cluster.string("certificate-authority-data")
+                .ifBlank { null },
+            insecureSkipTlsVerify = cluster.string("insecure-skip-tls-verify")
+                .equals("true", ignoreCase = true),
         )
     }
 
@@ -75,13 +81,19 @@ object KubeconfigParser {
      * Finds `name` in a kubeconfig list such as `clusters:` and returns its body, e.g. the
      * `cluster:` map of `- name: prod / cluster: {...}`.
      */
-    private fun Map<String?, Any?>.namedEntry(listKey: String, bodyKey: String, name: String): Map<String?, Any?>? {
+    private fun Map<String?, Any?>.namedEntry(
+        listKey: String,
+        bodyKey: String,
+        name: String
+    ): Map<String?, Any?>? {
         val entries = this[listKey] as? List<*> ?: return null
-        val entry = entries.firstOrNull { (it as? Map<*, *>)?.get("name")?.toString()?.trim() == name }
-            as? Map<*, *> ?: return null
+        val entry =
+            entries.firstOrNull { (it as? Map<*, *>)?.get("name")?.toString()?.trim() == name }
+                    as? Map<*, *> ?: return null
         @Suppress("UNCHECKED_CAST")
         return entry[bodyKey] as? Map<String?, Any?> ?: emptyMap()
     }
 
-    private fun Map<String?, Any?>.string(key: String): String = this[key]?.toString()?.trim().orEmpty()
+    private fun Map<String?, Any?>.string(key: String): String =
+        this[key]?.toString()?.trim().orEmpty()
 }

@@ -48,7 +48,10 @@ class ScreenViewModelStoresTest {
 
         stores.retainOnly(emptySet())
 
-        assertTrue("onCleared must run so sessions and native resources are released", first.cleared)
+        assertTrue(
+            "onCleared must run so sessions and native resources are released",
+            first.cleared
+        )
         assertTrue(stores.keys.isEmpty())
         assertNotSame(first, viewModelIn(stores.storeFor("pod/cluster-a/default/web-0")))
     }

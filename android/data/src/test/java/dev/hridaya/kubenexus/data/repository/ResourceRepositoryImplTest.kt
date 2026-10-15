@@ -33,14 +33,19 @@ class ResourceRepositoryImplTest {
     private val bridge = RecordingResourceBridge()
 
     private val repository = ResourceRepositoryImpl(
-        clusterCalls = ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher)),
+        clusterCalls = ClusterCallRunner(
+            clusterDao,
+            encryptor,
+            TestDispatcherProvider(testDispatcher)
+        ),
         nativeBridge = bridge,
         cacheDao = cacheDao,
         codecs = ResourceCodecRegistry(setOf(PodCodec, DeploymentCodec, ServiceCodec)),
         dispatcherProvider = TestDispatcherProvider(testDispatcher),
     )
 
-    private fun givenCluster() = clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG))
+    private fun givenCluster() =
+        clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG))
 
     // region sync and observe
 
@@ -71,7 +76,8 @@ class ResourceRepositoryImplTest {
         bridge.listResult = Result.Success(SERVICES_JSON)
 
         repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.All)
-        val services = repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
+        val services =
+            repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
 
         // Cached rows come back ordered by namespace, then name.
         assertEquals(listOf("api", "nginx"), services.map { it.name })
@@ -79,7 +85,15 @@ class ResourceRepositoryImplTest {
         assertEquals("web", nginx.namespace)
         assertEquals("10.96.0.10", nginx.clusterIP)
         assertEquals(
-            listOf(ServicePortDetail(port = 80, targetPort = 8080, nodePort = null, protocol = "TCP", name = "http")),
+            listOf(
+                ServicePortDetail(
+                    port = 80,
+                    targetPort = 8080,
+                    nodePort = null,
+                    protocol = "TCP",
+                    name = "http"
+                )
+            ),
             nginx.ports,
         )
     }
@@ -91,7 +105,9 @@ class ResourceRepositoryImplTest {
 
         repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.All)
 
-        val cached = repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.Only("default")).first()
+        val cached =
+            repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.Only("default"))
+                .first()
         assertEquals("orphan", cached.single().name)
     }
 
@@ -105,7 +121,8 @@ class ResourceRepositoryImplTest {
         bridge.listResult = Result.Success("""{"items":[]}""")
         repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.Only("web"))
 
-        val services = repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
+        val services =
+            repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
         assertEquals(listOf("api"), services.map { it.name })
         assertEquals("web", bridge.calls.last().namespace)
     }
@@ -116,7 +133,8 @@ class ResourceRepositoryImplTest {
         bridge.listResult = Result.Success(SERVICES_JSON)
         repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.All)
 
-        val deployments = repository.observe(CLUSTER, ResourceKinds.Deployments, NamespaceScope.All).first()
+        val deployments =
+            repository.observe(CLUSTER, ResourceKinds.Deployments, NamespaceScope.All).first()
 
         assertTrue(deployments.isEmpty())
     }
@@ -133,7 +151,8 @@ class ResourceRepositoryImplTest {
     @Test
     fun `a failed sync leaves the cache and its sync time untouched`() = runTest(testDispatcher) {
         givenCluster()
-        bridge.listResult = Result.Error(AppError.Unknown("services denied: token: secret-token-12345 rejected"))
+        bridge.listResult =
+            Result.Error(AppError.Unknown("services denied: token: secret-token-12345 rejected"))
 
         val result = repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.All)
 
@@ -145,29 +164,31 @@ class ResourceRepositoryImplTest {
     }
 
     @Test
-    fun `an unreadable cached row is skipped rather than failing the list`() = runTest(testDispatcher) {
-        givenCluster()
-        bridge.listResult = Result.Success(SERVICES_JSON)
-        repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.All)
-        val key = ResourceKinds.Services.type.key
-        cacheDao.upsert(
-            listOf(
-                CachedResourceEntity(
-                    id = CachedResourceEntity.idOf(CLUSTER, key, "web", "broken"),
-                    clusterId = CLUSTER,
-                    resourceKey = key,
-                    namespace = "web",
-                    name = "broken",
-                    payload = "not json",
-                    lastUpdated = 0L,
+    fun `an unreadable cached row is skipped rather than failing the list`() =
+        runTest(testDispatcher) {
+            givenCluster()
+            bridge.listResult = Result.Success(SERVICES_JSON)
+            repository.sync(CLUSTER, ResourceKinds.Services, NamespaceScope.All)
+            val key = ResourceKinds.Services.type.key
+            cacheDao.upsert(
+                listOf(
+                    CachedResourceEntity(
+                        id = CachedResourceEntity.idOf(CLUSTER, key, "web", "broken"),
+                        clusterId = CLUSTER,
+                        resourceKey = key,
+                        namespace = "web",
+                        name = "broken",
+                        payload = "not json",
+                        lastUpdated = 0L,
+                    ),
                 ),
-            ),
-        )
+            )
 
-        val services = repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
+            val services =
+                repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
 
-        assertEquals(listOf("api", "nginx"), services.map { it.name })
-    }
+            assertEquals(listOf("api", "nginx"), services.map { it.name })
+        }
 
     // endregion
 
@@ -178,7 +199,12 @@ class ResourceRepositoryImplTest {
         givenCluster()
         bridge.listResult = Result.Success(SERVICES_JSON)
 
-        val result = repository.list(CLUSTER, ResourceKinds.Services, NamespaceScope.Only("web"), "app=nginx")
+        val result = repository.list(
+            CLUSTER,
+            ResourceKinds.Services,
+            NamespaceScope.Only("web"),
+            "app=nginx"
+        )
 
         assertEquals(listOf("nginx", "api"), (result as Result.Success).data.map { it.name })
         assertEquals("app=nginx", bridge.calls.single().labelSelector)
@@ -189,9 +215,15 @@ class ResourceRepositoryImplTest {
     fun `describe decodes the object and attaches its events`() = runTest(testDispatcher) {
         givenCluster()
         bridge.getResult = Result.Success(SERVICE_JSON)
-        bridge.eventsResult = Result.Success("""{"items":[{"type":"Warning","reason":"SyncFailed","message":"boom","count":2}]}""")
+        bridge.eventsResult =
+            Result.Success("""{"items":[{"type":"Warning","reason":"SyncFailed","message":"boom","count":2}]}""")
 
-        val details = (repository.describe(CLUSTER, ResourceKinds.Services, "web", "nginx") as Result.Success).data
+        val details = (repository.describe(
+            CLUSTER,
+            ResourceKinds.Services,
+            "web",
+            "nginx"
+        ) as Result.Success).data
 
         assertEquals("nginx", details.name)
         assertEquals("SyncFailed", details.events.single().reason)
@@ -206,7 +238,12 @@ class ResourceRepositoryImplTest {
         bridge.getResult = Result.Success(SERVICE_JSON)
         bridge.eventsResult = Result.Error(AppError.Unknown("events are forbidden"))
 
-        val details = (repository.describe(CLUSTER, ResourceKinds.Services, "web", "nginx") as Result.Success).data
+        val details = (repository.describe(
+            CLUSTER,
+            ResourceKinds.Services,
+            "web",
+            "nginx"
+        ) as Result.Success).data
 
         assertTrue(details.events.isEmpty())
     }
@@ -214,10 +251,16 @@ class ResourceRepositoryImplTest {
     @Test
     fun `describing a pod keeps its raw json`() = runTest(testDispatcher) {
         givenCluster()
-        val podJson = """{"metadata":{"name":"web-1","namespace":"web"},"status":{"phase":"Running"}}"""
+        val podJson =
+            """{"metadata":{"name":"web-1","namespace":"web"},"status":{"phase":"Running"}}"""
         bridge.getResult = Result.Success(podJson)
 
-        val details = (repository.describe(CLUSTER, ResourceKinds.Pods, "web", "web-1") as Result.Success).data
+        val details = (repository.describe(
+            CLUSTER,
+            ResourceKinds.Pods,
+            "web",
+            "web-1"
+        ) as Result.Success).data
 
         assertEquals(podJson, details.rawDescribeText)
     }
@@ -231,7 +274,8 @@ class ResourceRepositoryImplTest {
         val result = repository.delete(CLUSTER, ResourceKinds.Services, "web", "nginx")
 
         assertEquals(Result.Success(Unit), result)
-        val remaining = repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
+        val remaining =
+            repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first()
         assertEquals(listOf("api"), remaining.map { it.name })
     }
 
@@ -245,7 +289,10 @@ class ResourceRepositoryImplTest {
         val result = repository.delete(CLUSTER, ResourceKinds.Services, "web", "nginx")
 
         assertTrue(result is Result.Error)
-        assertEquals(2, repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first().size)
+        assertEquals(
+            2,
+            repository.observe(CLUSTER, ResourceKinds.Services, NamespaceScope.All).first().size
+        )
     }
 
     // endregion
@@ -253,27 +300,32 @@ class ResourceRepositoryImplTest {
     // region create
 
     @Test
-    fun `create sends each document of a manifest to the type it declares`() = runTest(testDispatcher) {
-        givenCluster()
+    fun `create sends each document of a manifest to the type it declares`() =
+        runTest(testDispatcher) {
+            givenCluster()
 
-        val result = repository.create(CLUSTER, "$DEPLOYMENT_MANIFEST\n---\n$SERVICE_MANIFEST")
+            val result = repository.create(CLUSTER, "$DEPLOYMENT_MANIFEST\n---\n$SERVICE_MANIFEST")
 
-        assertEquals(Result.Success(Unit), result)
-        val creates = bridge.calls.filter { it.operation == "create" }
-        assertEquals(listOf(ResourceKinds.Deployments.type, ResourceKinds.Services.type), creates.map { it.type })
-        assertEquals(listOf(DEPLOYMENT_MANIFEST, SERVICE_MANIFEST), creates.map { it.manifest })
-        assertEquals(KUBECONFIG, creates.first().kubeconfig)
-    }
+            assertEquals(Result.Success(Unit), result)
+            val creates = bridge.calls.filter { it.operation == "create" }
+            assertEquals(
+                listOf(ResourceKinds.Deployments.type, ResourceKinds.Services.type),
+                creates.map { it.type })
+            assertEquals(listOf(DEPLOYMENT_MANIFEST, SERVICE_MANIFEST), creates.map { it.manifest })
+            assertEquals(KUBECONFIG, creates.first().kubeconfig)
+        }
 
     @Test
-    fun `create rejects a kind the app does not model without calling the cluster`() = runTest(testDispatcher) {
-        givenCluster()
+    fun `create rejects a kind the app does not model without calling the cluster`() =
+        runTest(testDispatcher) {
+            givenCluster()
 
-        val result = repository.create(CLUSTER, "apiVersion: v1\nkind: Secret\nmetadata:\n  name: db")
+            val result =
+                repository.create(CLUSTER, "apiVersion: v1\nkind: Secret\nmetadata:\n  name: db")
 
-        assertTrue((result as Result.Error).error is AppError.Validation)
-        assertTrue(bridge.calls.isEmpty())
-    }
+            assertTrue((result as Result.Error).error is AppError.Validation)
+            assertTrue(bridge.calls.isEmpty())
+        }
 
     @Test
     fun `create stops at the first document that fails`() = runTest(testDispatcher) {
@@ -306,14 +358,21 @@ class ResourceRepositoryImplTest {
     // A cancelled call (the screen closed, or a newer refresh replaced it) is not a failure:
     // it must reach the caller as cancellation, not be logged and returned as an error.
     @Test
-    fun `cancellation propagates instead of being reported as a failed request`() = runTest(testDispatcher) {
-        givenCluster()
-        bridge.errorToThrow = CancellationException("screen closed")
+    fun `cancellation propagates instead of being reported as a failed request`() =
+        runTest(testDispatcher) {
+            givenCluster()
+            bridge.errorToThrow = CancellationException("screen closed")
 
-        val thrown = runCatching { repository.sync(CLUSTER, ResourceKinds.Pods, NamespaceScope.All) }.exceptionOrNull()
+            val thrown = runCatching {
+                repository.sync(
+                    CLUSTER,
+                    ResourceKinds.Pods,
+                    NamespaceScope.All
+                )
+            }.exceptionOrNull()
 
-        assertTrue(thrown is CancellationException)
-    }
+            assertTrue(thrown is CancellationException)
+        }
 
     // endregion
 

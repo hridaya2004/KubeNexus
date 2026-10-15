@@ -37,14 +37,16 @@ fun InAppUpdate() {
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val manager = remember { AppUpdateManagerFactory.create(context.applicationContext) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {}
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {}
 
     var offered by rememberSaveable { mutableStateOf(false) }
     var restartDeclined by rememberSaveable { mutableStateOf(false) }
     var downloaded by remember { mutableStateOf<AppUpdateResult.Downloaded?>(null) }
 
     LaunchedEffect(manager, lifecycleOwner) {
-        val updates = runCatching { manager.requestUpdateFlow() }.getOrNull() ?: return@LaunchedEffect
+        val updates =
+            runCatching { manager.requestUpdateFlow() }.getOrNull() ?: return@LaunchedEffect
         updates
             .flowWithLifecycle(lifecycleOwner.lifecycle, Lifecycle.State.STARTED)
             .catch { }

@@ -125,13 +125,19 @@ class DeploymentDetailViewModelTest {
         return DeploymentDetailViewModel(
             deploymentName = "nginx",
             namespace = "default",
-            getActiveClusterUseCase = GetActiveClusterUseCase(fakeClusterRepository, testDispatcherProvider),
+            getActiveClusterUseCase = GetActiveClusterUseCase(
+                fakeClusterRepository,
+                testDispatcherProvider
+            ),
             describeResource = DescribeResourceUseCase(resources),
             listResources = ListResourcesUseCase(resources),
             observeResources = ObserveResourcesUseCase(resources),
             deleteResource = DeleteResourceUseCase(resources),
             scaleDeploymentUseCase = ScaleDeploymentUseCase(fakeDeploymentRepository, resources),
-            restartDeploymentUseCase = RestartDeploymentUseCase(fakeDeploymentRepository, resources),
+            restartDeploymentUseCase = RestartDeploymentUseCase(
+                fakeDeploymentRepository,
+                resources
+            ),
             dispatcherProvider = testDispatcherProvider,
         )
     }
@@ -198,7 +204,10 @@ class DeploymentDetailViewModelTest {
         assertEquals(5, viewModel.uiState.value.scaleInput)
 
         val requestsBeforeScale = resources.describeCalls.size
-        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails.copy(desiredReplicas = 5)))
+        resources.givenDescribe(
+            ResourceKinds.Deployments,
+            Result.Success(sampleDetails.copy(desiredReplicas = 5))
+        )
 
         viewModel.onAction(DeploymentDetailUiAction.ConfirmScale)
         advanceUntilIdle()
@@ -210,88 +219,109 @@ class DeploymentDetailViewModelTest {
         assertEquals("default", fakeDeploymentRepository.capturedScaleNamespace)
         assertEquals("nginx", fakeDeploymentRepository.capturedScaleName)
 
-        assertTrue(effects.any { it is DeploymentDetailUiEffect.ShowSnackbar && it.message.contains("5") })
+        assertTrue(effects.any {
+            it is DeploymentDetailUiEffect.ShowSnackbar && it.message.contains(
+                "5"
+            )
+        })
 
         job.cancel()
         viewModel.viewModelScope.cancel()
     }
 
     @Test
-    fun `performScale surfaces error and emits snackbar when scale fails`() = runTest(testDispatcher) {
-        givenDeployments(sampleSummary)
-        fakeDeploymentRepository.scaleResult = Result.Error(AppError.Network("RBAC denied scaling"))
+    fun `performScale surfaces error and emits snackbar when scale fails`() =
+        runTest(testDispatcher) {
+            givenDeployments(sampleSummary)
+            fakeDeploymentRepository.scaleResult =
+                Result.Error(AppError.Network("RBAC denied scaling"))
 
-        val viewModel = createViewModel()
-        advanceUntilIdle()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
 
-        val effects = mutableListOf<DeploymentDetailUiEffect>()
-        val job = launch { viewModel.effects.toList(effects) }
+            val effects = mutableListOf<DeploymentDetailUiEffect>()
+            val job = launch { viewModel.effects.toList(effects) }
 
-        viewModel.onAction(DeploymentDetailUiAction.OpenScaleDialog)
-        viewModel.onAction(DeploymentDetailUiAction.ScaleInputChanged(10))
-        viewModel.onAction(DeploymentDetailUiAction.ConfirmScale)
-        advanceUntilIdle()
+            viewModel.onAction(DeploymentDetailUiAction.OpenScaleDialog)
+            viewModel.onAction(DeploymentDetailUiAction.ScaleInputChanged(10))
+            viewModel.onAction(DeploymentDetailUiAction.ConfirmScale)
+            advanceUntilIdle()
 
-        assertEquals("RBAC denied scaling", viewModel.uiState.value.mutationErrorMessage)
-        assertTrue(effects.any { it is DeploymentDetailUiEffect.ShowSnackbar && it.message.contains("RBAC denied") })
+            assertEquals("RBAC denied scaling", viewModel.uiState.value.mutationErrorMessage)
+            assertTrue(effects.any {
+                it is DeploymentDetailUiEffect.ShowSnackbar && it.message.contains(
+                    "RBAC denied"
+                )
+            })
 
-        job.cancel()
-        viewModel.viewModelScope.cancel()
-    }
-
-    @Test
-    fun `performRestart triggers rollout restart and refreshes on success`() = runTest(testDispatcher) {
-        givenDeployments(sampleSummary)
-        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        val effects = mutableListOf<DeploymentDetailUiEffect>()
-        val job = launch { viewModel.effects.toList(effects) }
-
-        viewModel.onAction(DeploymentDetailUiAction.OpenRestartDialog)
-        assertTrue(viewModel.uiState.value.showRestartDialog)
-
-        viewModel.onAction(DeploymentDetailUiAction.ConfirmRestart)
-        advanceUntilIdle()
-
-        assertEquals("c1", fakeDeploymentRepository.capturedRestartClusterId)
-        assertEquals("default", fakeDeploymentRepository.capturedRestartNamespace)
-        assertEquals("nginx", fakeDeploymentRepository.capturedRestartName)
-
-        assertTrue(effects.any { it is DeploymentDetailUiEffect.ShowSnackbar && (it.message.contains("Restarted") || it.message.contains("restart")) })
-
-        job.cancel()
-        viewModel.viewModelScope.cancel()
-    }
+            job.cancel()
+            viewModel.viewModelScope.cancel()
+        }
 
     @Test
-    fun `performDelete deletes deployment and emits NavigateBack on success`() = runTest(testDispatcher) {
-        givenDeployments(sampleSummary)
+    fun `performRestart triggers rollout restart and refreshes on success`() =
+        runTest(testDispatcher) {
+            givenDeployments(sampleSummary)
+            resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails))
 
-        val viewModel = createViewModel()
-        advanceUntilIdle()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
 
-        val effects = mutableListOf<DeploymentDetailUiEffect>()
-        val job = launch { viewModel.effects.toList(effects) }
+            val effects = mutableListOf<DeploymentDetailUiEffect>()
+            val job = launch { viewModel.effects.toList(effects) }
 
-        viewModel.onAction(DeploymentDetailUiAction.OpenDeleteDialog)
-        assertTrue(viewModel.uiState.value.showDeleteDialog)
+            viewModel.onAction(DeploymentDetailUiAction.OpenRestartDialog)
+            assertTrue(viewModel.uiState.value.showRestartDialog)
 
-        viewModel.onAction(DeploymentDetailUiAction.ConfirmDelete)
-        advanceUntilIdle()
+            viewModel.onAction(DeploymentDetailUiAction.ConfirmRestart)
+            advanceUntilIdle()
 
-        assertEquals(
-            FakeResourceRepository.ObjectCall("c1", ResourceKinds.Deployments, "default", "nginx"),
-            resources.deleteCalls.single(),
-        )
+            assertEquals("c1", fakeDeploymentRepository.capturedRestartClusterId)
+            assertEquals("default", fakeDeploymentRepository.capturedRestartNamespace)
+            assertEquals("nginx", fakeDeploymentRepository.capturedRestartName)
 
-        assertTrue(effects.contains(DeploymentDetailUiEffect.NavigateBack))
+            assertTrue(effects.any {
+                it is DeploymentDetailUiEffect.ShowSnackbar && (it.message.contains(
+                    "Restarted"
+                ) || it.message.contains("restart"))
+            })
 
-        job.cancel()
-        viewModel.viewModelScope.cancel()
-    }
+            job.cancel()
+            viewModel.viewModelScope.cancel()
+        }
+
+    @Test
+    fun `performDelete deletes deployment and emits NavigateBack on success`() =
+        runTest(testDispatcher) {
+            givenDeployments(sampleSummary)
+
+            val viewModel = createViewModel()
+            advanceUntilIdle()
+
+            val effects = mutableListOf<DeploymentDetailUiEffect>()
+            val job = launch { viewModel.effects.toList(effects) }
+
+            viewModel.onAction(DeploymentDetailUiAction.OpenDeleteDialog)
+            assertTrue(viewModel.uiState.value.showDeleteDialog)
+
+            viewModel.onAction(DeploymentDetailUiAction.ConfirmDelete)
+            advanceUntilIdle()
+
+            assertEquals(
+                FakeResourceRepository.ObjectCall(
+                    "c1",
+                    ResourceKinds.Deployments,
+                    "default",
+                    "nginx"
+                ),
+                resources.deleteCalls.single(),
+            )
+
+            assertTrue(effects.contains(DeploymentDetailUiEffect.NavigateBack))
+
+            job.cancel()
+            viewModel.viewModelScope.cancel()
+        }
 
     @Test
     fun `dialog actions toggle show state`() = runTest(testDispatcher) {
@@ -326,7 +356,10 @@ class DeploymentDetailViewModelTest {
         val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
         assertTrue(initialRefreshedAt != null && initialRefreshedAt > 0)
         val requestsBeforeRefresh = resources.describeCalls.size
-        resources.givenDescribe(ResourceKinds.Deployments, Result.Success(sampleDetails.copy(readyReplicas = 1)))
+        resources.givenDescribe(
+            ResourceKinds.Deployments,
+            Result.Success(sampleDetails.copy(readyReplicas = 1))
+        )
 
         viewModel.onAction(DeploymentDetailUiAction.Refresh)
         advanceUntilIdle()
@@ -346,20 +379,36 @@ class DeploymentDetailViewModelTest {
 
         override fun getActiveClusterStream(): Flow<Cluster?> = activeClusterFlow
         override fun getClustersStream(): Flow<List<Cluster>> = flowOf(emptyList())
-        override suspend fun addCluster(kubeconfigRaw: String, customName: String?, setAsActive: Boolean): Result<Cluster> =
+        override suspend fun addCluster(
+            kubeconfigRaw: String,
+            customName: String?,
+            setAsActive: Boolean
+        ): Result<Cluster> =
             Result.Error(AppError.Unknown("not implemented"))
+
         override suspend fun setActiveCluster(id: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun updateClusterName(id: String, newName: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun updateClusterName(id: String, newName: String): Result<Unit> =
+            Result.Success(Unit)
+
         override suspend fun deleteCluster(id: String): Result<Unit> = Result.Success(Unit)
 
         override suspend fun clearCachedData(): Result<Unit> = Result.Success(Unit)
-        override suspend fun testConnection(kubeconfigRaw: String): Result<String> = Result.Success("v1.28.0")
+        override suspend fun testConnection(kubeconfigRaw: String): Result<String> =
+            Result.Success("v1.28.0")
+
         override suspend fun testClusterById(id: String): Result<String> = Result.Success("v1.28.0")
         override suspend fun checkClusterHealth(id: String): Result<ClusterHealth> =
             Result.Error(AppError.NotFound("not found"))
+
         override suspend fun checkClusterHealthByKubeconfig(kubeconfigRaw: String): Result<ClusterHealth> =
             Result.Error(AppError.NotFound("not found"))
-        override suspend fun updateClusterStatus(id: String, status: ClusterStatus, lastConnectedAt: Long?): Result<Unit> = Result.Success(Unit)
+
+        override suspend fun updateClusterStatus(
+            id: String,
+            status: ClusterStatus,
+            lastConnectedAt: Long?
+        ): Result<Unit> = Result.Success(Unit)
+
         override suspend fun getClusterById(id: String): Cluster? = activeClusterFlow.value
     }
 
@@ -376,7 +425,12 @@ class DeploymentDetailViewModelTest {
         var capturedRestartName: String? = null
         var restartResult: Result<Unit> = Result.Success(Unit)
 
-        override suspend fun scaleDeployment(clusterId: String?, namespace: String, name: String, replicas: Int): Result<Unit> {
+        override suspend fun scaleDeployment(
+            clusterId: String?,
+            namespace: String,
+            name: String,
+            replicas: Int
+        ): Result<Unit> {
             capturedScaleClusterId = clusterId
             capturedScaleNamespace = namespace
             capturedScaleName = name
@@ -384,7 +438,11 @@ class DeploymentDetailViewModelTest {
             return scaleResult
         }
 
-        override suspend fun restartDeployment(clusterId: String?, namespace: String, name: String): Result<Unit> {
+        override suspend fun restartDeployment(
+            clusterId: String?,
+            namespace: String,
+            name: String
+        ): Result<Unit> {
             capturedRestartClusterId = clusterId
             capturedRestartNamespace = namespace
             capturedRestartName = name

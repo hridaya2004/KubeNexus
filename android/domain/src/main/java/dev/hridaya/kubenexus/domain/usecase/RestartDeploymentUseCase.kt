@@ -22,6 +22,10 @@ class RestartDeploymentUseCase @Inject constructor(
         name: String,
     ): Result<Unit> =
         deploymentRepository.restartDeployment(clusterId, namespace, name).onSuccess {
-            resourceRepository.sync(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))
+            resourceRepository.sync(
+                clusterId,
+                ResourceKinds.Deployments,
+                NamespaceScope.Only(namespace)
+            )
         }
 }

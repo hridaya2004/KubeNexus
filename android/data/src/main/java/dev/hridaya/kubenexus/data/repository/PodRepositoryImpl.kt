@@ -67,7 +67,13 @@ class PodRepositoryImpl @Inject constructor(
         tailLines: Long?,
     ): Result<String> =
         clusterCalls.run(clusterId, "Failed to fetch logs for pod '$podName'") { cluster ->
-            nativeBridge.getPodLogs(cluster.kubeconfig, namespace, podName, containerName, tailLines)
+            nativeBridge.getPodLogs(
+                cluster.kubeconfig,
+                namespace,
+                podName,
+                containerName,
+                tailLines
+            )
         }
 
     override fun streamPodLogs(
@@ -167,7 +173,10 @@ class PodRepositoryImpl @Inject constructor(
         onError: (String) -> Unit,
         onDone: () -> Unit,
     ): Result<TerminalSession> =
-        clusterCalls.run(clusterId, "Failed to start terminal session in pod '$podName'") { cluster ->
+        clusterCalls.run(
+            clusterId,
+            "Failed to start terminal session in pod '$podName'"
+        ) { cluster ->
             nativeBridge.startTerminal(
                 rawKubeconfig = cluster.kubeconfig,
                 namespace = namespace,

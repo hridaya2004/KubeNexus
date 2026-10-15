@@ -57,7 +57,12 @@ internal object ScreenSaver {
         val parts = saved.split(SEPARATOR)
         return when (parts.first()) {
             "list" -> Screen.ResourceList(typeKey = parts[1])
-            "detail" -> Screen.ResourceDetail(typeKey = parts[1], namespace = parts[2], name = parts[3])
+            "detail" -> Screen.ResourceDetail(
+                typeKey = parts[1],
+                namespace = parts[2],
+                name = parts[3]
+            )
+
             "create" -> Screen.CreateResource(typeKey = parts[1])
             "clusters" -> Screen.ManageClusters
             "logcat" -> Screen.Logcat

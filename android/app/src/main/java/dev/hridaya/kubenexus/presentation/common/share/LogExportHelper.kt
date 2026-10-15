@@ -7,6 +7,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import dev.hridaya.kubenexus.core.security.LogSanitizer
+import dev.hridaya.kubenexus.presentation.common.share.LogExportHelper.EXPORT_MAX_AGE_MS
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,7 +44,12 @@ object LogExportHelper {
             val logFile = withContext(ioDispatcher) {
                 val logsDir = File(context.cacheDir, "logs").apply { mkdirs() }
                 pruneExports(logsDir, System.currentTimeMillis())
-                File(logsDir, safeName).apply { writeText(LogSanitizer.sanitize(content), Charsets.UTF_8) }
+                File(logsDir, safeName).apply {
+                    writeText(
+                        LogSanitizer.sanitize(content),
+                        Charsets.UTF_8
+                    )
+                }
             }
 
             val fileUri: Uri = FileProvider.getUriForFile(
@@ -97,7 +103,12 @@ object LogExportHelper {
      * Copies [text] to the clipboard. Logs are treated as [sensitive] unless the caller says
      * otherwise, so the system clipboard preview does not show them.
      */
-    fun copyToClipboard(context: Context, text: String, label: String = "Logs", sensitive: Boolean = true) {
+    fun copyToClipboard(
+        context: Context,
+        text: String,
+        label: String = "Logs",
+        sensitive: Boolean = true
+    ) {
         ClipboardHelper.copy(context, label, text, sensitive)
     }
 }

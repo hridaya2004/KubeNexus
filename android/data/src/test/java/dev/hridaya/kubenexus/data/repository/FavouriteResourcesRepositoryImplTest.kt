@@ -39,7 +39,8 @@ class FavouriteResourcesRepositoryImplTest {
             scope = testScope,
             produceFile = { File(tmpFolder.root, "test_app_prefs.preferences_pb") },
         )
-        repository = FavouriteResourcesRepositoryImpl(dataStore, TestDispatcherProvider(testDispatcher))
+        repository =
+            FavouriteResourcesRepositoryImpl(dataStore, TestDispatcherProvider(testDispatcher))
     }
 
     @Test
@@ -82,6 +83,9 @@ class FavouriteResourcesRepositoryImplTest {
         extra.forEach { assertTrue(repository.addFavourite(it)) }
 
         assertFalse(repository.addFavourite("example.com/v1/onemore"))
-        assertEquals(listOf(pods, deployments, services) + extra, repository.getFavouritesStream().first())
+        assertEquals(
+            listOf(pods, deployments, services) + extra,
+            repository.getFavouritesStream().first()
+        )
     }
 }

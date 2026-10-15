@@ -16,12 +16,30 @@ import kotlinx.coroutines.flow.map
  */
 class FakeResourceRepository : ResourceRepository {
 
-    data class SyncCall(val clusterId: String?, val kind: ResourceKind<*, *>, val scope: NamespaceScope)
-    data class ListCall(val clusterId: String?, val kind: ResourceKind<*, *>, val scope: NamespaceScope, val labelSelector: String)
-    data class ObjectCall(val clusterId: String?, val kind: ResourceKind<*, *>, val namespace: String, val name: String)
+    data class SyncCall(
+        val clusterId: String?,
+        val kind: ResourceKind<*, *>,
+        val scope: NamespaceScope
+    )
+
+    data class ListCall(
+        val clusterId: String?,
+        val kind: ResourceKind<*, *>,
+        val scope: NamespaceScope,
+        val labelSelector: String
+    )
+
+    data class ObjectCall(
+        val clusterId: String?,
+        val kind: ResourceKind<*, *>,
+        val namespace: String,
+        val name: String
+    )
+
     data class CreateCall(val clusterId: String?, val manifest: String)
 
-    private val cache = mutableMapOf<ResourceKind<*, *>, MutableStateFlow<List<KubeObjectSummary>>>()
+    private val cache =
+        mutableMapOf<ResourceKind<*, *>, MutableStateFlow<List<KubeObjectSummary>>>()
     private val listResults = mutableMapOf<ResourceKind<*, *>, Result<List<KubeObjectSummary>>>()
     private val describeResults = mutableMapOf<ResourceKind<*, *>, Result<Any>>()
 
@@ -63,13 +81,18 @@ class FakeResourceRepository : ResourceRepository {
         } as List<S>
     }
 
-    override suspend fun sync(clusterId: String?, kind: ResourceKind<*, *>, scope: NamespaceScope): Result<Unit> {
+    override suspend fun sync(
+        clusterId: String?,
+        kind: ResourceKind<*, *>,
+        scope: NamespaceScope
+    ): Result<Unit> {
         val call = SyncCall(clusterId, kind, scope)
         syncCalls += call
         return onSync(call)
     }
 
-    override fun observeLastSynced(clusterId: String?, kind: ResourceKind<*, *>): Flow<Long?> = lastSynced
+    override fun observeLastSynced(clusterId: String?, kind: ResourceKind<*, *>): Flow<Long?> =
+        lastSynced
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun <S : KubeObjectSummary> list(
@@ -90,10 +113,16 @@ class FakeResourceRepository : ResourceRepository {
         name: String,
     ): Result<D> {
         describeCalls += ObjectCall(clusterId, kind, namespace, name)
-        return (describeResults[kind] ?: Result.Error(AppError.NotFound("$name not found"))) as Result<D>
+        return (describeResults[kind]
+            ?: Result.Error(AppError.NotFound("$name not found"))) as Result<D>
     }
 
-    override suspend fun delete(clusterId: String?, kind: ResourceKind<*, *>, namespace: String, name: String): Result<Unit> {
+    override suspend fun delete(
+        clusterId: String?,
+        kind: ResourceKind<*, *>,
+        namespace: String,
+        name: String
+    ): Result<Unit> {
         deleteCalls += ObjectCall(clusterId, kind, namespace, name)
         return deleteResult
     }
@@ -103,5 +132,6 @@ class FakeResourceRepository : ResourceRepository {
         return createResult
     }
 
-    private fun cacheOf(kind: ResourceKind<*, *>) = cache.getOrPut(kind) { MutableStateFlow(emptyList()) }
+    private fun cacheOf(kind: ResourceKind<*, *>) =
+        cache.getOrPut(kind) { MutableStateFlow(emptyList()) }
 }

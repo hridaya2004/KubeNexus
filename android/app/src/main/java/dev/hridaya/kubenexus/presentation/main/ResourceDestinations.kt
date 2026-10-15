@@ -47,7 +47,15 @@ internal fun ResourceListDestination(
         presentation = presentation,
         viewModel = viewModel,
         onNavigateBack = onNavigateBack,
-        onOpenResource = { row -> onOpen(Screen.ResourceDetail(screen.typeKey, row.namespace, row.name)) },
+        onOpenResource = { row ->
+            onOpen(
+                Screen.ResourceDetail(
+                    screen.typeKey,
+                    row.namespace,
+                    row.name
+                )
+            )
+        },
         onCreateResource = { onOpen(Screen.CreateResource(screen.typeKey)) },
         modifier = modifier,
     )
@@ -67,7 +75,11 @@ internal fun ResourceDetailDestination(
                     factory.create(podName = screen.name, namespace = screen.namespace)
                 },
             )
-            PodDetailRoute(viewModel = viewModel, onNavigateBack = onNavigateBack, modifier = modifier)
+            PodDetailRoute(
+                viewModel = viewModel,
+                onNavigateBack = onNavigateBack,
+                modifier = modifier
+            )
         }
 
         DEPLOYMENTS -> {
@@ -92,7 +104,11 @@ internal fun ResourceDetailDestination(
                     factory.create(serviceName = screen.name, namespace = screen.namespace)
                 },
             )
-            ServiceDetailRoute(viewModel = viewModel, onNavigateBack = onNavigateBack, modifier = modifier)
+            ServiceDetailRoute(
+                viewModel = viewModel,
+                onNavigateBack = onNavigateBack,
+                modifier = modifier
+            )
         }
 
         else -> error("No detail screen is registered for '${screen.typeKey}'")
@@ -107,9 +123,24 @@ internal fun CreateResourceDestination(
     modifier: Modifier = Modifier,
 ) {
     when (screen.typeKey) {
-        PODS -> CreatePodOverlay(homeViewModel = homeViewModel, onDismiss = onDismiss, modifier = modifier)
-        DEPLOYMENTS -> CreateDeploymentOverlay(homeViewModel = homeViewModel, onDismiss = onDismiss, modifier = modifier)
-        SERVICES -> CreateServiceOverlay(homeViewModel = homeViewModel, onDismiss = onDismiss, modifier = modifier)
+        PODS -> CreatePodOverlay(
+            homeViewModel = homeViewModel,
+            onDismiss = onDismiss,
+            modifier = modifier
+        )
+
+        DEPLOYMENTS -> CreateDeploymentOverlay(
+            homeViewModel = homeViewModel,
+            onDismiss = onDismiss,
+            modifier = modifier
+        )
+
+        SERVICES -> CreateServiceOverlay(
+            homeViewModel = homeViewModel,
+            onDismiss = onDismiss,
+            modifier = modifier
+        )
+
         else -> error("No create screen is registered for '${screen.typeKey}'")
     }
 }

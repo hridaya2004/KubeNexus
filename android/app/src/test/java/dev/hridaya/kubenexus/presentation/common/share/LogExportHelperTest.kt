@@ -21,8 +21,10 @@ class LogExportHelperTest {
         val dir = kotlin.io.path.createTempDirectory("kn-logs").toFile()
         try {
             val now = 10_000_000_000L
-            val old = java.io.File(dir, "old.log").apply { writeText("x"); setLastModified(now - 2 * 60 * 60 * 1000L) }
-            val recent = java.io.File(dir, "recent.log").apply { writeText("y"); setLastModified(now - 60 * 1000L) }
+            val old = java.io.File(dir, "old.log")
+                .apply { writeText("x"); setLastModified(now - 2 * 60 * 60 * 1000L) }
+            val recent = java.io.File(dir, "recent.log")
+                .apply { writeText("y"); setLastModified(now - 60 * 1000L) }
 
             LogExportHelper.pruneExports(dir, now)
 

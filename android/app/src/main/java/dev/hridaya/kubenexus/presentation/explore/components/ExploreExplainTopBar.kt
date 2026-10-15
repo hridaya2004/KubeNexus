@@ -41,13 +41,13 @@ fun ExploreExplainTopBar(
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier
                     .clickable(onClickLabel = "Copy kubectl explain command", role = Role.Button) {
-                    val clipboard =
-                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val commandClip =
-                        ClipData.newPlainText("Command", "kubectl explain ${resource.name}")
-                    clipboard.setPrimaryClip(commandClip)
-                    Toast.makeText(context, "Command copied", Toast.LENGTH_SHORT).show()
-                }
+                        val clipboard =
+                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val commandClip =
+                            ClipData.newPlainText("Command", "kubectl explain ${resource.name}")
+                        clipboard.setPrimaryClip(commandClip)
+                        Toast.makeText(context, "Command copied", Toast.LENGTH_SHORT).show()
+                    }
                     .padding(vertical = 4.dp),
             )
         },

@@ -20,7 +20,12 @@ class ListResourcesUseCase @Inject constructor(
         scope: NamespaceScope,
         matchLabels: Map<String, String> = emptyMap(),
     ): Result<List<S>> =
-        resourceRepository.list(clusterId, kind, scope, labelSelector = matchLabels.toLabelSelector())
+        resourceRepository.list(
+            clusterId,
+            kind,
+            scope,
+            labelSelector = matchLabels.toLabelSelector()
+        )
 
     private fun Map<String, String>.toLabelSelector(): String =
         entries.joinToString(separator = ",") { (key, value) -> "$key=$value" }

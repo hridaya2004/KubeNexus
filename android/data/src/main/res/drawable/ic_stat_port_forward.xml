@@ -1,16 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Status bar icon for port-forward notifications: the KubeNexus mark as an alpha mask. -->
+<?xml version="1.0" encoding="utf-8"?><!-- Status bar icon for port-forward notifications: the KubeNexus mark as an alpha mask. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:strokeColor="#FFFFFFFF"
+        android:pathData="M12,13.5L12,4.5M12,13.5L19.8,18M12,13.5L4.2,18M12,4.5L19.8,18L4.2,18Z"
         android:strokeWidth="1.6"
+        android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M12,13.5L12,4.5M12,13.5L19.8,18M12,13.5L4.2,18M12,4.5L19.8,18L4.2,18Z" />
+        android:strokeLineJoin="round" />
     <path
         android:fillColor="#FFFFFFFF"
         android:pathData="M9,13.5a3,3 0,1 0,6,0a3,3 0,1 0,-6,0ZM10,4.5a2,2 0,1 0,4,0a2,2 0,1 0,-4,0ZM17.8,18a2,2 0,1 0,4,0a2,2 0,1 0,-4,0ZM2.2,18a2,2 0,1 0,4,0a2,2 0,1 0,-4,0Z" />

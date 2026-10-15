@@ -108,7 +108,11 @@ class ServiceDetailViewModel @AssistedInject constructor(
 
             // Instant offline load from Room cache
             if (_uiState.value.service == null) {
-                val cachedSummary = observeResources(clusterId, ResourceKinds.Services, NamespaceScope.Only(namespace))
+                val cachedSummary = observeResources(
+                    clusterId,
+                    ResourceKinds.Services,
+                    NamespaceScope.Only(namespace)
+                )
                     .firstOrNull()
                     ?.firstOrNull { it.name == serviceName && it.namespace == namespace }
 

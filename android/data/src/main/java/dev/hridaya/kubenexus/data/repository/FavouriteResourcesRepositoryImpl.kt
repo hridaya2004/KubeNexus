@@ -62,7 +62,8 @@ class FavouriteResourcesRepositoryImpl @Inject constructor(
     override suspend fun removeFavourite(typeKey: String) {
         withContext(dispatcherProvider.io) {
             dataStore.edit { preferences ->
-                preferences[KEY_FAVOURITES] = (preferences.favourites() - typeKey).joinToString(SEPARATOR)
+                preferences[KEY_FAVOURITES] =
+                    (preferences.favourites() - typeKey).joinToString(SEPARATOR)
             }
         }
     }

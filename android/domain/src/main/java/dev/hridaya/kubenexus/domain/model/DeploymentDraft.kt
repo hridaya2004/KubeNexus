@@ -74,7 +74,8 @@ data class DeploymentDraft(
         const val SERVICE_TYPE_NONE = "None"
         const val SERVICE_TYPE_CLUSTER_IP = "ClusterIP"
         const val SERVICE_TYPE_NODE_PORT = "NodePort"
-        val SERVICE_TYPES = listOf(SERVICE_TYPE_NONE, SERVICE_TYPE_CLUSTER_IP, SERVICE_TYPE_NODE_PORT)
+        val SERVICE_TYPES =
+            listOf(SERVICE_TYPE_NONE, SERVICE_TYPE_CLUSTER_IP, SERVICE_TYPE_NODE_PORT)
         const val MIN_REPLICAS = 1
         const val MAX_REPLICAS = 500
         const val MIN_PORT = 1

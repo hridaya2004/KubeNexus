@@ -188,7 +188,12 @@ fun ResourceListScreen(
 
                     else -> LazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = 32.dp
+                        ),
                         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                         modifier = Modifier.fillMaxSize(),
                     ) {
@@ -221,7 +226,13 @@ private fun ResourceListScreenPreview() {
                         name = "web-frontend",
                         namespace = "default",
                         badge = "ClusterIP",
-                        details = listOf(RowDetail("10.96.0.42", label = "ClusterIP:", monospace = true)),
+                        details = listOf(
+                            RowDetail(
+                                "10.96.0.42",
+                                label = "ClusterIP:",
+                                monospace = true
+                            )
+                        ),
                         createdAtMillis = System.currentTimeMillis(),
                     ),
                 ),

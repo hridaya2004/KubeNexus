@@ -65,7 +65,10 @@ class PortForwardService : Service() {
         // service decides to stop itself.
         if (observeJob == null) {
             observeJob = serviceScope.launch {
-                combine(sessionManager.sessions, sessionManager.needsForegroundService) { sessions, needed ->
+                combine(
+                    sessionManager.sessions,
+                    sessionManager.needsForegroundService
+                ) { sessions, needed ->
                     sessions.filter { it.isActive } to needed
                 }.collect { (activeSessions, needed) ->
                     if (needed) {

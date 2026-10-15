@@ -333,7 +333,13 @@ class ExploreViewModelTest {
             val gate = CompletableDeferred<Unit>()
             fakeExploreRepository.fetchGate = gate
             fakeExploreRepository.fetchResultOverride = listOf(
-                APIResource(name = "prodonlies", singularName = "prodonly", namespaced = true, kind = "ProdOnly", groupVersion = "v1"),
+                APIResource(
+                    name = "prodonlies",
+                    singularName = "prodonly",
+                    namespaced = true,
+                    kind = "ProdOnly",
+                    groupVersion = "v1"
+                ),
             )
             viewModel.onAction(ExploreUiAction.Refresh)
             advanceUntilIdle()

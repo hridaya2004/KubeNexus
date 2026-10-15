@@ -36,19 +36,41 @@ class RecordingResourceBridge : FakeKubeNexusNativeBridge() {
         type: ResourceType,
         namespace: String,
         labelSelector: String,
-    ): Result<String> = record(Call("list", rawKubeconfig, type, namespace, labelSelector = labelSelector)) { listResult }
+    ): Result<String> = record(
+        Call(
+            "list",
+            rawKubeconfig,
+            type,
+            namespace,
+            labelSelector = labelSelector
+        )
+    ) { listResult }
 
-    override fun getResource(rawKubeconfig: String, type: ResourceType, namespace: String, name: String): Result<String> =
+    override fun getResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String
+    ): Result<String> =
         record(Call("get", rawKubeconfig, type, namespace, name)) { getResult }
 
-    override fun createResource(rawKubeconfig: String, type: ResourceType, manifest: String): Result<String> {
+    override fun createResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        manifest: String
+    ): Result<String> {
         val index = calls.count { it.operation == "create" }
         return record(Call("create", rawKubeconfig, type, manifest = manifest)) {
             createResults.getOrElse(index) { createResults.last() }
         }
     }
 
-    override fun deleteResource(rawKubeconfig: String, type: ResourceType, namespace: String, name: String): Result<Unit> =
+    override fun deleteResource(
+        rawKubeconfig: String,
+        type: ResourceType,
+        namespace: String,
+        name: String
+    ): Result<Unit> =
         record(Call("delete", rawKubeconfig, type, namespace, name)) { deleteResult }
 
     override fun listEvents(
@@ -56,7 +78,8 @@ class RecordingResourceBridge : FakeKubeNexusNativeBridge() {
         namespace: String,
         involvedKind: String,
         involvedName: String,
-    ): Result<String> = record(Call("events", rawKubeconfig, type = null, namespace, involvedName)) { eventsResult }
+    ): Result<String> =
+        record(Call("events", rawKubeconfig, type = null, namespace, involvedName)) { eventsResult }
 
     private fun <T> record(call: Call, answer: () -> T): T {
         calls += call

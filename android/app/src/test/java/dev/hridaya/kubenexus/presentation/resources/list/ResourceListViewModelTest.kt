@@ -82,20 +82,29 @@ class ResourceListViewModelTest {
         namespace = namespace,
         type = "ClusterIP",
         clusterIP = "10.96.0.1",
-        ports = listOf(ServicePortDetail(port = 80, targetPort = 8080, nodePort = null, protocol = "TCP", name = "http")),
+        ports = listOf(
+            ServicePortDetail(
+                port = 80,
+                targetPort = 8080,
+                nodePort = null,
+                protocol = "TCP",
+                name = "http"
+            )
+        ),
         creationTimestampMillis = 0L,
     )
 
     @Test
-    fun `cached rows render immediately, mapped by the kind's presentation`() = vmTest { viewModel ->
-        resources.givenCached(ResourceKinds.Services, listOf(service("web"), service("api")))
-        advanceUntilIdle()
+    fun `cached rows render immediately, mapped by the kind's presentation`() =
+        vmTest { viewModel ->
+            resources.givenCached(ResourceKinds.Services, listOf(service("web"), service("api")))
+            advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(listOf("web", "api"), state.rows.map { it.name })
-        assertEquals("ClusterIP", state.rows.first().badge)
-        assertFalse(state.isLoading)
-    }
+            val state = viewModel.uiState.value
+            assertEquals(listOf("web", "api"), state.rows.map { it.name })
+            assertEquals("ClusterIP", state.rows.first().badge)
+            assertFalse(state.isLoading)
+        }
 
     @Test
     fun `nothing syncs until the screen asks`() = vmTest {
@@ -108,32 +117,41 @@ class ResourceListViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            FakeResourceRepository.SyncCall(CLUSTER, ResourceKinds.Services, NamespaceScope.Only("team-a")),
+            FakeResourceRepository.SyncCall(
+                CLUSTER,
+                ResourceKinds.Services,
+                NamespaceScope.Only("team-a")
+            ),
             resources.syncCalls.single(),
         )
     }
 
     @Test
-    fun `the all namespaces filter syncs the whole cluster`() = vmTest(initialNamespace = null) { viewModel ->
-        viewModel.onAction(ResourceListUiAction.Refresh)
-        advanceUntilIdle()
+    fun `the all namespaces filter syncs the whole cluster`() =
+        vmTest(initialNamespace = null) { viewModel ->
+            viewModel.onAction(ResourceListUiAction.Refresh)
+            advanceUntilIdle()
 
-        assertEquals(ALL_NAMESPACES_FILTER, viewModel.uiState.value.selectedNamespace)
-        assertEquals(NamespaceScope.All, resources.syncCalls.single().scope)
-    }
+            assertEquals(ALL_NAMESPACES_FILTER, viewModel.uiState.value.selectedNamespace)
+            assertEquals(NamespaceScope.All, resources.syncCalls.single().scope)
+        }
 
     @Test
-    fun `selecting a namespace re-scopes the rows and syncs that namespace`() = vmTest { viewModel ->
-        resources.givenCached(ResourceKinds.Services, listOf(service("web", "team-a"), service("api", "team-b")))
-        advanceUntilIdle()
-        assertEquals(listOf("web"), viewModel.uiState.value.rows.map { it.name })
+    fun `selecting a namespace re-scopes the rows and syncs that namespace`() =
+        vmTest { viewModel ->
+            resources.givenCached(
+                ResourceKinds.Services,
+                listOf(service("web", "team-a"), service("api", "team-b"))
+            )
+            advanceUntilIdle()
+            assertEquals(listOf("web"), viewModel.uiState.value.rows.map { it.name })
 
-        viewModel.onAction(ResourceListUiAction.SelectNamespace("team-b"))
-        advanceUntilIdle()
+            viewModel.onAction(ResourceListUiAction.SelectNamespace("team-b"))
+            advanceUntilIdle()
 
-        assertEquals(listOf("api"), viewModel.uiState.value.rows.map { it.name })
-        assertEquals(NamespaceScope.Only("team-b"), resources.syncCalls.single().scope)
-    }
+            assertEquals(listOf("api"), viewModel.uiState.value.rows.map { it.name })
+            assertEquals(NamespaceScope.Only("team-b"), resources.syncCalls.single().scope)
+        }
 
     @Test
     fun `re-selecting the visible namespace does not sync again`() = vmTest { viewModel ->
@@ -145,7 +163,10 @@ class ResourceListViewModelTest {
 
     @Test
     fun `namespace chips lead with all namespaces`() = vmTest { viewModel ->
-        assertEquals(listOf(ALL_NAMESPACES_FILTER, "team-a", "team-b"), viewModel.uiState.value.namespaces)
+        assertEquals(
+            listOf(ALL_NAMESPACES_FILTER, "team-a", "team-b"),
+            viewModel.uiState.value.namespaces
+        )
     }
 
     @Test
@@ -163,21 +184,22 @@ class ResourceListViewModelTest {
     }
 
     @Test
-    fun `a failed sync with nothing cached shows the error until a retry succeeds`() = vmTest { viewModel ->
-        resources.syncResult = Result.Error(AppError.Network("offline"))
-        viewModel.onAction(ResourceListUiAction.Refresh)
-        advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.showsSyncError)
+    fun `a failed sync with nothing cached shows the error until a retry succeeds`() =
+        vmTest { viewModel ->
+            resources.syncResult = Result.Error(AppError.Network("offline"))
+            viewModel.onAction(ResourceListUiAction.Refresh)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.showsSyncError)
 
-        resources.syncResult = Result.Success(Unit)
-        resources.givenCached(ResourceKinds.Services, listOf(service("web")))
-        viewModel.onAction(ResourceListUiAction.Refresh)
-        advanceUntilIdle()
+            resources.syncResult = Result.Success(Unit)
+            resources.givenCached(ResourceKinds.Services, listOf(service("web")))
+            viewModel.onAction(ResourceListUiAction.Refresh)
+            advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertFalse(state.showsSyncError)
-        assertEquals(listOf("web"), state.rows.map { it.name })
-    }
+            val state = viewModel.uiState.value
+            assertFalse(state.showsSyncError)
+            assertEquals(listOf("web"), state.rows.map { it.name })
+        }
 
     @Test
     fun `an empty cache shows loading while the first sync runs`() = vmTest { viewModel ->

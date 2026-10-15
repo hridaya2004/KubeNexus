@@ -23,7 +23,14 @@ class PortForwardSessionRepositoryImpl @Inject constructor(
         remotePort: Int,
     ): Result<String> {
         val kubeconfig = kubeconfigs.kubeconfigOf(clusterId) ?: return noCluster()
-        return sessionManager.startPodForward(kubeconfig, namespace, podName, localPort, remotePort, clusterId)
+        return sessionManager.startPodForward(
+            kubeconfig,
+            namespace,
+            podName,
+            localPort,
+            remotePort,
+            clusterId
+        )
     }
 
     override suspend fun startServiceForward(

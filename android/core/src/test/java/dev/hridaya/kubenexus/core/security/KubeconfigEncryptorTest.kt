@@ -117,7 +117,8 @@ class KubeconfigEncryptorTest {
     @Test
     fun `a key store runtime failure is reported as unreadable credentials`() {
         val encrypted = encryptor.encrypt(sampleKubeconfig)
-        val failingKeyStore = AesGcmKubeconfigEncryptor { throw java.security.ProviderException("Keystore operation failed") }
+        val failingKeyStore =
+            AesGcmKubeconfigEncryptor { throw java.security.ProviderException("Keystore operation failed") }
 
         val thrown = runCatching { failingKeyStore.decrypt(encrypted) }.exceptionOrNull()
 

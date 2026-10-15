@@ -12,7 +12,8 @@ class MetadataKeyValueRowIntegrationTest {
 
     @Test
     fun `last-applied-configuration annotation is recognized as JSON and formatted`() {
-        val lastAppliedConfig = """{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"name":"web-frontend"}}"""
+        val lastAppliedConfig =
+            """{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"name":"web-frontend"}}"""
         assertTrue(JsonFormatter.isJson(lastAppliedConfig))
 
         val formatted = JsonFormatter.formatIfJson(lastAppliedConfig)

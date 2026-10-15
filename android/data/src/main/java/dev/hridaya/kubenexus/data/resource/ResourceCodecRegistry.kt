@@ -41,7 +41,7 @@ class ResourceCodecRegistry @Inject constructor(
         kind: ResourceKind<Summary, Details>,
     ): ResourceCodec<Summary, Details> =
         checkNotNull(codecsByType[kind.type]) { "No codec is registered for $kind" }
-            as ResourceCodec<Summary, Details>
+                as ResourceCodec<Summary, Details>
 
     /** The resource a manifest of [apiVersion] and [kind] creates, if the app models it. */
     fun typeOf(apiVersion: String, kind: String): ResourceType? =

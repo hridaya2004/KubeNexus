@@ -144,7 +144,7 @@ class PortForwardNotificationManager @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val text = "Android limits background port forwarding to 6 hours a day, so KubeNexus " +
-            "closed your tunnels. Open the app to start them again."
+                "closed your tunnels. Open the app to start them again."
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_port_forward)
             .setContentTitle("Port forwarding stopped")

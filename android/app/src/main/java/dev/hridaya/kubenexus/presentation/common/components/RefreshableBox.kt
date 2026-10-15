@@ -49,7 +49,9 @@ fun RefreshableBox(
     ) {
         Box(
             modifier = if (appBarScrollConnection != null) {
-                Modifier.fillMaxSize().nestedScroll(appBarScrollConnection)
+                Modifier
+                    .fillMaxSize()
+                    .nestedScroll(appBarScrollConnection)
             } else {
                 Modifier.fillMaxSize()
             },

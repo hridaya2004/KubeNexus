@@ -28,7 +28,10 @@ class PodMapperTest {
         }.bufferedReader().use { it.readText() }
 
     private fun podList(): K8sListDto<PodDto> =
-        K8sJson.decodeFromString(K8sListDto.serializer(PodDto.serializer()), loadFixture("pod-list.json"))
+        K8sJson.decodeFromString(
+            K8sListDto.serializer(PodDto.serializer()),
+            loadFixture("pod-list.json")
+        )
 
     @Test
     fun `decodes a pod list containing fields the DTOs do not model`() {

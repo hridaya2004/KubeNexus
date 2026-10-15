@@ -18,24 +18,32 @@ interface ResourceCacheDao {
 
     @Query(
         "SELECT payload FROM cached_resources WHERE clusterId = :clusterId AND resourceKey = :resourceKey " +
-            "ORDER BY namespace ASC, name ASC",
+                "ORDER BY namespace ASC, name ASC",
     )
     fun observePayloads(clusterId: String, resourceKey: String): Flow<List<String>>
 
     @Query(
         "SELECT payload FROM cached_resources WHERE clusterId = :clusterId AND resourceKey = :resourceKey " +
-            "AND namespace = :namespace ORDER BY name ASC",
+                "AND namespace = :namespace ORDER BY name ASC",
     )
-    fun observePayloadsInNamespace(clusterId: String, resourceKey: String, namespace: String): Flow<List<String>>
+    fun observePayloadsInNamespace(
+        clusterId: String,
+        resourceKey: String,
+        namespace: String
+    ): Flow<List<String>>
 
     @Query("SELECT id FROM cached_resources WHERE clusterId = :clusterId AND resourceKey = :resourceKey")
     suspend fun getIds(clusterId: String, resourceKey: String): List<String>
 
     @Query(
         "SELECT id FROM cached_resources WHERE clusterId = :clusterId AND resourceKey = :resourceKey " +
-            "AND namespace = :namespace",
+                "AND namespace = :namespace",
     )
-    suspend fun getIdsInNamespace(clusterId: String, resourceKey: String, namespace: String): List<String>
+    suspend fun getIdsInNamespace(
+        clusterId: String,
+        resourceKey: String,
+        namespace: String
+    ): List<String>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(rows: List<CachedResourceEntity>)

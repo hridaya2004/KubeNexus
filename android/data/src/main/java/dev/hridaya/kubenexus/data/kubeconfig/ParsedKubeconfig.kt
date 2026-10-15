@@ -14,7 +14,7 @@ data class ParsedKubeconfig(
     // The generated toString would print the kubeconfig's credentials.
     override fun toString(): String =
         "ParsedKubeconfig(clusterName=$clusterName, serverUrl=$serverUrl, contextName=$contextName, " +
-            "userName=$userName, namespace=$namespace, insecureSkipTlsVerify=$insecureSkipTlsVerify, " +
-            "rawKubeconfig=<redacted>)"
+                "userName=$userName, namespace=$namespace, insecureSkipTlsVerify=$insecureSkipTlsVerify, " +
+                "rawKubeconfig=<redacted>)"
 }
 

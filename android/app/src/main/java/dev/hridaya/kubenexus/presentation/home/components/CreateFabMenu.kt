@@ -35,7 +35,11 @@ fun CreateFabMenu(
     BackHandler(enabled = expanded) { onExpandedChange(false) }
 
     val items = creatableResources.map { presentation ->
-        MenuEntry("Add ${presentation.singularTitle}", presentation.icon) { onAddResourceClick(presentation) }
+        MenuEntry("Add ${presentation.singularTitle}", presentation.icon) {
+            onAddResourceClick(
+                presentation
+            )
+        }
     } + MenuEntry("Add Cluster", Icons.Outlined.CloudQueue, onAddClusterClick)
 
     FloatingActionButtonMenu(

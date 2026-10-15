@@ -47,14 +47,38 @@ class K8sManifestRenderingTest {
     // The API server parses YAML 1.1, where these plain scalars are not strings.
     @Test
     fun `strings YAML 1_1 would read as booleans, nulls or numbers are quoted`() {
-        for (text in listOf("yes", "No", "ON", "off", "true", "null", "~", "y", "123", "1:20", "0x1F", "1e3", "2001-12-14", "-dash", ".5")) {
+        for (text in listOf(
+            "yes",
+            "No",
+            "ON",
+            "off",
+            "true",
+            "null",
+            "~",
+            "y",
+            "123",
+            "1:20",
+            "0x1F",
+            "1e3",
+            "2001-12-14",
+            "-dash",
+            ".5"
+        )) {
             assertEquals(text, "\"$text\"", yamlScalar(text))
         }
     }
 
     @Test
     fun `ordinary names, images and paths stay plain`() {
-        for (text in listOf("nginx", "my-app", "web.v2", "registry.example.com/team/api:1.2.3", "apps/v1", "ClusterIP", "app_name")) {
+        for (text in listOf(
+            "nginx",
+            "my-app",
+            "web.v2",
+            "registry.example.com/team/api:1.2.3",
+            "apps/v1",
+            "ClusterIP",
+            "app_name"
+        )) {
             assertEquals(text, yamlScalar(text))
         }
     }
@@ -70,6 +94,9 @@ class K8sManifestRenderingTest {
 
     @Test
     fun `empty collections render inline`() {
-        assertEquals("a: {}\nb: []\n", renderK8sManifest(linkedMapOf("a" to emptyMap<String, Any>(), "b" to emptyList<Any>())))
+        assertEquals(
+            "a: {}\nb: []\n",
+            renderK8sManifest(linkedMapOf("a" to emptyMap<String, Any>(), "b" to emptyList<Any>()))
+        )
     }
 }

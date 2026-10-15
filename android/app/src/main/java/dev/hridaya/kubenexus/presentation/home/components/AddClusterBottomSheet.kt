@@ -244,6 +244,7 @@ private fun readKubeconfigFile(context: Context, uri: Uri): KubeconfigFile = try
         bytes == null -> KubeconfigFile.Failed("Couldn't open that file.")
         bytes.size > Cluster.MAX_KUBECONFIG_BYTES ->
             KubeconfigFile.Failed("That file is larger than 1 MB, which is more than any kubeconfig needs. Check that it is the right file.")
+
         else -> KubeconfigFile.Loaded(bytes.decodeToString(), getFileName(context, uri))
     }
 } catch (e: Exception) {

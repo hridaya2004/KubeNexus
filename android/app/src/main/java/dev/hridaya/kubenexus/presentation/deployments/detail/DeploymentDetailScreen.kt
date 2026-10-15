@@ -4,9 +4,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -203,100 +202,100 @@ fun DeploymentDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
 
-                    ButtonGroup(
-                        overflowIndicator = {},
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        customItem(
-                            buttonGroupContent = {
-                                val interactionSource = remember { MutableInteractionSource() }
-                                FilledTonalButton(
-                                    onClick = { onAction(DeploymentDetailUiAction.OpenScaleDialog) },
-                                    enabled = !uiState.isMutating,
-                                    interactionSource = interactionSource,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .animateWidth(interactionSource),
-                                    shapes = ButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Tune,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
+                        ButtonGroup(
+                            overflowIndicator = {},
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            customItem(
+                                buttonGroupContent = {
+                                    val interactionSource = remember { MutableInteractionSource() }
+                                    FilledTonalButton(
+                                        onClick = { onAction(DeploymentDetailUiAction.OpenScaleDialog) },
+                                        enabled = !uiState.isMutating,
+                                        interactionSource = interactionSource,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .animateWidth(interactionSource),
+                                        shapes = ButtonDefaults.shapes(),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Tune,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.size(6.dp))
+                                        Text("Scale")
+                                    }
+                                },
+                                menuContent = { state ->
+                                    DropdownMenuItem(
+                                        text = { Text("Scale") },
+                                        onClick = {
+                                            state.dismiss()
+                                            onAction(DeploymentDetailUiAction.OpenScaleDialog)
+                                        },
                                     )
-                                    Spacer(modifier = Modifier.size(6.dp))
-                                    Text("Scale")
-                                }
-                            },
-                            menuContent = { state ->
-                                DropdownMenuItem(
-                                    text = { Text("Scale") },
-                                    onClick = {
-                                        state.dismiss()
-                                        onAction(DeploymentDetailUiAction.OpenScaleDialog)
-                                    },
-                                )
-                            },
+                                },
+                            )
+                            customItem(
+                                buttonGroupContent = {
+                                    val interactionSource = remember { MutableInteractionSource() }
+                                    FilledTonalButton(
+                                        onClick = { onAction(DeploymentDetailUiAction.OpenRestartDialog) },
+                                        enabled = !uiState.isMutating,
+                                        interactionSource = interactionSource,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .animateWidth(interactionSource),
+                                        shapes = ButtonDefaults.shapes(),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.RestartAlt,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.size(6.dp))
+                                        Text("Restart")
+                                    }
+                                },
+                                menuContent = { state ->
+                                    DropdownMenuItem(
+                                        text = { Text("Restart") },
+                                        onClick = {
+                                            state.dismiss()
+                                            onAction(DeploymentDetailUiAction.OpenRestartDialog)
+                                        },
+                                    )
+                                },
+                            )
+                        }
+
+                        DeploymentImagesCard(
+                            images = deployment.images,
+                            modifier = Modifier.fillMaxWidth(),
                         )
-                        customItem(
-                            buttonGroupContent = {
-                                val interactionSource = remember { MutableInteractionSource() }
-                                FilledTonalButton(
-                                    onClick = { onAction(DeploymentDetailUiAction.OpenRestartDialog) },
-                                    enabled = !uiState.isMutating,
-                                    interactionSource = interactionSource,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .animateWidth(interactionSource),
-                                    shapes = ButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.RestartAlt,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Spacer(modifier = Modifier.size(6.dp))
-                                    Text("Restart")
-                                }
-                            },
-                            menuContent = { state ->
-                                DropdownMenuItem(
-                                    text = { Text("Restart") },
-                                    onClick = {
-                                        state.dismiss()
-                                        onAction(DeploymentDetailUiAction.OpenRestartDialog)
-                                    },
-                                )
-                            },
+
+                        DeploymentPodsSection(
+                            pods = uiState.associatedPods,
+                            isLoading = uiState.isPodsLoading,
+                            errorMessage = uiState.podsErrorMessage,
+                            onPodClick = onPodClick,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        // Describe sections load independently; the overview above
+                        // keeps rendering while they stream in or fail.
+                        DeploymentDetailsSection(
+                            isDetailsLoading = uiState.isDetailsLoading,
+                            details = uiState.details,
+                            detailsErrorMessage = uiState.detailsErrorMessage,
+                            onRetry = { onAction(DeploymentDetailUiAction.Refresh) },
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
-
-                    DeploymentImagesCard(
-                        images = deployment.images,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    DeploymentPodsSection(
-                        pods = uiState.associatedPods,
-                        isLoading = uiState.isPodsLoading,
-                        errorMessage = uiState.podsErrorMessage,
-                        onPodClick = onPodClick,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    // Describe sections load independently; the overview above
-                    // keeps rendering while they stream in or fail.
-                    DeploymentDetailsSection(
-                        isDetailsLoading = uiState.isDetailsLoading,
-                        details = uiState.details,
-                        detailsErrorMessage = uiState.detailsErrorMessage,
-                        onRetry = { onAction(DeploymentDetailUiAction.Refresh) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
             }
         }
-    }
 
         if (uiState.showScaleDialog) {
             ScaleDeploymentDialog(

@@ -11,9 +11,25 @@ import kotlinx.coroutines.flow.flowOf
 /** Records calls and answers with whatever a test has configured, success by default. */
 class FakeResourceRepository : ResourceRepository {
 
-    data class ListCall(val clusterId: String?, val kind: ResourceKind<*, *>, val scope: NamespaceScope, val labelSelector: String)
-    data class SyncCall(val clusterId: String?, val kind: ResourceKind<*, *>, val scope: NamespaceScope)
-    data class DeleteCall(val clusterId: String?, val kind: ResourceKind<*, *>, val namespace: String, val name: String)
+    data class ListCall(
+        val clusterId: String?,
+        val kind: ResourceKind<*, *>,
+        val scope: NamespaceScope,
+        val labelSelector: String
+    )
+
+    data class SyncCall(
+        val clusterId: String?,
+        val kind: ResourceKind<*, *>,
+        val scope: NamespaceScope
+    )
+
+    data class DeleteCall(
+        val clusterId: String?,
+        val kind: ResourceKind<*, *>,
+        val namespace: String,
+        val name: String
+    )
 
     val listCalls = mutableListOf<ListCall>()
     val syncCalls = mutableListOf<SyncCall>()
@@ -33,12 +49,17 @@ class FakeResourceRepository : ResourceRepository {
         scope: NamespaceScope,
     ): Flow<List<S>> = flowOf(emptyList())
 
-    override suspend fun sync(clusterId: String?, kind: ResourceKind<*, *>, scope: NamespaceScope): Result<Unit> {
+    override suspend fun sync(
+        clusterId: String?,
+        kind: ResourceKind<*, *>,
+        scope: NamespaceScope
+    ): Result<Unit> {
         syncCalls += SyncCall(clusterId, kind, scope)
         return syncResult
     }
 
-    override fun observeLastSynced(clusterId: String?, kind: ResourceKind<*, *>): Flow<Long?> = flowOf(null)
+    override fun observeLastSynced(clusterId: String?, kind: ResourceKind<*, *>): Flow<Long?> =
+        flowOf(null)
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun <S : KubeObjectSummary> list(
@@ -68,5 +89,6 @@ class FakeResourceRepository : ResourceRepository {
         return deleteResult
     }
 
-    override suspend fun create(clusterId: String?, manifest: String): Result<Unit> = Result.Success(Unit)
+    override suspend fun create(clusterId: String?, manifest: String): Result<Unit> =
+        Result.Success(Unit)
 }

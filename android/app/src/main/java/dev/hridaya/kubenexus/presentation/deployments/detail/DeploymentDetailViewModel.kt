@@ -102,26 +102,33 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                     ?: 1
                 _uiState.update { it.copy(showScaleDialog = true, scaleInput = currentDesired) }
             }
+
             DeploymentDetailUiAction.DismissScaleDialog -> {
                 _uiState.update { it.copy(showScaleDialog = false) }
             }
+
             is DeploymentDetailUiAction.ScaleInputChanged -> {
                 _uiState.update { it.copy(scaleInput = action.replicas) }
             }
+
             DeploymentDetailUiAction.ConfirmScale -> performScale()
             DeploymentDetailUiAction.OpenRestartDialog -> {
                 _uiState.update { it.copy(showRestartDialog = true) }
             }
+
             DeploymentDetailUiAction.DismissRestartDialog -> {
                 _uiState.update { it.copy(showRestartDialog = false) }
             }
+
             DeploymentDetailUiAction.ConfirmRestart -> performRestart()
             DeploymentDetailUiAction.OpenDeleteDialog -> {
                 _uiState.update { it.copy(showDeleteDialog = true) }
             }
+
             DeploymentDetailUiAction.DismissDeleteDialog -> {
                 _uiState.update { it.copy(showDeleteDialog = false) }
             }
+
             DeploymentDetailUiAction.ConfirmDelete -> performDelete()
             DeploymentDetailUiAction.DismissMutationError -> {
                 _uiState.update { it.copy(mutationErrorMessage = null) }
@@ -156,9 +163,10 @@ class DeploymentDetailViewModel @AssistedInject constructor(
     }
 
     private suspend fun loadSummary(clusterId: String?) {
-        val cachedSummary = observeResources(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))
-            .firstOrNull()
-            ?.firstOrNull { it.name == deploymentName && it.namespace == namespace }
+        val cachedSummary =
+            observeResources(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))
+                .firstOrNull()
+                ?.firstOrNull { it.name == deploymentName && it.namespace == namespace }
         if (cachedSummary != null) {
             _uiState.update { state ->
                 state.copy(isLoading = false, deployment = cachedSummary, errorMessage = null)
@@ -169,7 +177,8 @@ class DeploymentDetailViewModel @AssistedInject constructor(
             }
         }
 
-        when (val result = listResources(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))) {
+        when (val result =
+            listResources(clusterId, ResourceKinds.Deployments, NamespaceScope.Only(namespace))) {
             is Result.Success -> {
                 val match = result.data.firstOrNull { candidate ->
                     candidate.name == deploymentName && candidate.namespace == namespace
@@ -211,7 +220,8 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         _uiState.update { state ->
             state.copy(isDetailsLoading = state.details == null, detailsErrorMessage = null)
         }
-        when (val result = describeResource(clusterId, ResourceKinds.Deployments, namespace, deploymentName)) {
+        when (val result =
+            describeResource(clusterId, ResourceKinds.Deployments, namespace, deploymentName)) {
             is Result.Success -> {
                 val details = result.data
                 _uiState.update { state ->
@@ -248,11 +258,17 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         )
         when (podsResult) {
             is Result.Success -> _uiState.update {
-                it.copy(isPodsLoading = false, associatedPods = podsResult.data, podsErrorMessage = null)
+                it.copy(
+                    isPodsLoading = false,
+                    associatedPods = podsResult.data,
+                    podsErrorMessage = null
+                )
             }
+
             is Result.Error -> _uiState.update {
                 it.copy(isPodsLoading = false, podsErrorMessage = podsResult.error.message)
             }
+
             is Result.Loading -> Unit
         }
     }
@@ -269,13 +285,15 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         }
         viewModelScope.launch {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
-            val result = scaleDeploymentUseCase(clusterId, namespace, deploymentName, targetReplicas)
+            val result =
+                scaleDeploymentUseCase(clusterId, namespace, deploymentName, targetReplicas)
             when (result) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isMutating = false) }
                     _effects.send(DeploymentDetailUiEffect.ShowSnackbar("Scaled \"$deploymentName\" to $targetReplicas replicas"))
                     load()
                 }
+
                 is Result.Error -> {
                     val message = result.error.message ?: "Failed to scale deployment"
                     _uiState.update {
@@ -286,6 +304,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                     }
                     _effects.send(DeploymentDetailUiEffect.ShowSnackbar(message))
                 }
+
                 else -> {
                     _uiState.update { it.copy(isMutating = false) }
                 }
@@ -311,6 +330,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                     _effects.send(DeploymentDetailUiEffect.ShowSnackbar("Initiated rollout restart for \"$deploymentName\""))
                     load()
                 }
+
                 is Result.Error -> {
                     val message = result.error.message ?: "Failed to restart deployment"
                     _uiState.update {
@@ -321,6 +341,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                     }
                     _effects.send(DeploymentDetailUiEffect.ShowSnackbar(message))
                 }
+
                 else -> {
                     _uiState.update { it.copy(isMutating = false) }
                 }
@@ -339,13 +360,15 @@ class DeploymentDetailViewModel @AssistedInject constructor(
         }
         viewModelScope.launch {
             val clusterId = getActiveClusterUseCase().firstOrNull()?.id
-            val result = deleteResource(clusterId, ResourceKinds.Deployments, namespace, deploymentName)
+            val result =
+                deleteResource(clusterId, ResourceKinds.Deployments, namespace, deploymentName)
             when (result) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isMutating = false) }
                     _effects.send(DeploymentDetailUiEffect.ShowSnackbar("Deleted deployment \"$deploymentName\""))
                     _effects.send(DeploymentDetailUiEffect.NavigateBack)
                 }
+
                 is Result.Error -> {
                     val message = result.error.message ?: "Failed to delete deployment"
                     _uiState.update {
@@ -356,6 +379,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                     }
                     _effects.send(DeploymentDetailUiEffect.ShowSnackbar(message))
                 }
+
                 else -> {
                     _uiState.update { it.copy(isMutating = false) }
                 }

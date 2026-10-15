@@ -175,7 +175,8 @@ class PodDetailViewModel @AssistedInject constructor(
                         val samples = (state.metricsSamples + sample)
                             .distinctBy { it.timestampMillis }
                             .sortedBy { it.timestampMillis }
-                        val cutoff = samples.last().timestampMillis - MetricsRange.MINUTES_5.durationMs
+                        val cutoff =
+                            samples.last().timestampMillis - MetricsRange.MINUTES_5.durationMs
                         state.copy(metricsSamples = samples.filter { it.timestampMillis >= cutoff })
                     }
                 }
@@ -480,7 +481,12 @@ class PodDetailViewModel @AssistedInject constructor(
                 .batched(LOG_BATCH_WINDOW_MS)
                 .onStart {
                     val tailDesc = if (tail != null && tail > 0) " (tail $tail lines)" else ""
-                    _uiState.update { it.copy(logs = listOf("[Streaming logs initiated for container '${container ?: "default"}'$tailDesc]..."), firstLogLineNumber = 1) }
+                    _uiState.update {
+                        it.copy(
+                            logs = listOf("[Streaming logs initiated for container '${container ?: "default"}'$tailDesc]..."),
+                            firstLogLineNumber = 1
+                        )
+                    }
                 }
                 .onCompletion { cause ->
                     // The stream ends by itself when the container stops or the connection
@@ -493,7 +499,8 @@ class PodDetailViewModel @AssistedInject constructor(
                 }
                 .catch { t ->
                     _uiState.update {
-                        it.appendingLogs("[Log stream closed: ${t.message}]").copy(isStreamingLogs = false)
+                        it.appendingLogs("[Log stream closed: ${t.message}]")
+                            .copy(isStreamingLogs = false)
                     }
                 }
                 .collect { lines ->
@@ -527,7 +534,12 @@ class PodDetailViewModel @AssistedInject constructor(
         val cid = activeClusterId ?: return
         val container = _uiState.value.selectedContainer ?: "default"
 
-        _uiState.update { it.copy(isTerminalActive = true, activeShellCommand = preferredShell ?: "bash") }
+        _uiState.update {
+            it.copy(
+                isTerminalActive = true,
+                activeShellCommand = preferredShell ?: "bash"
+            )
+        }
         terminalNotice("Attaching to container '$container'...")
 
         terminalJob = viewModelScope.launch(dispatcherProvider.main) {
@@ -600,6 +612,7 @@ class PodDetailViewModel @AssistedInject constructor(
                 terminalNotice("Failed to start $command: ${sessionResult.error.message}")
                 return false
             }
+
             is Result.Loading -> return false
         }
 
@@ -740,11 +753,15 @@ class PodDetailViewModel @AssistedInject constructor(
     }
 }
 
-private fun PodDetailUiState.appendingLogs(line: String): PodDetailUiState = appendingLogs(listOf(line))
+private fun PodDetailUiState.appendingLogs(line: String): PodDetailUiState =
+    appendingLogs(listOf(line))
 
 private fun PodDetailUiState.appendingLogs(lines: List<String>): PodDetailUiState {
     val next = logs.appendCapped(lines)
-    return copy(logs = next, firstLogLineNumber = firstLogLineNumber + (logs.size + lines.size - next.size))
+    return copy(
+        logs = next,
+        firstLogLineNumber = firstLogLineNumber + (logs.size + lines.size - next.size)
+    )
 }
 
 /** Appends [lines], dropping the oldest lines beyond [PodDetailViewModel.MAX_LOG_LINES]. */

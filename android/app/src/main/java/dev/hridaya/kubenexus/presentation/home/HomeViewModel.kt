@@ -171,8 +171,8 @@ class HomeViewModel @Inject constructor(
 
                 // A namespace picked on the previous cluster may not exist on this one.
                 val switchedCluster = data.activeCluster != null &&
-                    lastSyncedClusterId != null &&
-                    lastSyncedClusterId != data.activeCluster.id
+                        lastSyncedClusterId != null &&
+                        lastSyncedClusterId != data.activeCluster.id
                 if (switchedCluster && !isAllNamespaces(data.selectedNamespace)) {
                     _selectedNamespace.value = ALL_NAMESPACES_FILTER
                     return@collect

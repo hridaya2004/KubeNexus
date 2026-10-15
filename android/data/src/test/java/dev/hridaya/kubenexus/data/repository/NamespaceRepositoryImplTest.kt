@@ -19,7 +19,12 @@ class NamespaceRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
-    private val clusterDao = InMemoryClusterDao().apply { seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt("kubeconfig")) }
+    private val clusterDao = InMemoryClusterDao().apply {
+        seed(
+            id = CLUSTER,
+            rawKubeconfig = encryptor.encrypt("kubeconfig")
+        )
+    }
     private val namespaceDao = InMemoryNamespaceDao()
     private val cacheDao = InMemoryResourceCacheDao()
     private var liveNamespaces: Result<List<Namespace>> = Result.Success(emptyList())
@@ -29,7 +34,11 @@ class NamespaceRepositoryImplTest {
     }
 
     private val repository = NamespaceRepositoryImpl(
-        clusterCalls = ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher)),
+        clusterCalls = ClusterCallRunner(
+            clusterDao,
+            encryptor,
+            TestDispatcherProvider(testDispatcher)
+        ),
         nativeBridge = bridge,
         namespaceDao = namespaceDao,
         resourceCacheDao = cacheDao,
@@ -43,11 +52,15 @@ class NamespaceRepositoryImplTest {
 
     @Test
     fun `sync replaces the cached names, sorted`() = runTest(testDispatcher) {
-        liveNamespaces = Result.Success(listOf(Namespace("team-b"), Namespace("default"), Namespace("team-a")))
+        liveNamespaces =
+            Result.Success(listOf(Namespace("team-b"), Namespace("default"), Namespace("team-a")))
 
         repository.sync(CLUSTER)
 
-        assertEquals(listOf("default", "team-a", "team-b"), repository.observeNames(CLUSTER).first())
+        assertEquals(
+            listOf("default", "team-a", "team-b"),
+            repository.observeNames(CLUSTER).first()
+        )
     }
 
     @Test

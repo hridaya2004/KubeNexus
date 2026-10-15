@@ -118,7 +118,11 @@ fun ManageClusterCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                StatusPills(active = active, testStatus = testStatus, modifier = Modifier.weight(1f))
+                StatusPills(
+                    active = active,
+                    testStatus = testStatus,
+                    modifier = Modifier.weight(1f)
+                )
                 PrimaryAction(
                     active = active,
                     testStatus = testStatus,
@@ -192,7 +196,11 @@ private fun ClusterOverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun StatusPills(active: Boolean, testStatus: ClusterTestStatus, modifier: Modifier = Modifier) {
+private fun StatusPills(
+    active: Boolean,
+    testStatus: ClusterTestStatus,
+    modifier: Modifier = Modifier
+) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (active) {
             StatusPill(
@@ -268,7 +276,11 @@ private fun PrimaryAction(
     }
 
     val testing = testStatus == ClusterTestStatus.TESTING
-    OutlinedButton(onClick = onTestConnection, enabled = !testing, shapes = ButtonDefaults.shapes()) {
+    OutlinedButton(
+        onClick = onTestConnection,
+        enabled = !testing,
+        shapes = ButtonDefaults.shapes()
+    ) {
         if (testing) {
             CircularProgressIndicator(
                 modifier = Modifier.size(ButtonDefaults.IconSize),
@@ -290,7 +302,10 @@ private fun PrimaryAction(
 @Composable
 private fun ManageClusterCardPreview() {
     KubeNexusTheme {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.padding(16.dp)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
             ManageClusterCard(
                 cluster = Cluster(
                     id = "1",

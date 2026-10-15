@@ -187,7 +187,10 @@ fun ServiceDetailScreen(
                                         .padding(horizontal = 16.dp),
                                     shapes = ButtonDefaults.shapes(),
                                 ) {
-                                    Text(text = "Retry", style = MaterialTheme.typography.labelLarge)
+                                    Text(
+                                        text = "Retry",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
                                 }
                             }
                         }

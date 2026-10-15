@@ -63,7 +63,13 @@ class ExploreViewModel @Inject constructor(
             hasCheckedEmptyForCluster = false
             // A refresh still running for the previous cluster must not land on this one.
             refreshJob?.cancel()
-            _uiState.update { it.copy(isRefreshing = false, isLoading = false, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    isLoading = false,
+                    errorMessage = null
+                )
+            }
         }
         streamJob = viewModelScope.launch(dispatcherProvider.main) {
             getAPIResourcesUseCase.getStream(clusterId).collectLatest { list ->

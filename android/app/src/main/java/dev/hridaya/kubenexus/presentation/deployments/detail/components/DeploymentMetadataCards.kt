@@ -76,7 +76,10 @@ private fun DeploymentKeyValueCard(
                 MetadataKeyValueRow(key = entryKey, value = entryValue)
             }
             if (entries.size > MAX_VISIBLE_ENTRIES) {
-                TextButton(onClick = { showAllEntries = !showAllEntries }, shapes = ButtonDefaults.shapes()) {
+                TextButton(
+                    onClick = { showAllEntries = !showAllEntries },
+                    shapes = ButtonDefaults.shapes()
+                ) {
                     Text(
                         text = if (showAllEntries) "Show less" else "Show all ${entries.size}",
                         style = MaterialTheme.typography.labelLarge,

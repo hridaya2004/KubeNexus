@@ -107,7 +107,12 @@ fun ErrorDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    ClipboardHelper.copy(context, "Error details", data.rawErrorTrace, sensitive = true)
+                    ClipboardHelper.copy(
+                        context,
+                        "Error details",
+                        data.rawErrorTrace,
+                        sensitive = true
+                    )
                     onCopy(data.rawErrorTrace)
                 },
                 colors = ButtonDefaults.buttonColors(

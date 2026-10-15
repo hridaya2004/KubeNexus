@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import dev.hridaya.kubenexus.BuildConfig
 import dev.hridaya.kubenexus.R
-import dev.hridaya.kubenexus.domain.model.ThemeMode
 import dev.hridaya.kubenexus.presentation.common.components.SegmentedListSection
 import dev.hridaya.kubenexus.presentation.settings.components.AboutItem
 import dev.hridaya.kubenexus.presentation.settings.components.AppThemeModePreferenceWidget
@@ -79,20 +78,24 @@ fun SettingsScreen(
             text = {
                 Text(
                     "Deletes the pods, deployments, services, namespaces and API schemas KubeNexus " +
-                        "has cached from your clusters. Your clusters and their credentials are " +
-                        "kept, and the data is fetched again the next time you open it.",
+                            "has cached from your clusters. Your clusters and their credentials are " +
+                            "kept, and the data is fetched again the next time you open it.",
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmClearCache = false
-                    onClearCachedData()
-                },
+                TextButton(
+                    onClick = {
+                        confirmClearCache = false
+                        onClearCachedData()
+                    },
                     shapes = ButtonDefaults.shapes(),
                 ) { Text("Clear") }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClearCache = false }, shapes = ButtonDefaults.shapes()) { Text("Cancel") }
+                TextButton(
+                    onClick = { confirmClearCache = false },
+                    shapes = ButtonDefaults.shapes()
+                ) { Text("Cancel") }
             },
         )
     }
@@ -105,7 +108,9 @@ fun SettingsScreen(
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = Color.Transparent,
         topBar = {
             LargeFlexibleTopAppBar(
@@ -171,42 +176,45 @@ fun SettingsScreen(
 
             item {
                 val modules = listOf(
-                ModuleInfo(
-                    title = "Android App",
-                    subtitle = "dev.hridaya.kubenexus",
-                    version = BuildConfig.APP_COMMIT_SHA,
-                    icon = Icons.Outlined.Android,
-                ),
-                ModuleInfo(
-                    title = "libghostty",
-                    subtitle = "ghostty-org/ghostty VT engine",
-                    version = BuildConfig.LIBGHOSTTY_COMMIT_SHA,
-                    icon = Icons.Outlined.Terminal,
-                ),
-                ModuleInfo(
-                    title = "Ghostty Bridge",
-                    subtitle = "terminal-native JNI bridge",
-                    version = BuildConfig.GHOSTTY_BRIDGE_COMMIT_SHA,
-                    icon = Icons.Outlined.Build,
-                ),
-                ModuleInfo(
-                    title = "Go-core Client",
-                    subtitle = "kubenexus-go-client runtime",
-                    version = BuildConfig.GO_CORE_COMMIT_SHA,
-                    icon = Icons.Outlined.DataObject,
-                ),
-                ModuleInfo(
-                    title = "k8s client-go",
-                    subtitle = "k8s.io/client-go ${BuildConfig.CLIENT_GO_VERSION}, unmodified",
-                    version = BuildConfig.CLIENT_GO_VERSION,
-                    icon = Icons.Outlined.Hub,
-                ),
+                    ModuleInfo(
+                        title = "Android App",
+                        subtitle = "dev.hridaya.kubenexus",
+                        version = BuildConfig.APP_COMMIT_SHA,
+                        icon = Icons.Outlined.Android,
+                    ),
+                    ModuleInfo(
+                        title = "libghostty",
+                        subtitle = "ghostty-org/ghostty VT engine",
+                        version = BuildConfig.LIBGHOSTTY_COMMIT_SHA,
+                        icon = Icons.Outlined.Terminal,
+                    ),
+                    ModuleInfo(
+                        title = "Ghostty Bridge",
+                        subtitle = "terminal-native JNI bridge",
+                        version = BuildConfig.GHOSTTY_BRIDGE_COMMIT_SHA,
+                        icon = Icons.Outlined.Build,
+                    ),
+                    ModuleInfo(
+                        title = "Go-core Client",
+                        subtitle = "kubenexus-go-client runtime",
+                        version = BuildConfig.GO_CORE_COMMIT_SHA,
+                        icon = Icons.Outlined.DataObject,
+                    ),
+                    ModuleInfo(
+                        title = "k8s client-go",
+                        subtitle = "k8s.io/client-go ${BuildConfig.CLIENT_GO_VERSION}, unmodified",
+                        version = BuildConfig.CLIENT_GO_VERSION,
+                        icon = Icons.Outlined.Hub,
+                    ),
                 )
                 SegmentedListSection(title = "Modules & Versions") {
                     modules.forEachIndexed { index, module ->
                         ModuleItem(
                             module = module,
-                            shapes = ListItemDefaults.segmentedShapes(index = index, count = modules.size),
+                            shapes = ListItemDefaults.segmentedShapes(
+                                index = index,
+                                count = modules.size
+                            ),
                         )
                     }
                 }
@@ -245,8 +253,8 @@ fun SettingsScreen(
                 // "Kubernetes" is a registered mark of LF Projects, LLC; KubeNexus is independent.
                 Text(
                     text = "KubeNexus is an independent app and is not affiliated with, endorsed " +
-                        "by, or sponsored by The Linux Foundation or the Kubernetes® project. " +
-                        "Kubernetes® is a registered trademark of LF Projects, LLC.",
+                            "by, or sponsored by The Linux Foundation or the Kubernetes® project. " +
+                            "Kubernetes® is a registered trademark of LF Projects, LLC.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),

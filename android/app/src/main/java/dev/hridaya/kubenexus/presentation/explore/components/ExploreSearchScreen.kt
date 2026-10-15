@@ -89,7 +89,10 @@ fun ExploreSearchScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = { onAction(ExploreUiAction.CloseSearch) }, shapes = IconButtonDefaults.shapes()) {
+                    IconButton(
+                        onClick = { onAction(ExploreUiAction.CloseSearch) },
+                        shapes = IconButtonDefaults.shapes()
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Close search",
@@ -121,7 +124,10 @@ fun ExploreSearchScreen(
                 },
                 actions = {
                     if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { onAction(ExploreUiAction.UpdateSearchQuery("")) }, shapes = IconButtonDefaults.shapes()) {
+                        IconButton(
+                            onClick = { onAction(ExploreUiAction.UpdateSearchQuery("")) },
+                            shapes = IconButtonDefaults.shapes()
+                        ) {
                             Icon(
                                 imageVector = Icons.Outlined.Clear,
                                 contentDescription = "Clear query",

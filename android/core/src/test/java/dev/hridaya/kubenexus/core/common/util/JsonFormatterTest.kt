@@ -40,7 +40,8 @@ class JsonFormatterTest {
 
     @Test
     fun `formatIfJson handles nested kubernetes annotation json`() {
-        val raw = """{"apiVersion":"v1","kind":"Pod","metadata":{"name":"test-pod","labels":{"app":"demo"}}}"""
+        val raw =
+            """{"apiVersion":"v1","kind":"Pod","metadata":{"name":"test-pod","labels":{"app":"demo"}}}"""
         val formatted = JsonFormatter.formatIfJson(raw)
         assertNotNull(formatted)
         val expected = """

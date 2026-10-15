@@ -18,7 +18,8 @@ class ClusterCallRunnerTest {
     private val testDispatcher = StandardTestDispatcher()
     private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
     private val clusterDao = InMemoryClusterDao()
-    private val runner = ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher))
+    private val runner =
+        ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher))
 
     @Test
     fun `no cluster selected fails without running the call`() = runTest(testDispatcher) {
@@ -38,13 +39,17 @@ class ClusterCallRunnerTest {
     }
 
     @Test
-    fun `the call receives the cluster id and its decrypted kubeconfig`() = runTest(testDispatcher) {
-        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+    fun `the call receives the cluster id and its decrypted kubeconfig`() =
+        runTest(testDispatcher) {
+            clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
 
-        val result = runner.run("c-1", "Failed") { cluster -> Result.Success(cluster.id to cluster.kubeconfig) }
+            val result = runner.run(
+                "c-1",
+                "Failed"
+            ) { cluster -> Result.Success(cluster.id to cluster.kubeconfig) }
 
-        assertEquals(Result.Success("c-1" to "kubeconfig-text"), result)
-    }
+            assertEquals(Result.Success("c-1" to "kubeconfig-text"), result)
+        }
 
     @Test
     fun `native failures become sanitized network errors`() = runTest(testDispatcher) {
@@ -58,13 +63,15 @@ class ClusterCallRunnerTest {
     }
 
     @Test
-    fun `a native failure without a message falls back to the failure message`() = runTest(testDispatcher) {
-        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+    fun `a native failure without a message falls back to the failure message`() =
+        runTest(testDispatcher) {
+            clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
 
-        val result = runner.run("c-1", "Failed to list pods") { Result.Error(AppError.Unknown("")) }
+            val result =
+                runner.run("c-1", "Failed to list pods") { Result.Error(AppError.Unknown("")) }
 
-        assertEquals(Result.Error(AppError.Network("Failed to list pods")), result)
-    }
+            assertEquals(Result.Error(AppError.Network("Failed to list pods")), result)
+        }
 
     @Test
     fun `deliberate errors pass through unchanged`() = runTest(testDispatcher) {
@@ -79,7 +86,8 @@ class ClusterCallRunnerTest {
     fun `thrown exceptions become network errors`() = runTest(testDispatcher) {
         clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
 
-        val result = runner.run<Unit>("c-1", "Failed") { throw IllegalStateException("connection reset") }
+        val result =
+            runner.run<Unit>("c-1", "Failed") { throw IllegalStateException("connection reset") }
 
         assertEquals(Result.Error(AppError.Network("connection reset")), result)
     }

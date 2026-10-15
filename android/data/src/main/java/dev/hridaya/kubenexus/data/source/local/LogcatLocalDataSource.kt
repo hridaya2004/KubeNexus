@@ -1,6 +1,5 @@
 package dev.hridaya.kubenexus.data.source.local
 
-import android.os.Process as AndroidProcess
 import android.util.Log
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.log.APP_LOG_TAG_PREFIX
@@ -22,6 +21,7 @@ import java.io.InputStreamReader
 import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.Pattern
 import javax.inject.Inject
+import android.os.Process as AndroidProcess
 
 /**
  * Whether a line from this app's process was written by KubeNexus itself: its own Kotlin and
@@ -133,11 +133,12 @@ class DefaultLogcatLocalDataSource @Inject constructor(private val dispatcherPro
     /** This process's lines from a logcat dump, or null when logcat exits with an error. */
     private fun readLogcat(pid: String, maxLines: Int, filterByPid: Boolean): List<LogcatEntry>? {
         val command = listOf("logcat", "-d", "-v", "threadtime", "-t", maxLines.toString()) +
-            if (filterByPid) listOf("--pid=$pid") else emptyList()
+                if (filterByPid) listOf("--pid=$pid") else emptyList()
         val process = ProcessBuilder(command).redirectErrorStream(true).start()
         try {
             val entries = process.inputStream.bufferedReader().useLines { lines ->
-                lines.map(::parseLogLine).filter { it.pid == pid && isKubeNexusLog(it.tag) }.toList()
+                lines.map(::parseLogLine).filter { it.pid == pid && isKubeNexusLog(it.tag) }
+                    .toList()
             }
             return if (process.waitFor() == 0) entries else null
         } finally {

@@ -99,10 +99,11 @@ fun LogcatTopBar(
                         contentDescription = if (uiState.isPaused) "Resume" else "Pause",
                     )
                 }
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onAction(LogcatUiAction.ClearLogs)
-                },
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAction(LogcatUiAction.ClearLogs)
+                    },
                     shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(

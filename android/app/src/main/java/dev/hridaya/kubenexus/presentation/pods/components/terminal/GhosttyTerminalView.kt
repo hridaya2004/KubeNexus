@@ -160,7 +160,12 @@ fun GhosttyTerminalView(
                                 )
                             }
                             if (!copiedText.isNullOrBlank()) {
-                                ClipboardHelper.copy(context, "Terminal Output", copiedText, sensitive = true)
+                                ClipboardHelper.copy(
+                                    context,
+                                    "Terminal Output",
+                                    copiedText,
+                                    sensitive = true
+                                )
                                 Toast.makeText(
                                     context,
                                     "Terminal output copied",
@@ -206,7 +211,9 @@ fun GhosttyTerminalView(
                     val showPlaceholder = if (uiState.isTerminalActive) {
                         false
                     } else {
-                        remember(snapshot) { snapshot?.codepoints?.none { it != 0 && it != 32 } ?: true }
+                        remember(snapshot) {
+                            snapshot?.codepoints?.none { it != 0 && it != 32 } ?: true
+                        }
                     }
 
                     if (showPlaceholder) {

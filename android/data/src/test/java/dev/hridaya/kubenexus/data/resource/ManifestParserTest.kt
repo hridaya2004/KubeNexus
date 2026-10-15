@@ -13,11 +13,17 @@ class ManifestParserTest {
         val deployment = "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web"
         val service = "apiVersion: v1\nkind: Service\nmetadata:\n  name: web"
 
-        val documents = (ManifestParser.parse("$deployment\n---\n$service\n") as Result.Success).data
+        val documents =
+            (ManifestParser.parse("$deployment\n---\n$service\n") as Result.Success).data
 
         assertEquals(
             listOf(
-                ManifestDocument(apiVersion = "apps/v1", kind = "Deployment", text = deployment, name = "web"),
+                ManifestDocument(
+                    apiVersion = "apps/v1",
+                    kind = "Deployment",
+                    text = deployment,
+                    name = "web"
+                ),
                 ManifestDocument(apiVersion = "v1", kind = "Service", text = service, name = "web"),
             ),
             documents,
@@ -68,6 +74,9 @@ class ManifestParserTest {
     }
 
     private fun assertValidationError(result: Result<*>) {
-        assertTrue("expected a validation error, got $result", (result as? Result.Error)?.error is AppError.Validation)
+        assertTrue(
+            "expected a validation error, got $result",
+            (result as? Result.Error)?.error is AppError.Validation
+        )
     }
 }

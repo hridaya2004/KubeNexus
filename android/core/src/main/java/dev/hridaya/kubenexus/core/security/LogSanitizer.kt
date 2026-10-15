@@ -42,6 +42,7 @@ object LogSanitizer {
 
     private val QUOTED_SECRET_VALUE_REGEX =
         Regex("""(?i)$KEY_PREFIX$SECRET_KEYS$KEY_SUFFIX(["'])(.*?)\2""")
+
     // Catches unquoted values and values whose closing quote is missing (truncated lines). A
     // value may not start with '[', so an already redacted "[REDACTED]" is left alone and
     // sanitizing twice is harmless.
@@ -57,7 +58,8 @@ object LogSanitizer {
     private val BASE64_PEM_REGEX = Regex("""LS0tLS1CRUdJT[A-Za-z0-9+/=]*""")
 
     /** JSON Web Tokens, including Kubernetes service account tokens, wherever they appear. */
-    private val JWT_REGEX = Regex("""\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]*)?""")
+    private val JWT_REGEX =
+        Regex("""\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]*)?""")
 
     private val AWS_ACCESS_KEY_ID_REGEX = Regex("""\b(?:AKIA|ASIA)[0-9A-Z]{16}\b""")
 

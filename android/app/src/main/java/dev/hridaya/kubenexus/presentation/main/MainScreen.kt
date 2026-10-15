@@ -64,7 +64,12 @@ fun MainScreen(
     LaunchedEffect(homeViewModel.effects) {
         homeViewModel.effects.collect { effect ->
             when (effect) {
-                is HomeUiEffect.ShowToast -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                is HomeUiEffect.ShowToast -> Toast.makeText(
+                    context,
+                    effect.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+
                 HomeUiEffect.NavigateToHome -> {
                     backStack.clear()
                     showPortForwardSessions = false
@@ -124,7 +129,11 @@ private fun ScreenContent(
     /** Gives [content]'s ViewModels the store of this screen, see [Screen.storeKey]. */
     @Composable
     fun Scoped(content: @Composable () -> Unit) =
-        ScreenViewModelScope(key = checkNotNull(screen.storeKey(clusterKey)), stores = stores, content = content)
+        ScreenViewModelScope(
+            key = checkNotNull(screen.storeKey(clusterKey)),
+            stores = stores,
+            content = content
+        )
 
     when (screen) {
         is Screen.ResourceList -> Scoped {
@@ -160,7 +169,11 @@ private fun ScreenContent(
         // Scoped so the logcat process it streams from stops when the screen is left.
         Screen.Logcat -> Scoped {
             val logcatViewModel: LogcatViewModel = hiltViewModel()
-            LogcatRoute(viewModel = logcatViewModel, onNavigateBack = onNavigateBack, modifier = modifier)
+            LogcatRoute(
+                viewModel = logcatViewModel,
+                onNavigateBack = onNavigateBack,
+                modifier = modifier
+            )
         }
 
         // Its state is the Activity-scoped HomeViewModel's.
@@ -174,6 +187,9 @@ private fun ScreenContent(
             )
         }
 
-        Screen.OpenSourceLicenses -> OpenSourceLicensesScreen(onNavigateBack = onNavigateBack, modifier = modifier)
+        Screen.OpenSourceLicenses -> OpenSourceLicensesScreen(
+            onNavigateBack = onNavigateBack,
+            modifier = modifier
+        )
     }
 }

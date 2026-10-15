@@ -99,7 +99,9 @@ class DeploymentDraftTest {
 
     @Test
     fun `serviceType must be one of the supported types`() {
-        assertTrue(validDraft().copy(serviceType = "InvalidType").validate().containsKey("serviceType"))
+        assertTrue(
+            validDraft().copy(serviceType = "InvalidType").validate().containsKey("serviceType")
+        )
         assertTrue(validDraft().copy(serviceType = "None").validate().isEmpty())
         assertTrue(validDraft().copy(serviceType = "ClusterIP").validate().isEmpty())
         assertTrue(validDraft().copy(serviceType = "NodePort").validate().isEmpty())
@@ -113,7 +115,8 @@ class DeploymentDraftTest {
         val validPort = validDraft().copy(serviceType = "ClusterIP", servicePort = 80).validate()
         assertTrue(validPort.isEmpty())
 
-        val noneTypeWithZeroPort = validDraft().copy(serviceType = "None", servicePort = 0).validate()
+        val noneTypeWithZeroPort =
+            validDraft().copy(serviceType = "None", servicePort = 0).validate()
         assertTrue(noneTypeWithZeroPort.isEmpty())
     }
 }

@@ -52,32 +52,34 @@ class FavouritesViewModelTest {
     )
 
     @Test
-    fun `favourites are unknown until read, so an empty list really means none`() = runTest(testDispatcher) {
-        val firstRead = MutableSharedFlow<List<String>>()
-        val slowRepository = object : FavouriteResourcesRepository by repository {
-            override fun getFavouritesStream(): Flow<List<String>> = firstRead
+    fun `favourites are unknown until read, so an empty list really means none`() =
+        runTest(testDispatcher) {
+            val firstRead = MutableSharedFlow<List<String>>()
+            val slowRepository = object : FavouriteResourcesRepository by repository {
+                override fun getFavouritesStream(): Flow<List<String>> = firstRead
+            }
+            val viewModel = favouritesViewModel(slowRepository)
+            advanceUntilIdle()
+            assertNull(viewModel.favourites.value)
+
+            firstRead.emit(emptyList())
+            advanceUntilIdle()
+
+            assertEquals(emptyList<Any>(), viewModel.favourites.value)
         }
-        val viewModel = favouritesViewModel(slowRepository)
-        advanceUntilIdle()
-        assertNull(viewModel.favourites.value)
-
-        firstRead.emit(emptyList())
-        advanceUntilIdle()
-
-        assertEquals(emptyList<Any>(), viewModel.favourites.value)
-    }
 
     @Test
-    fun `favourites keep the stored order and skip kinds the app no longer presents`() = runTest(testDispatcher) {
-        repository.keys.value = listOf(
-            ServicesPresentation.kind.type.key,
-            "example.com/v1/gone",
-            PodsPresentation.kind.type.key,
-        )
-        advanceUntilIdle()
+    fun `favourites keep the stored order and skip kinds the app no longer presents`() =
+        runTest(testDispatcher) {
+            repository.keys.value = listOf(
+                ServicesPresentation.kind.type.key,
+                "example.com/v1/gone",
+                PodsPresentation.kind.type.key,
+            )
+            advanceUntilIdle()
 
-        assertEquals(listOf(ServicesPresentation, PodsPresentation), viewModel.favourites.value)
-    }
+            assertEquals(listOf(ServicesPresentation, PodsPresentation), viewModel.favourites.value)
+        }
 
     @Test
     fun `adding a kind keeps it and removing it drops it`() = runTest(testDispatcher) {
@@ -102,7 +104,10 @@ class FavouritesViewModelTest {
 
         assertEquals(MAX_FAVOURITE_RESOURCES, repository.keys.value.size)
         val effect = viewModel.effects.first() as FavouritesUiEffect.ShowToast
-        assertEquals("You can keep up to $MAX_FAVOURITE_RESOURCES favourites. Remove one to add another.", effect.message)
+        assertEquals(
+            "You can keep up to $MAX_FAVOURITE_RESOURCES favourites. Remove one to add another.",
+            effect.message
+        )
     }
 
     private class FakeFavouriteResourcesRepository : FavouriteResourcesRepository {

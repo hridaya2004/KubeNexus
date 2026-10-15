@@ -21,7 +21,14 @@ class LogcatTagFilterTest {
 
     @Test
     fun `drops what the framework logs from inside the process`() {
-        listOf("ViewRootImpl", "OpenGLRenderer", "Choreographer", "InsetsController", "System.err", "")
+        listOf(
+            "ViewRootImpl",
+            "OpenGLRenderer",
+            "Choreographer",
+            "InsetsController",
+            "System.err",
+            ""
+        )
             .forEach { assertFalse(it, isKubeNexusLog(it)) }
     }
 }

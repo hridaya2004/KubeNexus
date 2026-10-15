@@ -5,7 +5,8 @@ import dev.hridaya.kubenexus.domain.repository.NamespaceRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
-class FakeNamespaceRepository(names: List<String> = listOf("default", "kube-system")) : NamespaceRepository {
+class FakeNamespaceRepository(names: List<String> = listOf("default", "kube-system")) :
+    NamespaceRepository {
 
     val names = MutableStateFlow(names)
     val syncedClusters = mutableListOf<String?>()

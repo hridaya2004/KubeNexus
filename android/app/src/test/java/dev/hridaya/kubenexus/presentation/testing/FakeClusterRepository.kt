@@ -37,10 +37,16 @@ class FakeClusterRepository : ClusterRepository {
     ): Result<Cluster> = Result.Success(activeCluster)
 
     override suspend fun setActiveCluster(id: String): Result<Unit> = Result.Success(Unit)
-    override suspend fun updateClusterName(id: String, newName: String): Result<Unit> = Result.Success(Unit)
-    override suspend fun testConnection(kubeconfigRaw: String): Result<String> = Result.Success("OK")
+    override suspend fun updateClusterName(id: String, newName: String): Result<Unit> =
+        Result.Success(Unit)
+
+    override suspend fun testConnection(kubeconfigRaw: String): Result<String> =
+        Result.Success("OK")
+
     override suspend fun testClusterById(id: String): Result<String> = Result.Success("OK")
-    override suspend fun checkClusterHealth(id: String): Result<ClusterHealth> = Result.Success(health)
+    override suspend fun checkClusterHealth(id: String): Result<ClusterHealth> =
+        Result.Success(health)
+
     override suspend fun checkClusterHealthByKubeconfig(kubeconfigRaw: String): Result<ClusterHealth> =
         Result.Success(health)
 

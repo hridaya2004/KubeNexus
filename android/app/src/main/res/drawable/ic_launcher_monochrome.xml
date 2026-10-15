@@ -10,29 +10,29 @@
         android:translateX="54"
         android:translateY="59.632">
         <path
-            android:strokeColor="#FFFFFF"
+            android:pathData="M0,0L0,-42"
             android:strokeWidth="6"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M0,0L0,-42" />
+            android:strokeLineJoin="round" />
         <path
-            android:strokeColor="#FFFFFF"
+            android:pathData="M0,0L36.373,21"
             android:strokeWidth="6"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M0,0L36.373,21" />
+            android:strokeLineJoin="round" />
         <path
-            android:strokeColor="#FFFFFF"
+            android:pathData="M0,0L-36.373,21"
             android:strokeWidth="6"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M0,0L-36.373,21" />
+            android:strokeLineJoin="round" />
         <path
-            android:strokeColor="#FFFFFF"
+            android:pathData="M0,-42L36.373,21L-36.373,21Z"
             android:strokeWidth="6"
+            android:strokeColor="#FFFFFF"
             android:strokeLineCap="round"
-            android:strokeLineJoin="round"
-            android:pathData="M0,-42L36.373,21L-36.373,21Z" />
+            android:strokeLineJoin="round" />
         <path
             android:fillColor="#FFFFFF"
             android:pathData="M-15,0a15,15 0 1,0 30,0a15,15 0 1,0 -30,0" />

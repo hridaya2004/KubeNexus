@@ -58,7 +58,15 @@ class ServiceDetailViewModelTest {
         namespace = "default",
         type = "ClusterIP",
         clusterIP = "10.96.0.1",
-        ports = listOf(ServicePortDetail(port = 80, targetPort = 8080, nodePort = null, protocol = "TCP", name = "http")),
+        ports = listOf(
+            ServicePortDetail(
+                port = 80,
+                targetPort = 8080,
+                nodePort = null,
+                protocol = "TCP",
+                name = "http"
+            )
+        ),
         creationTimestampMillis = 1000L,
     )
 
@@ -71,7 +79,15 @@ class ServiceDetailViewModelTest {
         clusterIPs = listOf("10.96.0.1"),
         externalIPs = emptyList(),
         selector = mapOf("app" to "web"),
-        ports = listOf(ServicePortDetail(port = 80, targetPort = 8080, nodePort = null, protocol = "TCP", name = "http")),
+        ports = listOf(
+            ServicePortDetail(
+                port = 80,
+                targetPort = 8080,
+                nodePort = null,
+                protocol = "TCP",
+                name = "http"
+            )
+        ),
         labels = mapOf("app" to "web"),
         annotations = emptyMap(),
         events = listOf(
@@ -111,7 +127,10 @@ class ServiceDetailViewModelTest {
         return ServiceDetailViewModel(
             serviceName = "web",
             namespace = "default",
-            getActiveClusterUseCase = GetActiveClusterUseCase(fakeClusterRepository, testDispatcherProvider),
+            getActiveClusterUseCase = GetActiveClusterUseCase(
+                fakeClusterRepository,
+                testDispatcherProvider
+            ),
             describeResource = DescribeResourceUseCase(resources),
             observeResources = ObserveResourcesUseCase(resources),
             dispatcherProvider = testDispatcherProvider,
@@ -119,98 +138,124 @@ class ServiceDetailViewModelTest {
     }
 
     @Test
-    fun `loads cached summary immediately and fetches live service details`() = runTest(testDispatcher) {
-        resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
-        resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))
+    fun `loads cached summary immediately and fetches live service details`() =
+        runTest(testDispatcher) {
+            resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
+            resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))
 
-        val viewModel = createViewModel()
-        advanceUntilIdle()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertFalse(state.isLoading)
-        assertFalse(state.isRefreshing)
-        assertEquals(sampleDetails, state.service)
-        assertNotNull(state.lastRefreshedAt)
-        assertNull(state.errorMessage)
+            val state = viewModel.uiState.value
+            assertFalse(state.isLoading)
+            assertFalse(state.isRefreshing)
+            assertEquals(sampleDetails, state.service)
+            assertNotNull(state.lastRefreshedAt)
+            assertNull(state.errorMessage)
 
-        viewModel.viewModelScope.cancel()
-    }
-
-    @Test
-    fun `a cached service the cluster cannot describe is marked as cached`() = runTest(testDispatcher) {
-        resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
-        resources.givenDescribe(ResourceKinds.Services, Result.Error(AppError.Network("timeout")))
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertNotNull(state.service)
-        assertNull(state.errorMessage)
-        assertEquals(ServiceDetailViewModel.CACHED_NOTICE, state.staleNotice)
-
-        viewModel.viewModelScope.cancel()
-    }
+            viewModel.viewModelScope.cancel()
+        }
 
     @Test
-    fun `refresh action reloads service details and updates lastRefreshedAt`() = runTest(testDispatcher) {
-        resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
-        resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))
+    fun `a cached service the cluster cannot describe is marked as cached`() =
+        runTest(testDispatcher) {
+            resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
+            resources.givenDescribe(
+                ResourceKinds.Services,
+                Result.Error(AppError.Network("timeout"))
+            )
 
-        val viewModel = createViewModel()
-        advanceUntilIdle()
+            val viewModel = createViewModel()
+            advanceUntilIdle()
 
-        val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
-        assertNotNull(initialRefreshedAt)
-        val requestsBeforeRefresh = resources.describeCalls.size
-        resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails.copy(type = "NodePort")))
+            val state = viewModel.uiState.value
+            assertNotNull(state.service)
+            assertNull(state.errorMessage)
+            assertEquals(ServiceDetailViewModel.CACHED_NOTICE, state.staleNotice)
 
-        viewModel.onAction(ServiceDetailUiAction.Refresh)
-        advanceUntilIdle()
-
-        // Refresh must fetch again and show what it fetched, not just keep the old state.
-        assertEquals(requestsBeforeRefresh + 1, resources.describeCalls.size)
-        assertEquals("NodePort", viewModel.uiState.value.service?.type)
-        val newRefreshedAt = viewModel.uiState.value.lastRefreshedAt
-        assertNotNull(newRefreshedAt)
-        assertTrue(newRefreshedAt!! >= initialRefreshedAt!!)
-        assertFalse(viewModel.uiState.value.isRefreshing)
-
-        viewModel.viewModelScope.cancel()
-    }
+            viewModel.viewModelScope.cancel()
+        }
 
     @Test
-    fun `toggle port forward dialog updates showPortForwardDialog state`() = runTest(testDispatcher) {
-        val viewModel = createViewModel()
+    fun `refresh action reloads service details and updates lastRefreshedAt`() =
+        runTest(testDispatcher) {
+            resources.givenCached(ResourceKinds.Services, listOf(sampleSummary))
+            resources.givenDescribe(ResourceKinds.Services, Result.Success(sampleDetails))
 
-        viewModel.onAction(ServiceDetailUiAction.ShowPortForwardDialog(true))
-        assertTrue(viewModel.uiState.value.showPortForwardDialog)
+            val viewModel = createViewModel()
+            advanceUntilIdle()
 
-        viewModel.onAction(ServiceDetailUiAction.ShowPortForwardDialog(false))
-        assertFalse(viewModel.uiState.value.showPortForwardDialog)
+            val initialRefreshedAt = viewModel.uiState.value.lastRefreshedAt
+            assertNotNull(initialRefreshedAt)
+            val requestsBeforeRefresh = resources.describeCalls.size
+            resources.givenDescribe(
+                ResourceKinds.Services,
+                Result.Success(sampleDetails.copy(type = "NodePort"))
+            )
 
-        viewModel.viewModelScope.cancel()
-    }
+            viewModel.onAction(ServiceDetailUiAction.Refresh)
+            advanceUntilIdle()
+
+            // Refresh must fetch again and show what it fetched, not just keep the old state.
+            assertEquals(requestsBeforeRefresh + 1, resources.describeCalls.size)
+            assertEquals("NodePort", viewModel.uiState.value.service?.type)
+            val newRefreshedAt = viewModel.uiState.value.lastRefreshedAt
+            assertNotNull(newRefreshedAt)
+            assertTrue(newRefreshedAt!! >= initialRefreshedAt!!)
+            assertFalse(viewModel.uiState.value.isRefreshing)
+
+            viewModel.viewModelScope.cancel()
+        }
+
+    @Test
+    fun `toggle port forward dialog updates showPortForwardDialog state`() =
+        runTest(testDispatcher) {
+            val viewModel = createViewModel()
+
+            viewModel.onAction(ServiceDetailUiAction.ShowPortForwardDialog(true))
+            assertTrue(viewModel.uiState.value.showPortForwardDialog)
+
+            viewModel.onAction(ServiceDetailUiAction.ShowPortForwardDialog(false))
+            assertFalse(viewModel.uiState.value.showPortForwardDialog)
+
+            viewModel.viewModelScope.cancel()
+        }
 
     private class FakeClusterRepository : ClusterRepository {
         val activeClusterFlow = MutableStateFlow<Cluster?>(null)
 
         override fun getActiveClusterStream(): Flow<Cluster?> = activeClusterFlow
         override fun getClustersStream(): Flow<List<Cluster>> = flowOf(emptyList())
-        override suspend fun addCluster(kubeconfigRaw: String, customName: String?, setAsActive: Boolean): Result<Cluster> =
+        override suspend fun addCluster(
+            kubeconfigRaw: String,
+            customName: String?,
+            setAsActive: Boolean
+        ): Result<Cluster> =
             Result.Error(AppError.Unknown("not implemented"))
+
         override suspend fun setActiveCluster(id: String): Result<Unit> = Result.Success(Unit)
-        override suspend fun updateClusterName(id: String, newName: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun updateClusterName(id: String, newName: String): Result<Unit> =
+            Result.Success(Unit)
+
         override suspend fun deleteCluster(id: String): Result<Unit> = Result.Success(Unit)
 
         override suspend fun clearCachedData(): Result<Unit> = Result.Success(Unit)
-        override suspend fun testConnection(kubeconfigRaw: String): Result<String> = Result.Success("v1.28.0")
+        override suspend fun testConnection(kubeconfigRaw: String): Result<String> =
+            Result.Success("v1.28.0")
+
         override suspend fun testClusterById(id: String): Result<String> = Result.Success("v1.28.0")
         override suspend fun checkClusterHealth(id: String): Result<ClusterHealth> =
             Result.Error(AppError.NotFound("not found"))
+
         override suspend fun checkClusterHealthByKubeconfig(kubeconfigRaw: String): Result<ClusterHealth> =
             Result.Error(AppError.NotFound("not found"))
-        override suspend fun updateClusterStatus(id: String, status: ClusterStatus, lastConnectedAt: Long?): Result<Unit> = Result.Success(Unit)
+
+        override suspend fun updateClusterStatus(
+            id: String,
+            status: ClusterStatus,
+            lastConnectedAt: Long?
+        ): Result<Unit> = Result.Success(Unit)
+
         override suspend fun getClusterById(id: String): Cluster? = activeClusterFlow.value
     }
 }

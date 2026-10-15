@@ -29,9 +29,15 @@ object CoroutinesModule {
     fun provideApplicationScope(dispatcherProvider: DispatcherProvider): CoroutineScope =
         CoroutineScope(
             SupervisorJob() + dispatcherProvider.io +
-                CoroutineExceptionHandler { _, throwable ->
-                    Log.e(TAG, LogSanitizer.withStackTrace("Uncaught failure in the application scope", throwable))
-                },
+                    CoroutineExceptionHandler { _, throwable ->
+                        Log.e(
+                            TAG,
+                            LogSanitizer.withStackTrace(
+                                "Uncaught failure in the application scope",
+                                throwable
+                            )
+                        )
+                    },
         )
 
     private const val TAG = "$APP_LOG_TAG_PREFIX/ApplicationScope"

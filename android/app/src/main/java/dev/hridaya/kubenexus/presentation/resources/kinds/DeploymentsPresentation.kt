@@ -27,7 +27,7 @@ object DeploymentsPresentation : ResourcePresentation<DeploymentSummary> {
             namespace = item.namespace,
             status = if (item.isHealthy) StatusTone.Healthy else StatusTone.Failed,
             details = listOf(RowDetail("$readiness ready")) +
-                item.images.map { image -> RowDetail(image, monospace = true) },
+                    item.images.map { image -> RowDetail(image, monospace = true) },
             createdAtMillis = item.creationTimestampMillis,
             searchTerms = item.images + readiness,
         )

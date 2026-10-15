@@ -93,15 +93,16 @@ class CreateDeploymentViewModelTest {
         }
 
     @Test
-    fun `a cleared replicas field blocks the preview instead of becoming 1`() = vmTest { viewModel ->
-        fillValidForm(viewModel)
-        viewModel.onAction(CreateDeploymentUiAction.ReplicasChanged(""))
+    fun `a cleared replicas field blocks the preview instead of becoming 1`() =
+        vmTest { viewModel ->
+            fillValidForm(viewModel)
+            viewModel.onAction(CreateDeploymentUiAction.ReplicasChanged(""))
 
-        viewModel.onAction(CreateDeploymentUiAction.PreviewSubmitted)
+            viewModel.onAction(CreateDeploymentUiAction.PreviewSubmitted)
 
-        assertEquals("Replicas is required", viewModel.uiState.value.fieldErrors["replicas"])
-        assertEquals(CreateDeploymentStep.FORM, viewModel.uiState.value.step)
-    }
+            assertEquals("Replicas is required", viewModel.uiState.value.fieldErrors["replicas"])
+            assertEquals(CreateDeploymentStep.FORM, viewModel.uiState.value.step)
+        }
 
     @Test
     fun `preview success moves to review step with generated yaml`() = vmTest { viewModel ->

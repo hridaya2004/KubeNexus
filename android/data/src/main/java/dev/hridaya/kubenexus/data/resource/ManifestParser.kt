@@ -30,13 +30,22 @@ object ManifestParser {
 
     fun parse(manifest: String): Result<List<ManifestDocument>> {
         val documents = mutableListOf<ManifestDocument>()
-        for (text in DOCUMENT_SEPARATOR.split(manifest).map(String::trim).filter(String::isNotEmpty)) {
+        for (text in DOCUMENT_SEPARATOR.split(manifest).map(String::trim)
+            .filter(String::isNotEmpty)) {
             val content = try {
                 Load(LoadSettings.builder().setLabel("manifest").build()).loadFromString(text)
             } catch (e: YamlEngineException) {
-                return invalid("The manifest is not valid YAML: ${e.message?.lineSequence()?.firstOrNull().orEmpty()}")
+                return invalid(
+                    "The manifest is not valid YAML: ${
+                        e.message?.lineSequence()?.firstOrNull().orEmpty()
+                    }"
+                )
             } catch (e: RuntimeException) {
-                return invalid("The manifest could not be read: ${e.message?.lineSequence()?.firstOrNull().orEmpty()}")
+                return invalid(
+                    "The manifest could not be read: ${
+                        e.message?.lineSequence()?.firstOrNull().orEmpty()
+                    }"
+                )
             } catch (e: StackOverflowError) {
                 return invalid("The manifest is nested too deeply to read")
             }
@@ -49,11 +58,15 @@ object ManifestParser {
                     text = text,
                     name = (content["metadata"] as? Map<*, *>)?.get("name")?.toString().orEmpty(),
                 )
+
                 else -> return invalid("Each document in the manifest must be an object")
             }
         }
-        return if (documents.isEmpty()) invalid("The manifest is empty") else Result.Success(documents)
+        return if (documents.isEmpty()) invalid("The manifest is empty") else Result.Success(
+            documents
+        )
     }
 
-    private fun invalid(message: String): Result<Nothing> = Result.Error(AppError.Validation(message))
+    private fun invalid(message: String): Result<Nothing> =
+        Result.Error(AppError.Validation(message))
 }

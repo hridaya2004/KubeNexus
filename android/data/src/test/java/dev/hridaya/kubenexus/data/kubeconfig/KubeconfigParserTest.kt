@@ -125,7 +125,9 @@ class KubeconfigParserTest {
     // stored identity must be the one clientcmd connects to, whatever the entry order.
     private fun sharedNamesKubeconfig(order: List<String>, current: String): String {
         fun cluster(n: String) = "- cluster:\n    server: https://$n.example:6443\n  name: $n"
-        fun context(n: String) = "- context:\n    cluster: $n\n    namespace: $n-ns\n    user: $n-user\n  name: $n"
+        fun context(n: String) =
+            "- context:\n    cluster: $n\n    namespace: $n-ns\n    user: $n-user\n  name: $n"
+
         fun user(n: String) = "- name: $n-user\n  user:\n    token: $n-token"
         return buildString {
             appendLine("apiVersion: v1")
@@ -208,7 +210,8 @@ class KubeconfigParserTest {
 
     @Test
     fun `parse explains a missing or dangling current-context instead of guessing`() {
-        val withoutCurrent = sharedNamesKubeconfig(listOf("a"), current = "a").replace("current-context: a\n", "")
+        val withoutCurrent =
+            sharedNamesKubeconfig(listOf("a"), current = "a").replace("current-context: a\n", "")
         val noCurrent = runCatching { KubeconfigParser.parse(withoutCurrent) }.exceptionOrNull()
         assertTrue(noCurrent is IllegalArgumentException)
         assertTrue(noCurrent!!.message!!.contains("no current-context"))
@@ -234,9 +237,15 @@ class KubeconfigParserTest {
             return prefix + filler.repeat(count)
         }
 
-        assertEquals("minikube", KubeconfigParser.parse(padded("x", Cluster.MAX_KUBECONFIG_BYTES)).clusterName)
+        assertEquals(
+            "minikube",
+            KubeconfigParser.parse(padded("x", Cluster.MAX_KUBECONFIG_BYTES)).clusterName
+        )
 
-        listOf(padded("x", Cluster.MAX_KUBECONFIG_BYTES + 1), padded("é", Cluster.MAX_KUBECONFIG_BYTES + 2)).forEach { oversized ->
+        listOf(
+            padded("x", Cluster.MAX_KUBECONFIG_BYTES + 1),
+            padded("é", Cluster.MAX_KUBECONFIG_BYTES + 2)
+        ).forEach { oversized ->
             val error = runCatching { KubeconfigParser.parse(oversized) }.exceptionOrNull()
 
             assertTrue(error is IllegalArgumentException)

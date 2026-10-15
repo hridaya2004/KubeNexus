@@ -66,7 +66,9 @@ fun HomeWorkloadsList(
         groups.forEachIndexed { groupIndex, group ->
             item(key = "header/${group.title}") {
                 // The refresh time belongs to the whole list, so it is shown once.
-                ResourceGroupHeader(title = group.title, lastRefreshedAt = lastRefreshedAt.takeIf { groupIndex == 0 })
+                ResourceGroupHeader(
+                    title = group.title,
+                    lastRefreshedAt = lastRefreshedAt.takeIf { groupIndex == 0 })
             }
             item(key = "group/${group.title}") {
                 GroupEntries(
@@ -138,7 +140,10 @@ private fun GroupEntries(
                 subtitle = upcoming.description,
                 icon = upcoming.icon,
                 onClick = { onNoopAction("${upcoming.title} management coming soon") },
-                shapes = ListItemDefaults.segmentedShapes(index = group.resources.size + index, count = count),
+                shapes = ListItemDefaults.segmentedShapes(
+                    index = group.resources.size + index,
+                    count = count
+                ),
             )
         }
     }

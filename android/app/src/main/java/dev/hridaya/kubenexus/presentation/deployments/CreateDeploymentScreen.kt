@@ -15,7 +15,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -61,12 +60,16 @@ fun CreateDeploymentScreen(
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
-        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = { Text(text = "Create Deployment") },
                 // Always visible, so the cluster the object lands on is never a guess.
-                subtitle = { Text(text = targetClusterName?.let { "on $it" } ?: "No active cluster") },
+                subtitle = {
+                    Text(text = targetClusterName?.let { "on $it" } ?: "No active cluster")
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(

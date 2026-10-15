@@ -86,7 +86,10 @@ fun ExploreListView(
                 title = { Text(text = "API Resources") },
                 subtitle = { Text(text = uiState.activeCluster?.name ?: "Offline schema") },
                 actions = {
-                    IconButton(onClick = { onAction(ExploreUiAction.OpenSearch) }, shapes = IconButtonDefaults.shapes()) {
+                    IconButton(
+                        onClick = { onAction(ExploreUiAction.OpenSearch) },
+                        shapes = IconButtonDefaults.shapes()
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Search,
                             contentDescription = "Search Resources",

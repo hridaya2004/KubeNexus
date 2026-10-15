@@ -17,7 +17,9 @@ fun ClusterEntity.toDomain(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryp
         id = id,
         name = name,
         serverUrl = serverUrl,
-        credentialsUnavailable = rawKubeconfig.isNotBlank() && encryptor.decryptOrEmpty(rawKubeconfig).isBlank(),
+        credentialsUnavailable = rawKubeconfig.isNotBlank() && encryptor.decryptOrEmpty(
+            rawKubeconfig
+        ).isBlank(),
         contextName = contextName,
         userName = userName,
         namespace = namespace,
@@ -29,7 +31,10 @@ fun ClusterEntity.toDomain(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryp
 }
 
 /** The kubeconfig is not part of the domain model, so it is passed in to be stored encrypted. */
-fun Cluster.toEntity(rawKubeconfig: String, encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryptor): ClusterEntity {
+fun Cluster.toEntity(
+    rawKubeconfig: String,
+    encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryptor
+): ClusterEntity {
     return ClusterEntity(
         id = id,
         name = name,

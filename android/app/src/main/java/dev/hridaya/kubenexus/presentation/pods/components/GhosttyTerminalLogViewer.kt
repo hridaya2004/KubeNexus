@@ -242,7 +242,11 @@ fun GhosttyTerminalLogViewer(
 }
 
 /** Following resumes when a stream starts or the logs are replaced, never on a streamed line. */
-internal fun resumesFollowing(wasStreaming: Boolean, isStreaming: Boolean, logsChanged: Boolean): Boolean =
+internal fun resumesFollowing(
+    wasStreaming: Boolean,
+    isStreaming: Boolean,
+    logsChanged: Boolean
+): Boolean =
     if (isStreaming) !wasStreaming else logsChanged && !wasStreaming
 
 @Composable
@@ -254,9 +258,9 @@ private fun BoxScope.ScrollToBottomFab(
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
-            scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
+                scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()),
         exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
-            scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
+                scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()),
         modifier = modifier
             .align(Alignment.BottomEnd)
             .padding(12.dp),

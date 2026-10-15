@@ -88,8 +88,8 @@ private val YAML11_RESERVED = setOf(
  */
 internal fun yamlScalar(text: String): String {
     val plain = PLAIN_SAFE.matches(text) &&
-        !text.endsWith(':') &&
-        text.lowercase() !in YAML11_RESERVED
+            !text.endsWith(':') &&
+            text.lowercase() !in YAML11_RESERVED
     return if (plain) text else doubleQuoted(text)
 }
 

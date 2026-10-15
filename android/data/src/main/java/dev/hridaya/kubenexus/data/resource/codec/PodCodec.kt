@@ -10,7 +10,8 @@ import dev.hridaya.kubenexus.domain.model.Pod
 import dev.hridaya.kubenexus.domain.model.PodDetails
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
 
-object PodCodec : JsonResourceCodec<PodDto, Pod, PodDetails>(ResourceKinds.Pods, PodDto.serializer()) {
+object PodCodec :
+    JsonResourceCodec<PodDto, Pod, PodDetails>(ResourceKinds.Pods, PodDto.serializer()) {
 
     override fun toSummary(dto: PodDto): Pod = dto.toDomain()
 

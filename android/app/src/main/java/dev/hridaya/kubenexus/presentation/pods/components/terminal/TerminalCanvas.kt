@@ -148,7 +148,10 @@ fun TerminalCanvas(
 
         // Cells in the default background are skipped below, so paint the grid with it once.
         if (snap.defaultBgArgb != 0 && snap.defaultBgArgb != 0xFF000000.toInt()) {
-            drawRect(Color(snap.defaultBgArgb), size = Size(snap.cols * cellWidth, snap.rows * cellHeight))
+            drawRect(
+                Color(snap.defaultBgArgb),
+                size = Size(snap.cols * cellWidth, snap.rows * cellHeight)
+            )
         }
 
         val normalizedSelection = selection?.normalized(totalCells)
