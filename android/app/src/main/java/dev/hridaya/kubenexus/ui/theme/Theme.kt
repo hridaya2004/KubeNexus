@@ -38,16 +38,13 @@ fun ThemeMode.isDark(): Boolean {
 }
 
 /**
- * Material's top app bar colours, except that in pure black dark mode a scrolled bar stays on the
- * black page instead of lifting to the grey container colour.
+ * Material's top app bar colours, except that the bar always sits on the page background, so a
+ * scrolled or collapsed bar never lifts to a contrasting container colour in any theme.
  */
 @Composable
 fun appBarColors(): TopAppBarColors = TopAppBarDefaults.topAppBarColors(
-    scrolledContainerColor = if (LocalThemeMode.current.isDark() && LocalAmoledDark.current) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        Color.Unspecified
-    },
+    containerColor = MaterialTheme.colorScheme.background,
+    scrolledContainerColor = MaterialTheme.colorScheme.background,
 )
 
 @Composable
