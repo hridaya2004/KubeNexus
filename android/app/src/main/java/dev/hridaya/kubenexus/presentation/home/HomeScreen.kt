@@ -156,6 +156,7 @@ fun ResourcesRoute(
 
     HomeScreen(
         title = "Resources",
+        subtitle = uiState.activeCluster?.name,
         uiState = uiState,
         onAction = viewModel::onAction,
         creatableResources = ResourceCatalog.all,
@@ -184,6 +185,7 @@ fun HomeScreen(
     creatableResources: List<ResourcePresentation<*>>,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     activePortForwardCount: Int = 0,
     onOpenPortForwardSessions: () -> Unit = {},
     content: @Composable (LazyListState) -> Unit,
@@ -199,6 +201,7 @@ fun HomeScreen(
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text(text = title) },
+                subtitle = subtitle?.let { { Text(text = it) } },
                 actions = {
                     if (activePortForwardCount > 0) {
                         IconButton(onClick = onOpenPortForwardSessions, shapes = IconButtonDefaults.shapes()) {
