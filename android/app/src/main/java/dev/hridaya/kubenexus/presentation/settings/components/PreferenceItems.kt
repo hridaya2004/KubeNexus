@@ -169,7 +169,7 @@ private fun PreferenceRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLargeEmphasized,
+                style = MaterialTheme.typography.titleMedium,
                 color = colors.contentColor(enabled = enabled, selected = false, dragged = false),
             )
             if (subtitle != null) {
