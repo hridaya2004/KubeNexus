@@ -90,7 +90,6 @@ internal fun MainTopLevelScaffold(
                     Destination.Resources -> {
                         ResourcesRoute(
                             viewModel = homeViewModel,
-                            onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
                             onOpenResources = { onOpen(Screen.ResourceList(it.kind.type.key)) },
                             onCreateResource = { onOpen(Screen.CreateResource(it.kind.type.key)) },
                             activePortForwardCount = activeForwardCount,

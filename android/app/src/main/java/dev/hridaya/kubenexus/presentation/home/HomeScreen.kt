@@ -44,8 +44,7 @@ import dev.hridaya.kubenexus.presentation.favourites.FavouritesSection
 import dev.hridaya.kubenexus.presentation.favourites.FavouritesUiAction
 import dev.hridaya.kubenexus.presentation.favourites.FavouritesViewModel
 import dev.hridaya.kubenexus.presentation.home.components.AddClusterBottomSheet
-import dev.hridaya.kubenexus.presentation.home.components.ClusterPill
-import dev.hridaya.kubenexus.presentation.home.components.ClusterSwitcherDrawer
+import dev.hridaya.kubenexus.presentation.home.components.ClusterSelectorSection
 import dev.hridaya.kubenexus.presentation.home.components.CreateFabMenu
 import dev.hridaya.kubenexus.presentation.home.components.EmptyClustersView
 import dev.hridaya.kubenexus.presentation.home.components.ErrorDialog
@@ -73,7 +72,6 @@ fun HomeRoute(
         title = "Home",
         uiState = uiState,
         onAction = homeViewModel::onAction,
-        onNavigateToManageClusters = onNavigateToManageClusters,
         creatableResources = favourites.orEmpty(),
         onCreateResource = onCreateResource,
         activePortForwardCount = activePortForwardCount,
@@ -82,6 +80,8 @@ fun HomeRoute(
     ) { listState ->
         HomeCategoriesList(
             uiState = uiState,
+            onSelectCluster = { homeViewModel.onAction(HomeUiAction.SelectClusterClicked(it)) },
+            onManageClusters = onNavigateToManageClusters,
             listState = listState,
         ) {
             FavouritesSection(
@@ -95,10 +95,12 @@ fun HomeRoute(
     }
 }
 
-/** Home tab categories, currently just [favourites]. */
+/** Home tab categories: the cluster picker, then [favourites]. */
 @Composable
 private fun HomeCategoriesList(
     uiState: HomeUiState,
+    onSelectCluster: (String) -> Unit,
+    onManageClusters: () -> Unit,
     listState: LazyListState,
     favourites: @Composable () -> Unit,
 ) {
@@ -123,6 +125,16 @@ private fun HomeCategoriesList(
             }
         }
 
+        item(key = "category/Cluster") {
+            ClusterSelectorSection(
+                clusters = uiState.clusters,
+                activeClusterId = uiState.activeCluster?.id,
+                connectionStatus = uiState.clusterConnectionStatus,
+                onSelectCluster = onSelectCluster,
+                onManageClustersClick = onManageClusters,
+            )
+        }
+
         item(key = "category/Favourite") {
             favourites()
         }
@@ -132,7 +144,6 @@ private fun HomeCategoriesList(
 @Composable
 fun ResourcesRoute(
     viewModel: HomeViewModel,
-    onNavigateToManageClusters: () -> Unit,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
@@ -147,7 +158,6 @@ fun ResourcesRoute(
         title = "Resources",
         uiState = uiState,
         onAction = viewModel::onAction,
-        onNavigateToManageClusters = onNavigateToManageClusters,
         creatableResources = ResourceCatalog.all,
         onCreateResource = onCreateResource,
         activePortForwardCount = activePortForwardCount,
@@ -171,7 +181,6 @@ fun HomeScreen(
     title: String,
     uiState: HomeUiState,
     onAction: (HomeUiAction) -> Unit,
-    onNavigateToManageClusters: () -> Unit,
     creatableResources: List<ResourcePresentation<*>>,
     onCreateResource: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
@@ -190,14 +199,6 @@ fun HomeScreen(
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text(text = title) },
-                subtitle = {
-                    ClusterPill(
-                        activeCluster = uiState.activeCluster,
-                        totalClusters = uiState.clusters.size,
-                        connectionStatus = uiState.clusterConnectionStatus,
-                        onClick = { onAction(HomeUiAction.OpenClusterDrawer) },
-                    )
-                },
                 actions = {
                     if (activePortForwardCount > 0) {
                         IconButton(onClick = onOpenPortForwardSessions, shapes = IconButtonDefaults.shapes()) {
@@ -255,16 +256,6 @@ fun HomeScreen(
 
                 else -> content(listState)
             }
-        }
-
-        if (uiState.showClusterDrawer) {
-            ClusterSwitcherDrawer(
-                clusters = uiState.clusters,
-                activeCluster = uiState.activeCluster,
-                onSelectCluster = { onAction(HomeUiAction.SelectClusterClicked(it)) },
-                onManageClustersClick = onNavigateToManageClusters,
-                onDismiss = { onAction(HomeUiAction.DismissClusterDrawer) },
-            )
         }
 
         if (uiState.clusters.isNotEmpty()) {
@@ -349,7 +340,6 @@ private fun HomeScreenPreview() {
                 clusterConnectionStatus = ClusterConnectionStatus.CONNECTED,
             ),
             onAction = {},
-            onNavigateToManageClusters = {},
             creatableResources = ResourceCatalog.all,
             onCreateResource = {},
         ) { listState ->
@@ -375,7 +365,6 @@ private fun HomeScreenEmptyPreview() {
                 activeCluster = null,
             ),
             onAction = {},
-            onNavigateToManageClusters = {},
             creatableResources = ResourceCatalog.all,
             onCreateResource = {},
         ) { listState ->

@@ -254,14 +254,6 @@ class HomeViewModel @Inject constructor(
                 )
             }
 
-            is HomeUiAction.OpenClusterDrawer -> {
-                _uiState.update { it.copy(showClusterDrawer = true) }
-            }
-
-            is HomeUiAction.DismissClusterDrawer -> {
-                _uiState.update { it.copy(showClusterDrawer = false) }
-            }
-
             is HomeUiAction.OpenFabMenu -> {
                 _uiState.update { it.copy(showFabMenu = true) }
             }
@@ -275,7 +267,6 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         showAddClusterSheet = true,
                         showFabMenu = false,
-                        showClusterDrawer = false,
                         kubeconfigInput = "",
                         customClusterName = "",
                         kubeconfigError = null,

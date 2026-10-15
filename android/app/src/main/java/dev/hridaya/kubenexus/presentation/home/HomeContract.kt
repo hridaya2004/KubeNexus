@@ -30,7 +30,6 @@ data class HomeUiState(
     val selectedNamespace: String = "All Namespaces",
     val showNamespacePicker: Boolean = false,
     val selectedPod: Pod? = null,
-    val showClusterDrawer: Boolean = false,
     val showFabMenu: Boolean = false,
     val showAddClusterSheet: Boolean = false,
     val editingCluster: Cluster? = null,
@@ -48,8 +47,6 @@ data class HomeUiState(
 
 sealed interface HomeUiAction {
     data object RefreshWorkloads : HomeUiAction
-    data object OpenClusterDrawer : HomeUiAction
-    data object DismissClusterDrawer : HomeUiAction
     data object OpenFabMenu : HomeUiAction
     data object DismissFabMenu : HomeUiAction
     data object OpenAddClusterSheet : HomeUiAction

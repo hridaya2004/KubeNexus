@@ -139,15 +139,6 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `OpenClusterDrawer and DismissClusterDrawer update state`() {
-        viewModel.onAction(HomeUiAction.OpenClusterDrawer)
-        assertTrue(viewModel.uiState.value.showClusterDrawer)
-
-        viewModel.onAction(HomeUiAction.DismissClusterDrawer)
-        assertFalse(viewModel.uiState.value.showClusterDrawer)
-    }
-
-    @Test
     fun `OpenFabMenu and DismissFabMenu update state`() {
         viewModel.onAction(HomeUiAction.OpenFabMenu)
         assertTrue(viewModel.uiState.value.showFabMenu)
