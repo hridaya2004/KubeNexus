@@ -6,18 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -33,7 +28,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -56,10 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.MAX_FAVOURITE_RESOURCES
-import dev.hridaya.kubenexus.presentation.home.HomeScreen
-import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.home.components.ResourceGroupHeader
 import dev.hridaya.kubenexus.presentation.home.components.ResourcePreferenceCard
 import dev.hridaya.kubenexus.presentation.resources.ResourceCatalog
@@ -68,54 +59,15 @@ import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import kotlinx.coroutines.launch
 
+/** Home category of favourite resources. Shows nothing while [favourites] is null (not loaded yet). */
 @Composable
-fun FavouritesRoute(
-    homeViewModel: HomeViewModel,
-    favouritesViewModel: FavouritesViewModel,
-    onNavigateToManageClusters: () -> Unit,
-    onOpenResources: (ResourcePresentation<*>) -> Unit,
-    onCreateResource: (ResourcePresentation<*>) -> Unit,
-    modifier: Modifier = Modifier,
-    activePortForwardCount: Int = 0,
-    onOpenPortForwardSessions: () -> Unit = {},
-) {
-    val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-    val favourites by favouritesViewModel.favourites.collectAsStateWithLifecycle()
-
-    HomeScreen(
-        title = "Home",
-        uiState = uiState,
-        onAction = homeViewModel::onAction,
-        onNavigateToManageClusters = onNavigateToManageClusters,
-        creatableResources = favourites.orEmpty(),
-        onCreateResource = onCreateResource,
-        activePortForwardCount = activePortForwardCount,
-        onOpenPortForwardSessions = onOpenPortForwardSessions,
-        modifier = modifier,
-    ) { listState ->
-        FavouritesList(
-            favourites = favourites,
-            isRefreshing = uiState.isRefreshing,
-            lastRefreshedAt = uiState.lastRefreshedAt,
-            onOpenResources = onOpenResources,
-            onAddFavourite = { favouritesViewModel.onAction(FavouritesUiAction.AddFavourite(it)) },
-            onRemoveFavourite = { favouritesViewModel.onAction(FavouritesUiAction.RemoveFavourite(it)) },
-            listState = listState,
-        )
-    }
-}
-
-/** Shows nothing while [favourites] is null (not loaded yet). */
-@Composable
-fun FavouritesList(
+fun FavouritesSection(
     favourites: List<ResourcePresentation<*>>?,
-    isRefreshing: Boolean,
     lastRefreshedAt: Long?,
     onOpenResources: (ResourcePresentation<*>) -> Unit,
     onAddFavourite: (ResourcePresentation<*>) -> Unit,
     onRemoveFavourite: (ResourcePresentation<*>) -> Unit,
     modifier: Modifier = Modifier,
-    listState: LazyListState = rememberLazyListState(),
 ) {
     if (favourites == null) return
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
@@ -128,77 +80,32 @@ fun FavouritesList(
         )
     }
 
-    if (favourites.isEmpty()) {
-        EmptyFavouritesView(onAdd = { showAddSheet = true }, modifier = modifier)
-        return
-    }
-
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 8.dp,
-            bottom = 96.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = modifier.fillMaxSize(),
-    ) {
-        if (isRefreshing) {
-            item {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                )
-            }
-        }
-
-        item(key = "category/Favourite") {
-            FavouriteCategorySection(
-                title = "Favourite",
-                lastRefreshedAt = lastRefreshedAt,
-                favourites = favourites,
-                onOpen = onOpenResources,
-                onRemove = onRemoveFavourite,
-                onAdd = { showAddSheet = true },
-            )
-        }
-    }
-}
-
-@Composable
-private fun FavouriteCategorySection(
-    title: String,
-    lastRefreshedAt: Long?,
-    favourites: List<ResourcePresentation<*>>,
-    onOpen: (ResourcePresentation<*>) -> Unit,
-    onRemove: (ResourcePresentation<*>) -> Unit,
-    onAdd: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ResourceGroupHeader(title = title, lastRefreshedAt = lastRefreshedAt)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-        ) {
-            favourites.forEach { presentation ->
-                key(presentation.kind.type.key) {
-                    FavouriteRoundButton(
-                        presentation = presentation,
-                        onOpen = { onOpen(presentation) },
-                        onRemove = { onRemove(presentation) },
-                    )
+        ResourceGroupHeader(title = "Favourite", lastRefreshedAt = lastRefreshedAt)
+        if (favourites.isEmpty()) {
+            EmptyFavouritesView(onAdd = { showAddSheet = true })
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+            ) {
+                favourites.forEach { presentation ->
+                    key(presentation.kind.type.key) {
+                        FavouriteRoundButton(
+                            presentation = presentation,
+                            onOpen = { onOpenResources(presentation) },
+                            onRemove = { onRemoveFavourite(presentation) },
+                        )
+                    }
                 }
+                AddRoundButton(onClick = { showAddSheet = true })
             }
-            AddRoundButton(onClick = onAdd)
         }
     }
 }
@@ -413,9 +320,8 @@ private fun SheetMessage(text: String) {
 private fun EmptyFavouritesView(onAdd: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(32.dp),
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -474,11 +380,10 @@ private fun EmptyFavouritesView(onAdd: () -> Unit, modifier: Modifier = Modifier
 
 @Preview(showBackground = true)
 @Composable
-private fun FavouritesListPreview() {
+private fun FavouritesSectionPreview() {
     KubeNexusTheme {
-        FavouritesList(
+        FavouritesSection(
             favourites = ResourceCatalog.all,
-            isRefreshing = false,
             lastRefreshedAt = System.currentTimeMillis(),
             onOpenResources = {},
             onAddFavourite = {},
@@ -489,11 +394,10 @@ private fun FavouritesListPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun FavouritesListEmptyPreview() {
+private fun FavouritesSectionEmptyPreview() {
     KubeNexusTheme {
-        FavouritesList(
+        FavouritesSection(
             favourites = emptyList(),
-            isRefreshing = false,
             lastRefreshedAt = null,
             onOpenResources = {},
             onAddFavourite = {},

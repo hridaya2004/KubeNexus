@@ -1,9 +1,13 @@
 package dev.hridaya.kubenexus.presentation.home
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -17,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MediumFloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,11 +34,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterConnectionStatus
 import dev.hridaya.kubenexus.presentation.common.components.LoadingContent
 import dev.hridaya.kubenexus.presentation.common.components.RefreshableBox
+import dev.hridaya.kubenexus.presentation.favourites.FavouritesSection
+import dev.hridaya.kubenexus.presentation.favourites.FavouritesUiAction
+import dev.hridaya.kubenexus.presentation.favourites.FavouritesViewModel
 import dev.hridaya.kubenexus.presentation.home.components.AddClusterBottomSheet
 import dev.hridaya.kubenexus.presentation.home.components.ClusterPill
 import dev.hridaya.kubenexus.presentation.home.components.ClusterSwitcherDrawer
@@ -45,6 +54,80 @@ import dev.hridaya.kubenexus.presentation.resources.ResourceCatalog
 import dev.hridaya.kubenexus.presentation.resources.ResourcePresentation
 import dev.hridaya.kubenexus.ui.theme.KubeNexusTheme
 import dev.hridaya.kubenexus.ui.theme.appBarColors
+
+@Composable
+fun HomeRoute(
+    homeViewModel: HomeViewModel,
+    favouritesViewModel: FavouritesViewModel,
+    onNavigateToManageClusters: () -> Unit,
+    onOpenResources: (ResourcePresentation<*>) -> Unit,
+    onCreateResource: (ResourcePresentation<*>) -> Unit,
+    modifier: Modifier = Modifier,
+    activePortForwardCount: Int = 0,
+    onOpenPortForwardSessions: () -> Unit = {},
+) {
+    val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val favourites by favouritesViewModel.favourites.collectAsStateWithLifecycle()
+
+    HomeScreen(
+        title = "Home",
+        uiState = uiState,
+        onAction = homeViewModel::onAction,
+        onNavigateToManageClusters = onNavigateToManageClusters,
+        creatableResources = favourites.orEmpty(),
+        onCreateResource = onCreateResource,
+        activePortForwardCount = activePortForwardCount,
+        onOpenPortForwardSessions = onOpenPortForwardSessions,
+        modifier = modifier,
+    ) { listState ->
+        HomeCategoriesList(
+            uiState = uiState,
+            listState = listState,
+        ) {
+            FavouritesSection(
+                favourites = favourites,
+                lastRefreshedAt = uiState.lastRefreshedAt,
+                onOpenResources = onOpenResources,
+                onAddFavourite = { favouritesViewModel.onAction(FavouritesUiAction.AddFavourite(it)) },
+                onRemoveFavourite = { favouritesViewModel.onAction(FavouritesUiAction.RemoveFavourite(it)) },
+            )
+        }
+    }
+}
+
+/** Home tab categories, currently just [favourites]. */
+@Composable
+private fun HomeCategoriesList(
+    uiState: HomeUiState,
+    listState: LazyListState,
+    favourites: @Composable () -> Unit,
+) {
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 8.dp,
+            bottom = 96.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (uiState.isRefreshing) {
+            item {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                )
+            }
+        }
+
+        item(key = "category/Favourite") {
+            favourites()
+        }
+    }
+}
 
 @Composable
 fun ResourcesRoute(
@@ -81,7 +164,7 @@ fun ResourcesRoute(
     }
 }
 
-/** The frame shared by Favourites and Resources. [content] is shown once a cluster exists. */
+/** The frame shared by the Home and Resources tabs. [content] is shown once a cluster exists. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(

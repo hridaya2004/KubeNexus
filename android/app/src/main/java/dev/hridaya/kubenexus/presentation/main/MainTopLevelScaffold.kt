@@ -16,9 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dev.hridaya.kubenexus.presentation.explore.ExploreRoute
 import dev.hridaya.kubenexus.presentation.explore.ExploreViewModel
-import dev.hridaya.kubenexus.presentation.favourites.FavouritesRoute
 import dev.hridaya.kubenexus.presentation.favourites.FavouritesUiEffect
 import dev.hridaya.kubenexus.presentation.favourites.FavouritesViewModel
+import dev.hridaya.kubenexus.presentation.home.HomeRoute
 import dev.hridaya.kubenexus.presentation.home.HomeUiAction
 import dev.hridaya.kubenexus.presentation.home.HomeViewModel
 import dev.hridaya.kubenexus.presentation.home.ResourcesRoute
@@ -76,7 +76,7 @@ internal fun MainTopLevelScaffold(
             tabStateHolder.SaveableStateProvider(currentDestination.name) {
                 when (currentDestination) {
                     Destination.Home -> {
-                        FavouritesRoute(
+                        HomeRoute(
                             homeViewModel = homeViewModel,
                             favouritesViewModel = favouritesViewModel,
                             onNavigateToManageClusters = { onOpen(Screen.ManageClusters) },
