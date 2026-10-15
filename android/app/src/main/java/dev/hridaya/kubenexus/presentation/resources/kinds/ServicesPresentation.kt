@@ -17,7 +17,7 @@ object ServicesPresentation : ResourcePresentation<ServiceSummary> {
     override val title = "Services"
     override val description = "Stable network endpoints for Pods"
     override val icon: ImageVector = Icons.Outlined.Dns
-    override val searchHint = "Search services by name, IP"
+    override val searchHint = "Search"
 
     override fun row(item: ServiceSummary) = ResourceRow(
         id = item.id,

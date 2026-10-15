@@ -72,6 +72,6 @@ fun SearchField(
 @Composable
 private fun SearchFieldPreview() {
     KubeNexusTheme {
-        SearchField(query = "nginx", onQueryChange = {}, placeholder = "Search pods")
+        SearchField(query = "nginx", onQueryChange = {}, placeholder = "Search")
     }
 }

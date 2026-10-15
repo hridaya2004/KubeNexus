@@ -30,7 +30,7 @@ interface ResourcePresentation<Summary : KubeObjectSummary> {
 
     /** Placeholder for the list's search box. */
     val searchHint: String
-        get() = "Search ${title.lowercase()} by name"
+        get() = "Search"
 
     fun row(item: Summary): ResourceRow
 }

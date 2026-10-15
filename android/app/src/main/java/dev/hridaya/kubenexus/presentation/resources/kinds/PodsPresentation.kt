@@ -18,7 +18,7 @@ object PodsPresentation : ResourcePresentation<Pod> {
     override val title = "Pods"
     override val description = "Container instances and workload state"
     override val icon: ImageVector = Icons.Outlined.Layers
-    override val searchHint = "Search pods by name, IP, node or status"
+    override val searchHint = "Search"
 
     override fun row(item: Pod) = ResourceRow(
         id = item.id,

@@ -17,7 +17,7 @@ object DeploymentsPresentation : ResourcePresentation<DeploymentSummary> {
     override val title = "Deployments"
     override val description = "Declarative updates for Pods and ReplicaSets"
     override val icon: ImageVector = Icons.Outlined.Apps
-    override val searchHint = "Search deployments by name or image"
+    override val searchHint = "Search"
 
     override fun row(item: DeploymentSummary): ResourceRow {
         val readiness = "${item.readyReplicas}/${item.desiredReplicas}"
