@@ -72,7 +72,7 @@ internal fun TerminalHeaderBar(
             }
             val statusSubtitle = when {
                 !uiState.isOnline -> "(disconnected)"
-                uiState.isTerminalActive -> "(${uiState.activeShellCommand ?: "sh"})"
+                uiState.isTerminalActive -> "(${uiState.activeShellCommand})"
                 else -> "(inactive)"
             }
 

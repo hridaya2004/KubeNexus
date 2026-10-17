@@ -25,7 +25,7 @@ android {
                 commandLine("git", "rev-parse", "--short", "HEAD")
             }
         }.standardOutput.asText.get().trim().ifEmpty { null }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 

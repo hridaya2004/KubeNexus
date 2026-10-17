@@ -1,6 +1,7 @@
 package dev.hridaya.kubenexus.presentation.pods.detail
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.coroutineScope
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.flow
  * Nothing is dropped, and when the upstream ends or fails, the group gathered so far is
  * emitted before the completion or failure is passed on.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 internal fun <T> Flow<T>.batched(windowMs: Long): Flow<List<T>> = flow {
     coroutineScope {
         // Closed with the failure rather than failing, which would cancel the gathered group.

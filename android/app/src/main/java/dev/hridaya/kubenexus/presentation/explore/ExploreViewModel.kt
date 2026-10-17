@@ -358,7 +358,7 @@ class ExploreViewModel @Inject constructor(
                         if (state.explainDetails == null) {
                             state.copy(
                                 isLoadingExplain = false,
-                                explainError = result.error.message ?: "Failed to load explanation",
+                                explainError = result.error.message,
                             )
                         } else {
                             state.copy(isLoadingExplain = false)

@@ -295,7 +295,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> {
-                    val message = result.error.message ?: "Failed to scale deployment"
+                    val message = result.error.message
                     _uiState.update {
                         it.copy(
                             isMutating = false,
@@ -332,7 +332,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> {
-                    val message = result.error.message ?: "Failed to restart deployment"
+                    val message = result.error.message
                     _uiState.update {
                         it.copy(
                             isMutating = false,
@@ -370,7 +370,7 @@ class DeploymentDetailViewModel @AssistedInject constructor(
                 }
 
                 is Result.Error -> {
-                    val message = result.error.message ?: "Failed to delete deployment"
+                    val message = result.error.message
                     _uiState.update {
                         it.copy(
                             isMutating = false,
