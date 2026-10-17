@@ -168,15 +168,6 @@ android {
         }
     }
 
-    lint {
-        disable += listOf(
-            "NewerVersionAvailable",
-            "GradleDependency",
-            "AndroidGradlePluginVersion",
-            "ChromeOsAbiSupport",
-        )
-    }
-
     testOptions {
         unitTests {
             isReturnDefaultValues = true
