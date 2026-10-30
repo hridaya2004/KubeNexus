@@ -15,7 +15,7 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[1]
 ENGINE = REPO / "k8s-engine"
 CONFIG = REPO / "android" / "config"
-ZIG_ZON = REPO / "terminal-native" / "build.zig.zon"
+ZIG_ZON = REPO / "libghostty" / "build.zig.zon"
 
 LICENSE_FILE = re.compile(r"(?i)^(licen[cs]e|copying)")
 NOTICE_FILE = re.compile(r"(?i)^notice")

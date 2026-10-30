@@ -140,7 +140,7 @@ Go engine):
 | | `k8s.io/*`, `sigs.k8s.io/*` | Kubernetes Go client libraries, Apache-2.0 |
 | | 27 other Go modules under Apache-2.0, MIT, BSD-2, BSD-3 and ISC | Go modules in the Kubernetes engine, with each module's own licence and NOTICE text |
 
-`terminal-native/zig-pkg/` (fetched by Zig from `build.zig.zon`, not committed) also contains
+`libghostty/zig-pkg/` (fetched by Zig from `build.zig.zon`, not committed) also contains
 `aro`, `translate_c` and `uucode` (build tools), zlib's C sources, `afl++`, fonts and colour
 themes. None of those are in the shipped library: there are no zlib, `inflate`/`deflate`, `afl`
 or font symbols in `libghostty_jni.so`. Two things to watch when bumping the Ghostty pin:
@@ -183,7 +183,7 @@ runs; CI fails if the committed files are out of date:
   from the module cache, and reproduces every licence that is not plain Apache-2.0, plus every
   NOTICE file.
 - `lib_native_kubernetes_go_client.json` gets its version and module list from `go.mod`, and
-  the Ghostty and Zig entries get their versions from `terminal-native/build.zig.zon`.
+  the Ghostty and Zig entries get their versions from `libghostty/build.zig.zon`.
 - The Ghostty, Wuffs and Zig licence texts are copied by hand from their `LICENSE` files.
 
 **When you add a dependency that ships code, declare it there.** `strictMode = FAIL` in
@@ -288,10 +288,10 @@ Play reviewer or a user asks.
 
 ```bash
 # Ghostty and the Zig packages it pulls in are fetched and pinned
-ls terminal-native/zig-pkg/ | grep -i ghostty
+ls libghostty/zig-pkg/ | grep -i ghostty
 
 # Confirm the pinned Ghostty commit still matches build.zig.zon
-grep -A2 'ghostty' terminal-native/build.zig.zon
+grep -A2 'ghostty' libghostty/build.zig.zon
 
 # Confirm client-go is consumed straight from upstream, with no fork redirect
 grep -n 'replace' k8s-engine/go.mod || echo "no replace directives"

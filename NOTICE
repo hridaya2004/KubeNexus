@@ -44,7 +44,7 @@ dependency resolves to the upstream release tag v0.36.3 unmodified.
 --------------------------------------------------------------------------------
 Other components compiled into the native libraries
 --------------------------------------------------------------------------------
-libghostty_jni.so (built with Zig; packages fetched per terminal-native/build.zig.zon):
+libghostty_jni.so (built with Zig; packages fetched per libghostty/build.zig.zon):
 
   Wuffs ............... MIT OR Apache-2.0 (used under MIT),
                         Copyright 2023 The Wuffs Authors

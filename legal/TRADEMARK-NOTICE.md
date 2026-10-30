@@ -151,7 +151,7 @@ ghostty.org as of this writing). So:
   check that the About/Credits surface is your own and clearly attributes Ghostty
   as a third-party component.
 - Do not modify the code and present the result as Ghostty. If you have patched
-  `terminal-native/zig-pkg/ghostty-*`, your fork is a derivative work, not
+  `libghostty/zig-pkg/ghostty-*`, your fork is a derivative work, not
   Ghostty.
 
 ## 3. Your own name — "KubeNexus"

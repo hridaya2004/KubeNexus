@@ -19,7 +19,7 @@ jobs:
             sources: k8s-engine/**
             output: android/data/libs
           - lib: zig
-            sources: terminal-native/**
+            sources: libghostty/**
             output: android/app/src/main/jniLibs
 
     steps:
@@ -47,8 +47,8 @@ jobs:
         if: matrix.lib == 'zig'
         uses: actions/cache@v5
         with:
-          path: terminal-native/zig-pkg
-          key: zig-pkg-${{ hashFiles('terminal-native/build.zig.zon') }}
+          path: libghostty/zig-pkg
+          key: zig-pkg-${{ hashFiles('libghostty/build.zig.zon') }}
 
       - name: Cache ${{ matrix.lib }} library
         uses: actions/cache@v5

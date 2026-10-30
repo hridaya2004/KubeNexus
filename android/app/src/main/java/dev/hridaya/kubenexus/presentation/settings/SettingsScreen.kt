@@ -190,7 +190,7 @@ fun SettingsScreen(
                     ),
                     ModuleInfo(
                         title = "Ghostty Bridge",
-                        subtitle = "terminal-native JNI bridge",
+                        subtitle = "libghostty JNI bridge",
                         version = BuildConfig.GHOSTTY_BRIDGE_COMMIT_SHA,
                         icon = Icons.Outlined.Build,
                     ),

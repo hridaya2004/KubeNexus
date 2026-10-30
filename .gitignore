@@ -29,8 +29,8 @@ out/
 # Zig
 .zig-cache/
 zig-out/
-terminal-native/.zig-cache/
-terminal-native/zig-out/
+libghostty/.zig-cache/
+libghostty/zig-out/
 
 # Agent skills
 .agents/

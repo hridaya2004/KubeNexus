@@ -29,7 +29,7 @@ android {
         null
     }
 
-    fun pinnedGhosttySha(): String? = File(repoDir, "terminal-native/build.zig.zon")
+    fun pinnedGhosttySha(): String? = File(repoDir, "libghostty/build.zig.zon")
         .takeIf { it.isFile }
         ?.let { Regex("""github\.com/ghostty-org/ghostty#([a-f0-9]+)""").find(it.readText()) }
         ?.groupValues?.get(1)
@@ -54,9 +54,9 @@ android {
         "KUBENEXUS_LIBGHOSTTY_COMMIT_SHA",
     ) { pinnedGhosttySha() }
     val ghosttyBridgeCommitSha = resolved(
-        "the terminal-native commit SHA",
+        "the libghostty commit SHA",
         "KUBENEXUS_GHOSTTY_BRIDGE_COMMIT_SHA",
-    ) { gitCommitSha("terminal-native") }
+    ) { gitCommitSha("libghostty") }
     val goCoreCommitSha = resolved(
         "the k8s-engine commit SHA",
         "KUBENEXUS_GO_CORE_COMMIT_SHA",

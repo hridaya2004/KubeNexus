@@ -2,7 +2,7 @@ VERSIONS    := android/gradle/libs.versions.toml
 version      = $(shell sed -n 's/^$(1) *= *"\(.*\)"/\1/p' $(VERSIONS))
 NDK_VERSION := $(call version,ndk)
 MIN_SDK     := $(call version,minSdk)
-ZIG_VERSION := $(shell sed -n 's/.*minimum_zig_version = "\(.*\)".*/\1/p' terminal-native/build.zig.zon)
+ZIG_VERSION := $(shell sed -n 's/.*minimum_zig_version = "\(.*\)".*/\1/p' libghostty/build.zig.zon)
 JAVA_VERSION := $(shell sed -n 's/^toolchainVersion=//p' android/gradle/gradle-daemon-jvm.properties)
 
 export ANDROID_HOME ?= $(HOME)/Android/Sdk
@@ -19,7 +19,7 @@ TOOLS    := build/tools
 fingerprint = $(shell { files=$$(find $(1) -type f ! -name '*_test.go' ! -path '*/testdata/*' | LC_ALL=C sort); \
 	echo "$$files"; cat $$files; echo $(2); } | git hash-object --stdin)
 GO_STAMP  := build/native/go/$(call fingerprint,k8s-engine/go.mod k8s-engine/go.sum k8s-engine/pkg k8s-engine/scripts/rename_jni.sh Makefile,$(NDK_VERSION) $(MIN_SDK) $(shell go version 2>/dev/null))
-ZIG_STAMP := build/native/zig/$(call fingerprint,terminal-native/src terminal-native/build.zig terminal-native/build.zig.zon Makefile,$(NDK_VERSION) $(MIN_SDK) $(shell zig version 2>/dev/null))
+ZIG_STAMP := build/native/zig/$(call fingerprint,libghostty/src libghostty/build.zig libghostty/build.zig.zon Makefile,$(NDK_VERSION) $(MIN_SDK) $(shell zig version 2>/dev/null))
 
 LICENSES_DIR ?= legal/compliance
 LICENSES_OUT := $(abspath $(LICENSES_DIR))
@@ -61,7 +61,7 @@ $(GO_AAR): $(GO_STAMP) | ndk
 	k8s-engine/scripts/rename_jni.sh $@ kubenexus_client
 
 $(ZIG_SO) &: $(ZIG_STAMP) | ndk
-	cd terminal-native && zig build -Doptimize=ReleaseSmall -Dapi=$(MIN_SDK) \
+	cd libghostty && zig build -Doptimize=ReleaseSmall -Dapi=$(MIN_SDK) \
 		-Dsysroot="$$(echo $(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/*/sysroot)" --prefix $(CURDIR)/$(JNI_LIBS)
 	touch $(ZIG_SO)
 
@@ -104,7 +104,7 @@ lint: ## Run go vet and Android lint
 
 fmt: ## Format Go and Zig sources and apply Android lint fixes
 	cd k8s-engine && go fmt ./...
-	cd terminal-native && zig fmt build.zig src
+	cd libghostty && zig fmt build.zig src
 	$(GRADLE) lintFix
 
 licenses: ## Write the licence compliance report to LICENSES_DIR (default legal/compliance)
@@ -132,5 +132,5 @@ generate-kube-openapi-spec: ## Re-record the k8s-engine test payloads from a liv
 
 clean: ## Remove native libraries, build outputs and caches
 	rm -rf build $(JNI_LIBS) $(GO_AAR) android/data/libs/kubenexus-sources.jar
-	rm -rf terminal-native/.zig-cache terminal-native/zig-out
+	rm -rf libghostty/.zig-cache libghostty/zig-out
 	$(GRADLE) clean
