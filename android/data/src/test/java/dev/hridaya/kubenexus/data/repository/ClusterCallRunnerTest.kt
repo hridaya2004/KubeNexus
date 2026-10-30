@@ -2,9 +2,9 @@ package dev.hridaya.kubenexus.data.repository
 
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.testing.InMemoryClusterDao
 import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -16,7 +16,7 @@ import org.junit.Test
 class ClusterCallRunnerTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+    private val encryptor = testKubeconfigEncryptor()
     private val clusterDao = InMemoryClusterDao()
     private val runner =
         ClusterCallRunner(clusterDao, encryptor, TestDispatcherProvider(testDispatcher))
@@ -41,7 +41,7 @@ class ClusterCallRunnerTest {
     @Test
     fun `the call receives the cluster id and its decrypted kubeconfig`() =
         runTest(testDispatcher) {
-            clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+            clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text", "c-1"))
 
             val result = runner.run(
                 "c-1",
@@ -53,7 +53,7 @@ class ClusterCallRunnerTest {
 
     @Test
     fun `native failures become sanitized network errors`() = runTest(testDispatcher) {
-        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text", "c-1"))
 
         val result = runner.run("c-1", "Failed") {
             Result.Error(AppError.Unknown("denied: token: secret-token-12345"))
@@ -65,7 +65,7 @@ class ClusterCallRunnerTest {
     @Test
     fun `a native failure without a message falls back to the failure message`() =
         runTest(testDispatcher) {
-            clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+            clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text", "c-1"))
 
             val result =
                 runner.run("c-1", "Failed to list pods") { Result.Error(AppError.Unknown("")) }
@@ -75,7 +75,7 @@ class ClusterCallRunnerTest {
 
     @Test
     fun `deliberate errors pass through unchanged`() = runTest(testDispatcher) {
-        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text", "c-1"))
 
         val result = runner.run("c-1", "Failed") { Result.Error(AppError.Validation("bad name")) }
 
@@ -84,7 +84,7 @@ class ClusterCallRunnerTest {
 
     @Test
     fun `thrown exceptions become network errors`() = runTest(testDispatcher) {
-        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text", "c-1"))
 
         val result =
             runner.run<Unit>("c-1", "Failed") { throw IllegalStateException("connection reset") }
@@ -94,7 +94,7 @@ class ClusterCallRunnerTest {
 
     @Test
     fun `cancellation is rethrown, not reported as a failure`() = runTest(testDispatcher) {
-        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text"))
+        clusterDao.seed(id = "c-1", rawKubeconfig = encryptor.encrypt("kubeconfig-text", "c-1"))
 
         val thrown = runCatching {
             runner.run<Unit>("c-1", "Failed") { throw CancellationException("screen closed") }

@@ -87,14 +87,13 @@ class ClusterRepositoryImpl @Inject constructor(
                 val clusterEntity = clusterDao.getClusterById(id)
                     ?: return@withContext Result.Error(AppError.Unknown("Cluster with ID '$id' not found."))
 
-                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
+                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig, id)
                 val parsed = KubeconfigParser.parse(decryptedKubeconfig, clusterEntity.name)
                 connectionTester.testConnection(parsed)
 
-                // Opportunistic migration if this record was still stored as plaintext
-                if (!encryptor.isEncrypted(clusterEntity.rawKubeconfig)) {
-                    val encrypted = encryptor.encrypt(clusterEntity.rawKubeconfig)
-                    clusterDao.updateCluster(clusterEntity.copy(rawKubeconfig = encrypted))
+                // Opportunistic migration if this record was still stored in an older format
+                if (encryptor.needsReEncryption(clusterEntity.rawKubeconfig)) {
+                    clusterDao.updateKubeconfig(id, encryptor.encrypt(decryptedKubeconfig, id))
                 }
 
                 clusterDao.setActiveCluster(id)
@@ -118,7 +117,7 @@ class ClusterRepositoryImpl @Inject constructor(
         withContext(dispatcherProvider.io) {
             try {
                 val kubeconfig = clusterDao.getClusterById(id)
-                    ?.let { encryptor.decryptOrEmpty(it.rawKubeconfig) }
+                    ?.let { encryptor.decryptOrEmpty(it.rawKubeconfig, id) }
                 // Removes the cached workloads, namespaces, discovery, explains and
                 // OpenAPI schema blob along with the cluster row.
                 clusterDao.deleteClusterWithCachedData(id)
@@ -162,7 +161,7 @@ class ClusterRepositoryImpl @Inject constructor(
             try {
                 val clusterEntity = clusterDao.getClusterById(id)
                     ?: return@withContext Result.Error(AppError.Unknown("Cluster with ID '$id' not found."))
-                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
+                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig, id)
                 val parsed = KubeconfigParser.parse(decryptedKubeconfig, clusterEntity.name)
                 val info = connectionTester.testConnection(parsed)
                 clusterDao.updateStatus(
@@ -185,7 +184,7 @@ class ClusterRepositoryImpl @Inject constructor(
             try {
                 val clusterEntity = clusterDao.getClusterById(id)
                     ?: return@withContext Result.Error(AppError.Unknown("Cluster with ID '$id' not found."))
-                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig)
+                val decryptedKubeconfig = encryptor.decryptOrEmpty(clusterEntity.rawKubeconfig, id)
                 nativeBridge.checkHealth(decryptedKubeconfig)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
@@ -235,18 +234,21 @@ class ClusterRepositoryImpl @Inject constructor(
         }
     }
 
-    /** Encrypts kubeconfigs stored by versions that kept them in plain text. */
-    suspend fun migratePlaintextClusters(): Result<Int> =
+    /**
+     * Rewrites kubeconfigs stored in plain text or an older format with the current encryption.
+     * A record that cannot be decrypted is left as it is: it stays listed as unreadable.
+     */
+    suspend fun migrateStoredKubeconfigs(): Result<Int> =
         withContext(dispatcherProvider.io) {
             try {
                 val clusters = clusterDao.getAllClusters()
                 var migratedCount = 0
                 for (entity in clusters) {
-                    if (!encryptor.isEncrypted(entity.rawKubeconfig)) {
-                        val encryptedKubeconfig = encryptor.encrypt(entity.rawKubeconfig)
-                        clusterDao.updateCluster(entity.copy(rawKubeconfig = encryptedKubeconfig))
-                        migratedCount++
-                    }
+                    if (!encryptor.needsReEncryption(entity.rawKubeconfig)) continue
+                    val kubeconfig = encryptor.decryptOrEmpty(entity.rawKubeconfig, entity.id)
+                    if (kubeconfig.isEmpty()) continue
+                    clusterDao.updateKubeconfig(entity.id, encryptor.encrypt(kubeconfig, entity.id))
+                    migratedCount++
                 }
                 Result.Success(migratedCount)
             } catch (t: Throwable) {
@@ -254,7 +256,7 @@ class ClusterRepositoryImpl @Inject constructor(
                 val sanitizedMsg = LogSanitizer.sanitize(t.message)
                 Result.Error(
                     AppError.Unknown(
-                        "Failed to migrate plaintext clusters: $sanitizedMsg",
+                        "Failed to migrate stored kubeconfigs: $sanitizedMsg",
                         t,
                     ),
                 )

@@ -355,6 +355,13 @@ class ExploreRepositoryImplTest {
             notifyChanges()
         }
 
+        override suspend fun updateKubeconfig(id: String, rawKubeconfig: String) {
+            storage[id]?.let {
+                storage[id] = it.copy(rawKubeconfig = rawKubeconfig)
+            }
+            notifyChanges()
+        }
+
         override suspend fun updateClusterName(id: String, name: String) {
             storage[id]?.let {
                 storage[id] = it.copy(name = name)

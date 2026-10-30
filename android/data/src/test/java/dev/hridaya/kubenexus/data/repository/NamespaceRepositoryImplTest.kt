@@ -1,13 +1,13 @@
 package dev.hridaya.kubenexus.data.repository
 
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.source.local.entity.CachedResourceEntity
 import dev.hridaya.kubenexus.data.testing.InMemoryClusterDao
 import dev.hridaya.kubenexus.data.testing.InMemoryNamespaceDao
 import dev.hridaya.kubenexus.data.testing.InMemoryResourceCacheDao
 import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import dev.hridaya.kubenexus.domain.model.Namespace
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -18,11 +18,11 @@ import org.junit.Test
 class NamespaceRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+    private val encryptor = testKubeconfigEncryptor()
     private val clusterDao = InMemoryClusterDao().apply {
         seed(
             id = CLUSTER,
-            rawKubeconfig = encryptor.encrypt("kubeconfig")
+            rawKubeconfig = encryptor.encrypt("kubeconfig", CLUSTER)
         )
     }
     private val namespaceDao = InMemoryNamespaceDao()

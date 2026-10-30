@@ -17,6 +17,10 @@
         <exclude
             domain="database"
             path="." />
+        <!-- The kubeconfig keyset only works with its master key, which never leaves this device's Keystore -->
+        <exclude
+            domain="sharedpref"
+            path="kubenexus_kubeconfig_keyset.xml" />
     </cloud-backup>
     <device-transfer>
         <!-- Explicitly exclude credential-bearing database storage from device transfers -->
@@ -35,5 +39,9 @@
         <exclude
             domain="database"
             path="." />
+        <!-- The kubeconfig keyset only works with its master key, which never leaves this device's Keystore -->
+        <exclude
+            domain="sharedpref"
+            path="kubenexus_kubeconfig_keyset.xml" />
     </device-transfer>
 </data-extraction-rules>

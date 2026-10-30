@@ -68,6 +68,10 @@ class InMemoryClusterDao : ClusterDao() {
         clusters.value[id]?.let { clusters.value += id to it.copy(isActive = true) }
     }
 
+    override suspend fun updateKubeconfig(id: String, rawKubeconfig: String) {
+        clusters.value[id]?.let { clusters.value += id to it.copy(rawKubeconfig = rawKubeconfig) }
+    }
+
     override suspend fun updateClusterName(id: String, name: String) {
         clusters.value[id]?.let { clusters.value += id to it.copy(name = name) }
     }

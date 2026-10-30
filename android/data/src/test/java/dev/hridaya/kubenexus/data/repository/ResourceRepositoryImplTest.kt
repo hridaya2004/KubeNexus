@@ -2,7 +2,6 @@ package dev.hridaya.kubenexus.data.repository
 
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.resource.ResourceCodecRegistry
 import dev.hridaya.kubenexus.data.resource.codec.DeploymentCodec
 import dev.hridaya.kubenexus.data.resource.codec.PodCodec
@@ -12,6 +11,7 @@ import dev.hridaya.kubenexus.data.testing.InMemoryClusterDao
 import dev.hridaya.kubenexus.data.testing.InMemoryResourceCacheDao
 import dev.hridaya.kubenexus.data.testing.RecordingResourceBridge
 import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import dev.hridaya.kubenexus.domain.model.ServicePortDetail
 import dev.hridaya.kubenexus.domain.model.resource.NamespaceScope
 import dev.hridaya.kubenexus.domain.model.resource.ResourceKinds
@@ -27,7 +27,7 @@ import org.junit.Test
 class ResourceRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+    private val encryptor = testKubeconfigEncryptor()
     private val clusterDao = InMemoryClusterDao()
     private val cacheDao = InMemoryResourceCacheDao()
     private val bridge = RecordingResourceBridge()
@@ -45,7 +45,7 @@ class ResourceRepositoryImplTest {
     )
 
     private fun givenCluster() =
-        clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG))
+        clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG, CLUSTER))
 
     // region sync and observe
 

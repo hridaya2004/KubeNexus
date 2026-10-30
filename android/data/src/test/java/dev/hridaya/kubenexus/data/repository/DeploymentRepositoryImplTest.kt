@@ -2,10 +2,10 @@ package dev.hridaya.kubenexus.data.repository
 
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.testing.InMemoryClusterDao
 import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -14,11 +14,11 @@ import org.junit.Test
 class DeploymentRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+    private val encryptor = testKubeconfigEncryptor()
     private val clusterDao = InMemoryClusterDao().apply {
         seed(
             id = CLUSTER,
-            rawKubeconfig = encryptor.encrypt(KUBECONFIG)
+            rawKubeconfig = encryptor.encrypt(KUBECONFIG, CLUSTER)
         )
     }
     private val bridge = RecordingRolloutBridge()

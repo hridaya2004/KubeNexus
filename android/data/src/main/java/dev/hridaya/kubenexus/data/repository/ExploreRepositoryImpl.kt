@@ -77,7 +77,7 @@ class ExploreRepositoryImpl @Inject constructor(
             val resolvedClusterId = clusterId ?: OFFLINE_CLUSTER_ID
             val decryptedKubeconfig = if (clusterId != null) {
                 val cluster = clusterDao.getClusterById(clusterId)
-                if (cluster != null) encryptor.decryptOrEmpty(cluster.rawKubeconfig) else ""
+                if (cluster != null) encryptor.decryptOrEmpty(cluster.rawKubeconfig, clusterId) else ""
             } else ""
 
             try {
@@ -260,7 +260,7 @@ class ExploreRepositoryImpl @Inject constructor(
         resolvedClusterId: String,
     ): Result<String> = withContext(dispatcherProvider.io) {
         val decryptedKubeconfig = if (clusterId != null) {
-            clusterDao.getClusterById(clusterId)?.let { encryptor.decryptOrEmpty(it.rawKubeconfig) }
+            clusterDao.getClusterById(clusterId)?.let { encryptor.decryptOrEmpty(it.rawKubeconfig, clusterId) }
                 ?: ""
         } else ""
 

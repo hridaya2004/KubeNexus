@@ -15,6 +15,6 @@ class DataLayerInitializer @Inject constructor(
 ) {
     fun initialize() {
         nativeBridge.initialize()
-        applicationScope.launch { clusterRepository.migratePlaintextClusters() }
+        applicationScope.launch { clusterRepository.migrateStoredKubeconfigs() }
     }
 }

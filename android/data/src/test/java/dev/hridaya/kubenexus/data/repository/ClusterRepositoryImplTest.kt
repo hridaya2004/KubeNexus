@@ -2,12 +2,13 @@ package dev.hridaya.kubenexus.data.repository
 
 import dev.hridaya.kubenexus.core.common.dispatcher.DispatcherProvider
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.kubeconfig.ClusterConnectionTester
 import dev.hridaya.kubenexus.data.kubeconfig.ParsedKubeconfig
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.source.local.dao.ClusterDao
+import dev.hridaya.kubenexus.data.security.TinkKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.source.local.entity.ClusterEntity
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Base64
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
 class ClusterRepositoryImplTest {
 
@@ -34,7 +39,9 @@ class ClusterRepositoryImplTest {
     }
 
     private lateinit var fakeDao: FakeClusterDao
-    private lateinit var encryptor: AesGcmKubeconfigEncryptor
+    private val legacyKey: SecretKey =
+        KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    private lateinit var encryptor: TinkKubeconfigEncryptor
     private lateinit var fakeTester: ClusterConnectionTester
     private lateinit var repository: ClusterRepositoryImpl
 
@@ -65,8 +72,7 @@ class ClusterRepositoryImplTest {
     @Before
     fun setUp() {
         fakeDao = FakeClusterDao()
-        val secretKey = AesGcmKubeconfigEncryptor.generateKey()
-        encryptor = AesGcmKubeconfigEncryptor(secretKey)
+        encryptor = testKubeconfigEncryptor(legacyKey)
 
         val fakeNativeBridge = FakeKubeNexusNativeBridge()
 
@@ -99,9 +105,9 @@ class ClusterRepositoryImplTest {
         // Verify the persisted entity in DAO is encrypted
         val persistedEntity = fakeDao.getClusterById(addedCluster.id)
         assertNotNull(persistedEntity)
-        assertTrue(persistedEntity!!.rawKubeconfig.startsWith("enc:v1:"))
+        assertTrue(persistedEntity!!.rawKubeconfig.startsWith("enc:v2:"))
         assertFalse(persistedEntity.rawKubeconfig.contains("secret-token-12345"))
-        assertEquals(sampleKubeconfig, encryptor.decrypt(persistedEntity.rawKubeconfig))
+        assertEquals(sampleKubeconfig, encryptor.decrypt(persistedEntity.rawKubeconfig, addedCluster.id))
     }
 
     @Test
@@ -133,7 +139,7 @@ class ClusterRepositoryImplTest {
     @Test
     fun `getClustersStream and getClusterById decrypt stored encrypted kubeconfig`() =
         runTest(testDispatcher) {
-            val encryptedKubeconfig = encryptor.encrypt(sampleKubeconfig)
+            val encryptedKubeconfig = encryptor.encrypt(sampleKubeconfig, "c-100")
             fakeDao.insertCluster(
                 ClusterEntity(
                     id = "c-100",
@@ -160,7 +166,7 @@ class ClusterRepositoryImplTest {
         }
 
     @Test
-    fun `migratePlaintextClusters encrypts all plaintext records without losing data`() =
+    fun `migrateStoredKubeconfigs encrypts all plaintext records without losing data`() =
         runTest(testDispatcher) {
             // Insert legacy plaintext clusters
             val legacy1 = ClusterEntity(
@@ -196,23 +202,41 @@ class ClusterRepositoryImplTest {
             assertEquals(sampleKubeconfig, fakeDao.getClusterById("c-legacy-1")!!.rawKubeconfig)
 
             // Run migration
-            val migrationResult = repository.migratePlaintextClusters()
+            val migrationResult = repository.migrateStoredKubeconfigs()
             assertTrue(migrationResult is Result.Success)
             assertEquals(2, (migrationResult as Result.Success).data)
 
             // After migration, both records in DAO are encrypted at rest
             val entity1 = fakeDao.getClusterById("c-legacy-1")!!
             val entity2 = fakeDao.getClusterById("c-legacy-2")!!
-            assertTrue(entity1.rawKubeconfig.startsWith("enc:v1:"))
-            assertTrue(entity2.rawKubeconfig.startsWith("enc:v1:"))
+            assertTrue(entity1.rawKubeconfig.startsWith("enc:v2:"))
+            assertTrue(entity2.rawKubeconfig.startsWith("enc:v2:"))
 
-            assertEquals(sampleKubeconfig, encryptor.decrypt(entity1.rawKubeconfig))
-            assertEquals(sampleKubeconfig, encryptor.decrypt(entity2.rawKubeconfig))
+            assertEquals(sampleKubeconfig, encryptor.decrypt(entity1.rawKubeconfig, entity1.id))
+            assertEquals(sampleKubeconfig, encryptor.decrypt(entity2.rawKubeconfig, entity2.id))
 
             // Running migration again is idempotent (0 records migrated)
-            val secondMigration = repository.migratePlaintextClusters()
+            val secondMigration = repository.migrateStoredKubeconfigs()
             assertTrue(secondMigration is Result.Success)
             assertEquals(0, (secondMigration as Result.Success).data)
+        }
+
+    @Test
+    fun `migrateStoredKubeconfigs rewrites enc v1 records and leaves unreadable ones alone`() =
+        runTest(testDispatcher) {
+            val readable = clusterEntity("c-v1", legacyEncrypt(sampleKubeconfig, legacyKey))
+            val unreadableKubeconfig = "enc:v1:" + Base64.getEncoder().encodeToString(ByteArray(64))
+            val unreadable = clusterEntity("c-lost", unreadableKubeconfig)
+            fakeDao.insertCluster(readable)
+            fakeDao.insertCluster(unreadable)
+
+            val result = repository.migrateStoredKubeconfigs()
+
+            assertEquals(1, (result as Result.Success).data)
+            val migrated = fakeDao.getClusterById("c-v1")!!.rawKubeconfig
+            assertTrue(migrated.startsWith("enc:v2:"))
+            assertEquals(sampleKubeconfig, encryptor.decrypt(migrated, "c-v1"))
+            assertEquals(unreadableKubeconfig, fakeDao.getClusterById("c-lost")!!.rawKubeconfig)
         }
 
     @Test
@@ -237,6 +261,28 @@ class ClusterRepositoryImplTest {
         val health = (healthResult as Result.Success).data
         assertTrue(health.livez)
         assertEquals("Ready", health.statusMessage)
+    }
+
+    private fun clusterEntity(id: String, rawKubeconfig: String) = ClusterEntity(
+        id = id,
+        name = id,
+        serverUrl = "https://10.0.0.1:6443",
+        rawKubeconfig = rawKubeconfig,
+        contextName = "ctx",
+        userName = "user",
+        namespace = "default",
+        isActive = false,
+        createdAt = 1000L,
+        lastConnectedAt = null,
+        status = "DISCONNECTED",
+    )
+
+    /** The `enc:v1:` format written by earlier versions. */
+    private fun legacyEncrypt(plainText: String, key: SecretKey): String {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        val payload = cipher.iv + cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
+        return "enc:v1:" + Base64.getEncoder().encodeToString(payload)
     }
 
     private class FakeClusterDao : ClusterDao() {
@@ -292,6 +338,13 @@ class ClusterRepositoryImplTest {
         override suspend fun activateCluster(id: String) {
             storage[id]?.let {
                 storage[id] = it.copy(isActive = true)
+            }
+            notifyChanges()
+        }
+
+        override suspend fun updateKubeconfig(id: String, rawKubeconfig: String) {
+            storage[id]?.let {
+                storage[id] = it.copy(rawKubeconfig = rawKubeconfig)
             }
             notifyChanges()
         }

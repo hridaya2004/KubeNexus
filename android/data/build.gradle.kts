@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.snakeyaml.engine)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.tink.android)
 
 
     testImplementation(libs.junit)

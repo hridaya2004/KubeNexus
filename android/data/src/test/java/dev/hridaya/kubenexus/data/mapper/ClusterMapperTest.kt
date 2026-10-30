@@ -1,9 +1,9 @@
 package dev.hridaya.kubenexus.data.mapper
 
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.core.security.KubeconfigDecryptionException
 import dev.hridaya.kubenexus.core.security.KubeconfigEncryptor
 import dev.hridaya.kubenexus.data.source.local.entity.ClusterEntity
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import dev.hridaya.kubenexus.domain.model.Cluster
 import dev.hridaya.kubenexus.domain.model.ClusterStatus
 import org.junit.Assert.assertEquals
@@ -65,7 +65,7 @@ class ClusterMapperTest {
 
     @Test
     fun `toEntity encrypts the kubeconfig and toDomain can still read it`() {
-        val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+        val encryptor = testKubeconfigEncryptor()
         val plainKubeconfig =
             "apiVersion: v1\nkind: Config\nusers:\n- name: admin\n  user:\n    token: test-token"
 
@@ -77,8 +77,8 @@ class ClusterMapperTest {
         )
 
         val entity = domain.toEntity(plainKubeconfig, encryptor)
-        assertTrue(entity.rawKubeconfig.startsWith("enc:v1:"))
-        assertEquals(plainKubeconfig, encryptor.decrypt(entity.rawKubeconfig))
+        assertTrue(entity.rawKubeconfig.startsWith("enc:v2:"))
+        assertEquals(plainKubeconfig, encryptor.decrypt(entity.rawKubeconfig, "c-3"))
 
         assertFalse(entity.toDomain(encryptor).credentialsUnavailable)
     }
@@ -87,11 +87,11 @@ class ClusterMapperTest {
     @Test
     fun `an entity whose credentials cannot be decrypted maps with credentialsUnavailable`() {
         val unreadable = object : KubeconfigEncryptor {
-            override fun encrypt(plainText: String) = plainText
-            override fun decrypt(cipherText: String): String =
+            override fun encrypt(plainText: String, clusterId: String) = plainText
+            override fun decrypt(cipherText: String, clusterId: String): String =
                 throw KubeconfigDecryptionException("key lost")
 
-            override fun isEncrypted(text: String) = true
+            override fun needsReEncryption(stored: String) = false
         }
         val entity = ClusterEntity(
             id = "c1",

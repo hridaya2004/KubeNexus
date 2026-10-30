@@ -3,11 +3,11 @@ package dev.hridaya.kubenexus.data.repository
 import client.LogCallback
 import dev.hridaya.kubenexus.core.common.result.AppError
 import dev.hridaya.kubenexus.core.common.result.Result
-import dev.hridaya.kubenexus.core.security.AesGcmKubeconfigEncryptor
 import dev.hridaya.kubenexus.data.nativebridge.FakeKubeNexusNativeBridge
 import dev.hridaya.kubenexus.data.nativebridge.LogStreamHandle
 import dev.hridaya.kubenexus.data.testing.InMemoryClusterDao
 import dev.hridaya.kubenexus.data.testing.TestDispatcherProvider
+import dev.hridaya.kubenexus.data.testing.testKubeconfigEncryptor
 import dev.hridaya.kubenexus.domain.model.PodMetricSample
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -19,7 +19,7 @@ import org.junit.Test
 class PodRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val encryptor = AesGcmKubeconfigEncryptor(AesGcmKubeconfigEncryptor.generateKey())
+    private val encryptor = testKubeconfigEncryptor()
     private val clusterDao = InMemoryClusterDao()
     private val bridge = RecordingPodBridge()
 
@@ -34,7 +34,7 @@ class PodRepositoryImplTest {
     )
 
     private fun givenCluster() =
-        clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG))
+        clusterDao.seed(id = CLUSTER, rawKubeconfig = encryptor.encrypt(KUBECONFIG, CLUSTER))
 
     @Test
     fun `logs are fetched with the decrypted kubeconfig and the requested container and tail`() =

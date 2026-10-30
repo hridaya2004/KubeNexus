@@ -18,7 +18,8 @@ fun ClusterEntity.toDomain(encryptor: KubeconfigEncryptor = NoOpKubeconfigEncryp
         name = name,
         serverUrl = serverUrl,
         credentialsUnavailable = rawKubeconfig.isNotBlank() && encryptor.decryptOrEmpty(
-            rawKubeconfig
+            rawKubeconfig,
+            id,
         ).isBlank(),
         contextName = contextName,
         userName = userName,
@@ -39,7 +40,7 @@ fun Cluster.toEntity(
         id = id,
         name = name,
         serverUrl = serverUrl,
-        rawKubeconfig = encryptor.encrypt(rawKubeconfig),
+        rawKubeconfig = encryptor.encrypt(rawKubeconfig, id),
         contextName = contextName,
         userName = userName,
         namespace = namespace,

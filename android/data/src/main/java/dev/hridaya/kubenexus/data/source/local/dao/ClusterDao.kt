@@ -128,6 +128,9 @@ abstract class ClusterDao {
         insertCluster(cluster)
     }
 
+    @Query("UPDATE clusters SET rawKubeconfig = :rawKubeconfig WHERE id = :id")
+    abstract suspend fun updateKubeconfig(id: String, rawKubeconfig: String)
+
     @Query("UPDATE clusters SET name = :name WHERE id = :id")
     abstract suspend fun updateClusterName(id: String, name: String)
 

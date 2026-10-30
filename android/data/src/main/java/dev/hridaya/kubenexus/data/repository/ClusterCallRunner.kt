@@ -67,7 +67,7 @@ class ClusterCallRunner @Inject constructor(
         return Result.Success(
             ResolvedCluster(
                 id = clusterId,
-                kubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig)
+                kubeconfig = encryptor.decryptOrEmpty(cluster.rawKubeconfig, clusterId)
             ),
         )
     }
