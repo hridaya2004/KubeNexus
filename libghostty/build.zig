@@ -10,7 +10,6 @@ const abis = [_]Abi{
     .{ .name = "arm64-v8a", .zig = "aarch64-linux-android", .ndk = "aarch64-linux-android" },
     .{ .name = "armeabi-v7a", .zig = "arm-linux-androideabi", .ndk = "arm-linux-androideabi" },
     .{ .name = "x86_64", .zig = "x86_64-linux-android", .ndk = "x86_64-linux-android" },
-    .{ .name = "x86", .zig = "x86-linux-android", .ndk = "i686-linux-android" },
 };
 
 pub fn build(b: *std.Build) void {
@@ -41,7 +40,6 @@ fn buildLibrary(
     const ghostty = b.dependency("ghostty", .{
         .target = target,
         .optimize = optimize,
-        .simd = false,
     });
 
     const include_dir = b.pathJoin(&.{ sysroot, "usr", "include" });
@@ -49,7 +47,6 @@ fn buildLibrary(
     const lib_dir = b.fmt("{s}/usr/lib/{s}/{d}", .{ sysroot, abi.ndk, api });
 
     const module = b.createModule(.{
-        .root_source_file = b.path("src/ghostty_bridge.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
@@ -57,13 +54,16 @@ fn buildLibrary(
         .unwind_tables = .async,
         .omit_frame_pointer = false,
     });
-    module.addImport("ghostty-vt", ghostty.module("ghostty-vt"));
-    module.addIncludePath(b.path("src"));
+    module.addCSourceFiles(.{
+        .root = b.path("src"),
+        .files = &.{"ghostty_bridge.c"},
+        .flags = &.{ "-std=c11", "-Wall", "-Wextra" },
+    });
+    module.linkLibrary(ghostty.artifact("ghostty-vt-static"));
     module.addIncludePath(.{ .cwd_relative = include_dir });
     module.addIncludePath(.{ .cwd_relative = target_include_dir });
     module.addLibraryPath(.{ .cwd_relative = lib_dir });
-    module.linkSystemLibrary("log", .{});
-    module.linkSystemLibrary("z", .{});
+    module.addCMacro("GHOSTTY_STATIC", "");
     module.addCMacro("__ANDROID_MIN_SDK_VERSION__", b.fmt("{d}", .{api}));
     module.addCMacro("_Nullable", "");
     module.addCMacro("_Nonnull", "");
@@ -96,10 +96,11 @@ fn libcFile(
         \\include_dir={s}
         \\sys_include_dir={s}
         \\crt_dir={s}
+        \\cc_dir={s}
         \\msvc_lib_dir=
         \\kernel32_lib_dir=
-        \\gcc_dir=
+        \\darwin_sdk_dir=
         \\
-    , .{ include_dir, sys_include_dir, crt_dir });
+    , .{ include_dir, sys_include_dir, crt_dir, crt_dir });
     return b.addWriteFiles().add(b.fmt("libc-{s}.conf", .{abi.name}), contents);
 }

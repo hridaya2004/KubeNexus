@@ -68,7 +68,7 @@ def update_json(path: pathlib.Path, **fields) -> None:
 def zig_pins() -> tuple[str, str]:
     zon = ZIG_ZON.read_text()
     zig = re.search(r'minimum_zig_version = "([^"]+)"', zon).group(1)
-    commit = re.search(r"ghostty-org/ghostty#([0-9a-f]+)", zon).group(1)
+    commit = re.search(r"ghostty-org/ghostty[^#\s]*#([0-9a-f]+)", zon).group(1)
     version = re.search(r'"ghostty-(\d[^"]*?)-[A-Za-z0-9_-]{44}"', zon).group(1)
     return zig, f"{version}+{commit[:7]}"
 

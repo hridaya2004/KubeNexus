@@ -1,7 +1,7 @@
 {
   "uniqueId": "dev.hridaya.kubenexus:native-zig-std",
   "name": "Zig standard library",
-  "artifactVersion": "0.16.0",
+  "artifactVersion": "0.17.0",
   "description": "Parts of the Zig standard library compiled into the terminal engine (libghostty_jni.so).",
   "website": "https://ziglang.org",
   "licenses": [

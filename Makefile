@@ -10,7 +10,7 @@ export ANDROID_NDK_HOME := $(ANDROID_HOME)/ndk/$(NDK_VERSION)
 SDKMANAGER := $(ANDROID_HOME)/cmdline-tools/latest/bin/sdkmanager
 
 GRADLE   := android/gradlew -p android
-ABIS     := arm64-v8a armeabi-v7a x86_64 x86
+ABIS     := arm64-v8a armeabi-v7a x86_64
 JNI_LIBS := android/app/src/main/jniLibs
 GO_AAR   := android/data/libs/kubenexus.aar
 ZIG_SO   := $(ABIS:%=$(JNI_LIBS)/%/libghostty_jni.so)
@@ -104,7 +104,7 @@ lint: ## Run go vet and Android lint
 
 fmt: ## Format Go and Zig sources and apply Android lint fixes
 	cd k8s-engine && go fmt ./...
-	cd libghostty && zig fmt build.zig src
+	cd libghostty && zig fmt build.zig
 	$(GRADLE) lintFix
 
 licenses: ## Write the licence compliance report to LICENSES_DIR (default legal/compliance)
