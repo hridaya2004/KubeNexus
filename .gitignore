@@ -22,7 +22,8 @@ android/.externalNativeBuild/
 android/captures/
 
 # IntelliJ / Android Studio
-.idea/
+.idea/caches
+android/.idea/caches
 *.iws
 out/
 
