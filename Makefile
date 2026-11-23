@@ -7,9 +7,22 @@ JAVA_VERSION := $(shell sed -n 's/^toolchainVersion=//p' android/gradle/gradle-d
 
 export ANDROID_HOME ?= $(HOME)/Android/Sdk
 export ANDROID_NDK_HOME := $(ANDROID_HOME)/ndk/$(NDK_VERSION)
+
+# Launch Gradle and gomobile (javac) on the JDK bundled with Android Studio; the
+# Gradle daemon itself follows gradle/gradle-daemon-jvm.properties. Set JAVA_HOME
+# to override; with neither, use the java on PATH. The script follows the IDE's
+# install location, so upgrading Studio needs no change here.
+ifeq ($(strip $(JAVA_HOME)),)
+JAVA_HOME := $(shell scripts/android-studio-jdk.sh 2>/dev/null)
+endif
+export JAVA_HOME
+export PATH := $(if $(JAVA_HOME),$(JAVA_HOME)/bin:)$(PATH)
+
 SDKMANAGER := $(ANDROID_HOME)/cmdline-tools/latest/bin/sdkmanager
 
 GRADLE   := android/gradlew -p android
+ADB      := $(ANDROID_HOME)/platform-tools/adb
+APP_ID   := dev.hridaya.kubenexus.debug
 ABIS     := arm64-v8a armeabi-v7a x86_64
 JNI_LIBS := android/app/src/main/jniLibs
 GO_AAR   := android/data/libs/kubenexus.aar
@@ -30,13 +43,13 @@ LICENSES_OUT := $(abspath $(LICENSES_DIR))
 LICENSES_TXT := $(LICENSES_OUT)/kubenexus-licenses.txt
 
 .DEFAULT_GOAL := help
-.PHONY: help versions ndk jni jni-go jni-zig verify-jni debug release bundle install test lint fmt \
+.PHONY: help versions ndk jni jni-go jni-zig verify-jni debug release bundle install run test lint fmt \
         notices licenses licenses-clean generate-kube-openapi-spec clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
 
-versions: ## Print the pinned NDK, minSdk, Java and Zig versions and the ABIs
+versions: ## Print the pinned NDK, minSdk, CI Java and Zig versions and the ABIs
 	@echo ndk=$(NDK_VERSION)
 	@echo ndk_home=$(ANDROID_NDK_HOME)
 	@echo min_sdk=$(MIN_SDK)
@@ -107,6 +120,9 @@ bundle: jni notices ## Build the release App Bundle for Play
 
 install: jni notices ## Install the debug APK on a connected device
 	$(GRADLE) installDebug
+
+run: install ## Install and launch the debug app on a connected device
+	$(ADB) shell am start -W -n $(APP_ID)/dev.hridaya.kubenexus.MainActivity
 
 test: jni ## Run the Go and Android unit tests
 	cd k8s-engine && go test ./...
