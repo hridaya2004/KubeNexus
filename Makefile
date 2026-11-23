@@ -15,11 +15,15 @@ JNI_LIBS := android/app/src/main/jniLibs
 GO_AAR   := android/data/libs/kubenexus.aar
 ZIG_SO   := $(ABIS:%=$(JNI_LIBS)/%/libghostty_jni.so)
 TOOLS    := build/tools
+# Prefer the CMake bundled with the Android SDK, then whatever is on PATH.
+CMAKE    := $(firstword $(wildcard $(ANDROID_HOME)/cmake/*/bin/cmake) $(shell command -v cmake) cmake)
+NDK_CMAKE := $(ANDROID_NDK_HOME)/build/cmake/android.toolchain.cmake
+ZIG_CMAKE_BUILD := build/native/zig
 
 fingerprint = $(shell { files=$$(find $(1) -type f ! -name '*_test.go' ! -path '*/testdata/*' | LC_ALL=C sort); \
 	echo "$$files"; cat $$files; echo $(2); } | git hash-object --stdin)
 GO_STAMP  := build/native/go/$(call fingerprint,k8s-engine/go.mod k8s-engine/go.sum k8s-engine/pkg k8s-engine/scripts/rename_jni.sh Makefile,$(NDK_VERSION) $(MIN_SDK) $(shell go version 2>/dev/null))
-ZIG_STAMP := build/native/zig/$(call fingerprint,libghostty/src libghostty/build.zig libghostty/build.zig.zon Makefile,$(NDK_VERSION) $(MIN_SDK) $(shell zig version 2>/dev/null))
+ZIG_STAMP := build/native/zig/$(call fingerprint,libghostty/src libghostty/CMakeLists.txt libghostty/build.zig.zon Makefile,$(NDK_VERSION) $(MIN_SDK) $(shell zig version 2>/dev/null))
 
 LICENSES_DIR ?= legal/compliance
 LICENSES_OUT := $(abspath $(LICENSES_DIR))
@@ -49,10 +53,10 @@ jni: jni-go jni-zig ## Build the native libraries that are missing or out of dat
 
 jni-go: $(GO_AAR) ## Build only the Go engine library
 
-jni-zig: $(ZIG_SO) ## Build only the Ghostty terminal library
+jni-zig: $(ZIG_SO) ## Build only the Ghostty terminal library (CMake)
 
 $(GO_STAMP) $(ZIG_STAMP):
-	@rm -rf $(@D) && mkdir -p $(@D) && touch $@
+	@mkdir -p $(@D) && touch $@
 
 $(GO_AAR): $(GO_STAMP) | ndk
 	cd k8s-engine && go build -o $(CURDIR)/$(TOOLS)/ golang.org/x/mobile/cmd/gomobile golang.org/x/mobile/cmd/gobind
@@ -61,9 +65,19 @@ $(GO_AAR): $(GO_STAMP) | ndk
 	k8s-engine/scripts/rename_jni.sh $@ kubenexus_client
 
 $(ZIG_SO) &: $(ZIG_STAMP) | ndk
-	cd libghostty && zig build -Doptimize=ReleaseSmall -Dapi=$(MIN_SDK) \
-		-Dsysroot="$$(echo $(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/*/sysroot)" --prefix $(CURDIR)/$(JNI_LIBS)
-	touch $(ZIG_SO)
+	@set -e; src=""; for abi in $(ABIS); do \
+		echo "CMake: libghostty_jni.so for $$abi"; \
+		$(CMAKE) -S libghostty -B $(ZIG_CMAKE_BUILD)/$$abi \
+			-DCMAKE_TOOLCHAIN_FILE=$(NDK_CMAKE) \
+			-DANDROID_ABI=$$abi -DANDROID_PLATFORM=android-$(MIN_SDK) \
+			-DMIN_SDK=$(MIN_SDK) \
+			$${src:+-DFETCHCONTENT_SOURCE_DIR_GHOSTTY="$$src"} \
+			-DCMAKE_INSTALL_PREFIX=$(CURDIR)/$(JNI_LIBS) >/dev/null; \
+		$(CMAKE) --build $(ZIG_CMAKE_BUILD)/$$abi --parallel; \
+		$(CMAKE) --install $(ZIG_CMAKE_BUILD)/$$abi >/dev/null; \
+		src=$$(sed -n 's/^FETCHCONTENT_SOURCE_DIR_GHOSTTY:PATH=//p' $(ZIG_CMAKE_BUILD)/$$abi/CMakeCache.txt); \
+	done
+	@touch $(ZIG_SO)
 
 verify-jni: ## Check every ABI has both libraries, 16 KB aligned and free of afl++
 	@readelf=$$(echo $(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/*/bin/llvm-readelf); \
@@ -102,9 +116,8 @@ lint: ## Run go vet and Android lint
 	cd k8s-engine && go vet ./...
 	$(GRADLE) lint
 
-fmt: ## Format Go and Zig sources and apply Android lint fixes
+fmt: ## Format Go sources and apply Android lint fixes
 	cd k8s-engine && go fmt ./...
-	cd libghostty && zig fmt build.zig
 	$(GRADLE) lintFix
 
 licenses: ## Write the licence compliance report to LICENSES_DIR (default legal/compliance)

@@ -140,10 +140,12 @@ Go engine):
 | | `k8s.io/*`, `sigs.k8s.io/*` | Kubernetes Go client libraries, Apache-2.0 |
 | | 27 other Go modules under Apache-2.0, MIT, BSD-2, BSD-3 and ISC | Go modules in the Kubernetes engine, with each module's own licence and NOTICE text |
 
-`libghostty/zig-pkg/` (fetched by Zig from `build.zig.zon`, not committed) also contains
-`aro`, `translate_c` and `uucode` (build tools), zlib's C sources, `afl++`, fonts and colour
-themes. None of those are in the shipped library: there are no zlib, `inflate`/`deflate`, `afl`
-or font symbols in `libghostty_jni.so`. Two things to watch when bumping the Ghostty pin:
+The Ghostty source fetched at the pin in `build.zig.zon` (cached under
+`libghostty/zig-pkg/` when present, otherwise downloaded by CMake into the build tree, and
+never committed) also contains `aro`, `translate_c` and `uucode` (build tools), zlib's C
+sources, `afl++`, fonts and colour themes. None of those are in the shipped library: there
+are no zlib, `inflate`/`deflate`, `afl` or font symbols in `libghostty_jni.so`. Two things to
+watch when bumping the Ghostty pin:
 
 - **`afl++` is GPL-2.0.** If a future Ghostty ever linked it into the JNI library, the whole
   distribution would become GPL and could no longer be Apache-2.0. GPL-2.0-only is deliberately
@@ -287,11 +289,11 @@ Play reviewer or a user asks.
 ## 6. Verifying before you ship
 
 ```bash
-# Ghostty and the Zig packages it pulls in are fetched and pinned
-ls libghostty/zig-pkg/ | grep -i ghostty
-
 # Confirm the pinned Ghostty commit still matches build.zig.zon
 grep -A2 'ghostty' libghostty/build.zig.zon
+
+# Confirm CMake fetches Ghostty at that pin (a local zig-pkg cache is reused when present)
+grep -n -A3 'FetchContent_Declare' libghostty/CMakeLists.txt
 
 # Confirm client-go is consumed straight from upstream, with no fork redirect
 grep -n 'replace' k8s-engine/go.mod || echo "no replace directives"

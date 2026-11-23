@@ -10,8 +10,8 @@
     },
     .fingerprint = 0x8120c54b143f207c,
     .paths = .{
-        "build.zig",
         "build.zig.zon",
+        "CMakeLists.txt",
         "src",
     },
 }
